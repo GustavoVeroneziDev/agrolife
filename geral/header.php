@@ -49,7 +49,19 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     function initPicker(opts) {
         var aberto = false;
         var selecionado = null;
-        var picker, trigger, dropdown, search, list, hidden, label;
+        var picker, trigger, dropdown, search, list, hidden, label, erroObrigatorio;
+
+        function mostrarErroObrigatorio() {
+            if (!erroObrigatorio) return;
+            erroObrigatorio.textContent = 'Campo obrigatório.';
+            erroObrigatorio.style.display = '';
+            trigger.style.borderColor = 'var(--cor-perigo)';
+        }
+        function limparErroObrigatorio() {
+            if (!erroObrigatorio) return;
+            erroObrigatorio.style.display = 'none';
+            trigger.style.borderColor = '';
+        }
 
         function abrir() {
             aberto = true;
@@ -97,6 +109,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         function selecionar(it) {
             selecionado = it;
             hidden.value = opts.chave(it);
+            limparErroObrigatorio();
             var r = opts.renderItem(it);
             var icone = r.icon ? '<i class="bi ' + r.icon + ' me-1"></i>' : '';
             // r.title/r.sub podem vir de dado do usuário (nome de dono, animal…) —
@@ -122,6 +135,30 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
             });
             if (search) search.addEventListener('input', function () { filtrar(this.value); });
+
+            // "required" em input[hidden] é ignorado pelo navegador (não existe
+            // validação nativa pra campo hidden) — sem isso, um picker obrigatório
+            // vazio ia até o servidor, voltava com erro e apagava tudo que já
+            // tinha sido preenchido no resto do formulário. Valida aqui, antes de
+            // sair da página — igual pra todo picker com required, sem precisar
+            // repetir em cada tela.
+            if (hidden && hidden.hasAttribute('required')) {
+                erroObrigatorio = document.createElement('div');
+                erroObrigatorio.className = 'small mt-1';
+                erroObrigatorio.style.color = 'var(--cor-perigo)';
+                erroObrigatorio.style.display = 'none';
+                picker.insertAdjacentElement('afterend', erroObrigatorio);
+
+                var form = picker.closest('form');
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        if (!hidden.value) {
+                            e.preventDefault();
+                            mostrarErroObrigatorio();
+                        }
+                    });
+                }
+            }
         }
 
         // initPicker() sempre roda num <script> que vem DEPOIS do HTML do
