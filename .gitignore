@@ -1,0 +1,44 @@
+# ─── Referência local (Belos Cílios) — nunca commitar ─────────
+/Base/
+
+# ─── Uploads e logs ───────────────────────────────────────────
+/uploads/*
+!/uploads/.gitkeep
+/logs/*
+!/logs/.gitkeep
+
+# ─── Configurações sensíveis ──────────────────────────────────
+.env
+.env.*
+config/conexao.php
+config/smtp_keys.php
+config/evolution_keys.php
+config/*_keys.php
+config/*_secret*.php
+
+# ─── PHP ──────────────────────────────────────────────────────
+*.log
+error_log
+php_errorlog
+
+# ─── Backups e arquivos temporários ───────────────────────────
+*.bak
+*.backup
+*.old
+*.orig
+*.sql.gz
+*.tar.gz
+*.zip
+*~
+*.swp
+*.swo
+
+# ─── IDEs ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+.claude/
+
+# ─── Sistema operacional ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini

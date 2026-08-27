@@ -1,0 +1,95 @@
+/* ================================================================
+   VetSul — base.css
+   Tokens (custom properties) + reset + tipografia
+   ================================================================ */
+
+:root {
+    --accent:            #0d9488;
+    --accent-hover:      #0f766e;
+    --accent-light:      rgba(13, 148, 136, .1);
+    --accent-rgb:        13, 148, 136;
+
+    --bg-main:           #f0faf9;
+    --bg-card:           #ffffff;
+    --bg-hover:          #e6f7f5;
+    --text-main:         #0d2420;
+    --text-secondary:    #4a7b76;
+    --text-muted:        #6b9088;
+    --card-border-color: #b9e2dc;
+
+    --sidebar-bg:        #0b1210;
+    --sidebar-text:      #a8d8d1;
+    --sidebar-active:    rgba(13, 148, 136, .35);
+    --sidebar-width:     240px;
+
+    --radius-card:       14px;
+    --radius-btn:        8px;
+    --shadow-card:       0 2px 12px rgba(13, 36, 32, .07);
+    --transition-fast:   .15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --accent:            #2dd4bf;
+        --accent-hover:      #0d9488;
+        --accent-light:      rgba(45, 212, 191, .12);
+        --accent-rgb:        45, 212, 191;
+
+        --bg-main:           #0b1210;
+        --bg-card:           #111918;
+        --bg-hover:          #162220;
+        --text-main:         #e2f0ee;
+        --text-secondary:    #6b9e98;
+        --text-muted:        #4a7b76;
+        --card-border-color: #1e3430;
+    }
+}
+:root[data-theme="dark"] {
+    --accent:            #2dd4bf;
+    --accent-hover:      #0d9488;
+    --accent-light:      rgba(45, 212, 191, .12);
+    --accent-rgb:        45, 212, 191;
+
+    --bg-main:           #0b1210;
+    --bg-card:           #111918;
+    --bg-hover:          #162220;
+    --text-main:         #e2f0ee;
+    --text-secondary:    #6b9e98;
+    --text-muted:        #4a7b76;
+    --card-border-color: #1e3430;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { overflow-x: hidden; max-width: 100%; }
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    max-width: 100%;
+    -webkit-text-size-adjust: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+main { flex: 1; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+/* Evita zoom automático em inputs no iOS (≥16px) */
+input, select, textarea { font-size: 16px !important; }
+@media (min-width: 768px) {
+    input, select, textarea { font-size: .9rem !important; }
+}
+
+button, a, [role="button"] { touch-action: manipulation; }
+
+.text-accent   { color: var(--accent) !important; }
+.bg-accent     { background: var(--accent) !important; }
+.border-accent { border-color: var(--card-border-color) !important; }
+.rounded-xl    { border-radius: var(--radius-card) !important; }
+.shadow-card   { box-shadow: var(--shadow-card) !important; }
