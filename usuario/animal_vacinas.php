@@ -69,7 +69,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
                 <?php if ($animal['PesoKg']): ?>
                     <dt class="small text-secondary">Peso</dt>
-                    <dd><?= h(number_format((float) $animal['PesoKg'], 1, ',', '.')) ?> kg</dd>
+                    <dd><?= h(number_format((float) $animal['PesoKg'], 3, ',', '.')) ?> kg</dd>
                 <?php endif ?>
             </dl>
         </div>

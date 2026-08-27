@@ -135,7 +135,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
                 <?php if ($animal['PesoKg']): ?>
                     <dt class="small text-secondary">Peso</dt>
-                    <dd><?= h(number_format((float) $animal['PesoKg'], 1, ',', '.')) ?> kg</dd>
+                    <dd><?= h(number_format((float) $animal['PesoKg'], 3, ',', '.')) ?> kg</dd>
                 <?php endif ?>
                 <?php if ($animal['Microchip']): ?>
                     <dt class="small text-secondary">Microchip</dt>
@@ -149,12 +149,12 @@ require_once __DIR__ . '/../geral/header.php';
             <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
                 <i class="bi bi-shield-plus me-1"></i> Registrar vacina
             </a>
-            <button type="button" class="btn btn-outline-danger w-100" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita." onclick="document.getElementById('formDesativar').submit()">
-                <i class="bi bi-trash me-1"></i> Remover animal
-            </button>
-            <form id="formDesativar" method="POST" class="d-none">
+            <form method="POST" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita.">
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                 <input type="hidden" name="acao" value="desativar">
+                <button type="submit" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-trash me-1"></i> Remover animal
+                </button>
             </form>
         </div>
     </div>
@@ -252,7 +252,7 @@ require_once __DIR__ . '/../geral/header.php';
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
-                            <input type="text" id="eaPesoVisivel" class="form-control" data-mask="peso" data-target="eaPesoReal" placeholder="0,00" inputmode="numeric" value="<?= $animal['PesoKg'] ? h(number_format((float) $animal['PesoKg'], 2, ',', '')) : '' ?>">
+                            <input type="text" id="eaPesoVisivel" class="form-control" data-mask="peso" data-target="eaPesoReal" placeholder="0,000" inputmode="numeric" value="<?= $animal['PesoKg'] ? h(number_format((float) $animal['PesoKg'], 3, ',', '')) : '' ?>">
                             <input type="hidden" name="peso" id="eaPesoReal" value="<?= h($animal['PesoKg']) ?>">
                         </div>
                     </div>

@@ -266,12 +266,21 @@ function h(mixed $str): string
 function flashMsg(): void
 {
     if (!empty($_SESSION['flash_msg'])) {
-        $tipo = h($_SESSION['flash_tipo'] ?? 'info');
-        $msg  = h($_SESSION['flash_msg']);
-        echo "<div class=\"alert alert-{$tipo} alert-dismissible fade show mb-3\" role=\"alert\">"
-            . "<i class=\"bi bi-info-circle me-2\"></i>{$msg}"
-            . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>'
-            . '</div>';
+        $tipo = $_SESSION['flash_tipo'] ?? 'info';
+
+        if ($tipo === 'success') {
+            // Sucesso não precisa de banner que fica na tela — um toast
+            // rápido no canto já confirma e some sozinho, sem atrapalhar.
+            $msgJs = json_encode($_SESSION['flash_msg'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS);
+            echo "<script>document.addEventListener('DOMContentLoaded', function () { vsToast({$msgJs}, 'success'); });</script>";
+        } else {
+            $tipoSafe = h($tipo);
+            $msg      = h($_SESSION['flash_msg']);
+            echo "<div class=\"alert alert-{$tipoSafe} alert-dismissible fade show mb-3\" role=\"alert\">"
+                . "<i class=\"bi bi-info-circle me-2\"></i>{$msg}"
+                . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>'
+                . '</div>';
+        }
         unset($_SESSION['flash_msg'], $_SESSION['flash_tipo']);
     }
 }

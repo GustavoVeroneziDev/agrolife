@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS Animais (
     DataNascimento  DATE          NULL,
     Sexo            ENUM('macho','femea','indeterminado') NOT NULL,
     Pelagem         VARCHAR(100)  NULL,
-    PesoKg          DECIMAL(5,2)  NULL,
+    PesoKg          DECIMAL(6,3)  NULL,
     Microchip       VARCHAR(50)   NULL,
     Observacoes     TEXT          NULL,
     FotoUrl         VARCHAR(500)  NULL,

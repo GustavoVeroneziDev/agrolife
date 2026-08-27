@@ -60,7 +60,7 @@ function vsToast(msg, tipo) {
     var el = document.getElementById('vsToastEl');
     el.className = 'toast align-items-center border-0 text-bg-' + (tipo || 'warning');
     document.getElementById('vsToastMsg').textContent = msg;
-    bootstrap.Toast.getOrCreateInstance(el, { delay: 4500 }).show();
+    bootstrap.Toast.getOrCreateInstance(el, { delay: 2000 }).show();
 }
 
 // ── Modal de confirmação global ───────────────────────────────
@@ -93,17 +93,17 @@ function vsMascaraTel(input) {
 document.querySelectorAll('[data-mask="tel"]').forEach(vsMascaraTel);
 
 // ── Máscara de peso (estilo dinheiro — digita da direita pra esquerda,
-// "1050" vira "10,50") ─────────────────────────────────────────────
+// "1500" vira "1,500") — 3 casas decimais (precisão de grama) ──────
 // input: campo visível (texto). data-target aponta pro id do campo
 // hidden que recebe o valor real, com ponto, pro backend.
 function vsMascaraPeso(input) {
     var alvo = input.dataset.target ? document.getElementById(input.dataset.target) : null;
     function fmt() {
-        var d = input.value.replace(/\D/g, '').slice(0, 5); // máx 999,99 (cabe no DECIMAL(5,2))
+        var d = input.value.replace(/\D/g, '').slice(0, 6); // máx 999,999 (cabe no DECIMAL(6,3))
         if (!d) { input.value = ''; if (alvo) alvo.value = ''; return; }
-        while (d.length < 3) d = '0' + d;
-        var inteiro = d.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
-        var decimal = d.slice(-2);
+        while (d.length < 4) d = '0' + d;
+        var inteiro = d.slice(0, -3).replace(/^0+(?=\d)/, '') || '0';
+        var decimal = d.slice(-3);
         input.value = inteiro + ',' + decimal;
         if (alvo) alvo.value = inteiro + '.' + decimal;
     }

@@ -52,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
 }
 
 try {
-    $stmt = $pdo->prepare("SELECT * FROM Usuarios WHERE IDUsuario = :id AND NivelAcesso = 'cliente' LIMIT 1");
+    // Sem filtrar por NivelAcesso: um admin pode ser dono de animal também,
+    // e essa página precisa abrir certo quando alguém clicar no dono dele.
+    $stmt = $pdo->prepare("SELECT * FROM Usuarios WHERE IDUsuario = :id LIMIT 1");
     $stmt->execute([':id' => $id]);
     $dono = $stmt->fetch();
     if (!$dono) {
@@ -212,7 +214,7 @@ require_once __DIR__ . '/../geral/header.php';
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
-                            <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,00" inputmode="numeric">
+                            <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,000" inputmode="numeric">
                             <input type="hidden" name="peso" id="naPesoReal">
                         </div>
                     </div>
