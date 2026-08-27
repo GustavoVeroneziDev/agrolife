@@ -6,6 +6,12 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 require_once __DIR__ . '/../config/versao.php';
 
+// conexao.php é gitignored — reforço aqui pro deploy nunca quebrar por defasagem
+// entre o git push (auto) e o reenvio manual desse arquivo (FTP)
+if (!defined('APP_NOME')) {
+    define('APP_NOME', 'Agro Life');
+}
+
 $paginaTitulo = $paginaTitulo ?? APP_NOME;
 $areaAtual    = $areaAtual    ?? '';
 $ehPainel     = $areaAtual === 'painel';

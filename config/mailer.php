@@ -4,6 +4,12 @@
  * Não contém credenciais; requer config/smtp_keys.php com as constantes SMTP_*.
  */
 
+// conexao.php é gitignored — reforço aqui pro deploy nunca quebrar por defasagem
+// entre o git push (auto) e o reenvio manual desse arquivo (FTP)
+if (!defined('APP_NOME')) {
+    define('APP_NOME', 'Agro Life');
+}
+
 function enviarEmail(string $para, string $assunto, string $htmlBody, string $textoBody = ''): bool
 {
     if (!$textoBody) {
