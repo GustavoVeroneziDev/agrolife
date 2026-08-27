@@ -33,7 +33,106 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/paleta.css?v=<?= APP_VERSAO ?>">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/estrutura.css?v=<?= APP_VERSAO ?>">
-    <script>var BASE = '<?= BASE ?>';</script>
+    <script>
+    var BASE = '<?= BASE ?>';
+
+    // ── Picker de busca (dropdown com campo de busca) ──────────
+    // Fica no <head> (não no footer) de propósito: páginas podem chamar
+    // initPicker() no próprio <script> antes do footer.php ser incluído,
+    // então a função precisa existir antes de qualquer conteúdo da página.
+    // Uso: initPicker({ pickerId, triggerId, dropdownId, searchId, listId,
+    //   hiddenId, labelId, items, chave(item), renderItem(item) -> {title, sub},
+    //   matches(item, queryLower) -> bool, vazioMsg, onSelect(item) })
+    function escHtmlPicker(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function initPicker(opts) {
+        var aberto = false;
+        var selecionado = null;
+        var picker, trigger, dropdown, search, list, hidden, label;
+
+        function abrir() {
+            aberto = true;
+            trigger.classList.add('open');
+            dropdown.classList.remove('d-none');
+            search.value = '';
+            renderizar(opts.items);
+            setTimeout(function () { search.focus(); }, 40);
+            document.addEventListener('click', clickFora, true);
+        }
+        function fechar() {
+            aberto = false;
+            trigger.classList.remove('open');
+            dropdown.classList.add('d-none');
+            document.removeEventListener('click', clickFora, true);
+        }
+        function clickFora(e) { if (!picker.contains(e.target)) fechar(); }
+        function toggle() { aberto ? fechar() : abrir(); }
+        function filtrar(q) {
+            q = q.toLowerCase();
+            renderizar(opts.items.filter(function (it) { return opts.matches(it, q); }));
+        }
+        function renderizar(lista) {
+            list.innerHTML = '';
+            if (!lista.length) {
+                list.innerHTML = '<div class="picker-empty">' + escHtmlPicker(opts.vazioMsg || 'Nada encontrado.') + '</div>';
+                return;
+            }
+            lista.forEach(function (it) {
+                var r = opts.renderItem(it);
+                var div = document.createElement('div');
+                div.className = 'picker-item' + (selecionado && opts.chave(selecionado) === opts.chave(it) ? ' picker-active' : '');
+                div.innerHTML = '<div class="picker-item-titulo">' + escHtmlPicker(r.title) + '</div>'
+                    + (r.sub ? '<div class="picker-item-sub">' + escHtmlPicker(r.sub) + '</div>' : '');
+                div.addEventListener('mousedown', function (e) { e.preventDefault(); selecionar(it); });
+                list.appendChild(div);
+            });
+        }
+        function selecionar(it) {
+            selecionado = it;
+            hidden.value = opts.chave(it);
+            var r = opts.renderItem(it);
+            label.textContent = r.title + (r.sub ? ' — ' + r.sub : '');
+            label.className = 'picker-selected';
+            fechar();
+            if (opts.onSelect) opts.onSelect(it);
+        }
+        function iniciar() {
+            picker   = document.getElementById(opts.pickerId);
+            trigger  = document.getElementById(opts.triggerId);
+            dropdown = document.getElementById(opts.dropdownId);
+            search   = document.getElementById(opts.searchId);
+            list     = document.getElementById(opts.listId);
+            hidden   = document.getElementById(opts.hiddenId);
+            label    = document.getElementById(opts.labelId);
+            if (!picker || !trigger) return;
+
+            trigger.addEventListener('click', toggle);
+            trigger.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            });
+            search.addEventListener('input', function () { filtrar(this.value); });
+        }
+
+        // O elemento pode ainda não existir no DOM se initPicker() for chamado
+        // antes do <body> terminar de carregar — adia pro DOMContentLoaded nesse caso.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', iniciar);
+        } else {
+            iniciar();
+        }
+
+        return {
+            selecionar: selecionar,
+            limpar: function () {
+                selecionado = null;
+                if (hidden) hidden.value = '';
+                if (label) { label.textContent = opts.placeholder || ''; label.className = 'picker-placeholder'; }
+            },
+            getSelecionado: function () { return selecionado; },
+        };
+    }
+    </script>
 </head>
 
 <body>
