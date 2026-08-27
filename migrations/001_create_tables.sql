@@ -1,5 +1,5 @@
 -- ============================================================
--- VetSul — Migration 001: Criação das tabelas
+-- Agro Life — Migration 001: Criação das tabelas
 -- ============================================================
 
 SET NAMES utf8mb4;

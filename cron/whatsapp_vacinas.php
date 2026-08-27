@@ -2,7 +2,7 @@
 /**
  * Cron: notificações de vacinas — 7 dias antes do vencimento + no dia.
  * Executar 1x por dia (ex: 09h):
- *   0 9 * * * php /caminho/para/vetsul/cron/whatsapp_vacinas.php >> /logs/wa_vacinas.log 2>&1
+ *   0 9 * * * php /caminho/para/agrolife/cron/whatsapp_vacinas.php >> /logs/wa_vacinas.log 2>&1
  */
 
 if (php_sapi_name() !== 'cli') {

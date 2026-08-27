@@ -1,5 +1,5 @@
 -- ============================================================
--- VetSul — Migration 005: PesoKg passa a ter 3 decimais (grama)
+-- Agro Life — Migration 005: PesoKg passa a ter 3 decimais (grama)
 -- ============================================================
 -- DECIMAL(5,2) só ia até centésimos (10g de precisão). Vira
 -- DECIMAL(6,3) — precisão de 1 grama, até 999,999 kg.

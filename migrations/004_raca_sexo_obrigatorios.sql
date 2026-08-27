@@ -1,5 +1,5 @@
 -- ============================================================
--- VetSul — Migration 004: Raça e Sexo passam a ser obrigatórios
+-- Agro Life — Migration 004: Raça e Sexo passam a ser obrigatórios
 -- ============================================================
 -- Seguro rodar agora — tabela Animais ainda não tem registros reais
 -- em nenhum ambiente. Se algum dia houver linha com Raca/Sexo NULL,

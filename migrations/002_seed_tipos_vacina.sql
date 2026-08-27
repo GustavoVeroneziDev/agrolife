@@ -1,5 +1,5 @@
 -- ============================================================
--- VetSul — Migration 002: Seed de espécies e catálogo de vacinas
+-- Agro Life — Migration 002: Seed de espécies e catálogo de vacinas
 -- ============================================================
 
 SET NAMES utf8mb4;
