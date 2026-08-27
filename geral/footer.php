@@ -7,6 +7,7 @@
     <div class="container-lg text-center text-secondary small">
         <span style="color:var(--accent);font-weight:600;">VetSul</span> &copy; <?= date('Y') ?>
         &nbsp;·&nbsp; Todos os direitos reservados
+        &nbsp;·&nbsp; <span style="opacity:.5;font-size:.8em;" title="<?= h(APP_AMBIENTE . ' — ' . APP_BUILD_DATE) ?>">build <?= h(APP_VERSAO) ?></span>
     </div>
 </footer>
 <?php endif ?>

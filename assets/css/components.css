@@ -91,6 +91,16 @@
     align-items: center;
 }
 .sidebar-footer a:hover { color: var(--accent); }
+.sidebar-version {
+    margin-top: .6rem;
+    font-size: .68rem;
+    color: rgba(168, 216, 209, .55);
+    letter-spacing: .02em;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .3rem;
+}
 
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1039; }
 .sidebar-overlay.ativo { display: block; }

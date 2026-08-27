@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config/conexao.php';
+require_once __DIR__ . '/../config/versao.php';
 
 $paginaTitulo = $paginaTitulo ?? 'VetSul';
 $areaAtual    = $areaAtual    ?? '';
@@ -70,6 +71,28 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             <div class="sidebar-footer">
                 <div class="mb-1"><i class="bi bi-person-circle me-1"></i> <?= h($_nomeSession) ?></div>
                 <a href="<?= BASE ?>/usuario/logout.php"><i class="bi bi-box-arrow-right me-1"></i> Sair</a>
+                <?php
+                    // Nota: cada exec() usa no máximo um "%" — no Windows, escapeshellarg()
+                    // neutraliza "%" (risco de expansão de variável do cmd.exe), e uma string
+                    // com dois "%" formando um par (ex: %h|||%cd) é lida como uma única
+                    // variável "%h|||%" e quebra o comando.
+                    $gitVer = null;
+                    $repoDir = escapeshellarg(__DIR__ . '/..');
+                    $hashOut = $dateOut = [];
+                    @exec("git -C {$repoDir} rev-parse --short HEAD 2>&1", $hashOut, $retHash);
+                    @exec("git -C {$repoDir} log -1 --format=%cI 2>&1", $dateOut, $retData);
+                    if ($retHash === 0 && $retData === 0 && !empty($hashOut[0]) && !empty($dateOut[0])) {
+                        $gitVer = trim($hashOut[0]) . ' · ' . date('d/m/y H:i', strtotime(trim($dateOut[0])));
+                    }
+                ?>
+                <div class="sidebar-version" title="Ambiente atual — confirme aqui se o deploy já chegou">
+                    <span class="badge bg-secondary me-1"><?= h(APP_AMBIENTE) ?></span>
+                    <?php if ($gitVer): ?>
+                        <i class="bi bi-tag-fill me-1 opacity-50"></i><?= h($gitVer) ?>
+                    <?php else: ?>
+                        build <?= h(APP_VERSAO) ?>
+                    <?php endif ?>
+                </div>
             </div>
         </nav>
 
