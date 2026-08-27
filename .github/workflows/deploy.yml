@@ -11,12 +11,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico completo — necessário pra contar commits
 
-      - name: Gerar config/versao.php com hash do commit
+      - name: Gerar config/versao.php (0.0.X = numero de commits na main)
         run: |
+          PATCH=$(git rev-list --count HEAD)
+          VERSAO="0.0.${PATCH}"
           SHORT_SHA=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u '+%d/%m/%Y %H:%M UTC')
-          printf '<?php\ndefine("APP_VERSAO", "%s");\ndefine("APP_BUILD_DATE", "%s");\n' "$SHORT_SHA" "$BUILD_DATE" > config/versao.php
+          printf '<?php\ndefine("APP_VERSAO", "%s");\ndefine("APP_BUILD_DATE", "%s (%s)");\n' "$VERSAO" "$BUILD_DATE" "$SHORT_SHA" > config/versao.php
 
       - name: Deploy via FTP para hospedagem
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
