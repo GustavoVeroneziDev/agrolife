@@ -1,0 +1,96 @@
+/* ================================================================
+   VetSul — paleta.css
+   ÚNICA fonte de cores do sistema. estrutura.css e as páginas nunca
+   escrevem uma cor "crua" (hex/rgb) — sempre var(--token) daqui.
+   Trocar a paleta inteira do projeto é editar só este arquivo.
+   ================================================================ */
+
+:root {
+  /* ── Marca (teal/ciano) ── */
+  --accent:       #0f766e;
+  --accent-hover: #115e59;
+  --accent-light: rgba(15, 118, 110, .1);
+  --accent-text:  #ffffff;  /* cor do texto em cima de um fundo --accent */
+  --accent-rgb:   15, 118, 110;
+
+  /* ── Superfícies ── */
+  --bg-main:  #f4fbfa;
+  --bg-card:  #ffffff;
+  --bg-hover: #e6f7f5;
+
+  /* ── Texto ── */
+  --text-main:      #0d2420;
+  --text-secondary: #3f6b66;
+  --text-muted:     #5c8079;
+
+  /* ── Bordas / sombra / overlay ── */
+  --card-border-color: #b9e2dc;
+  --shadow-color:       rgba(13, 36, 32, .06);
+  --shadow-color-forte:  rgba(13, 36, 32, .1);
+  --overlay-bg:          rgba(13, 36, 32, .45);
+
+  /* ── Semânticas — significado fixo, não mudam entre projetos ── */
+  --cor-perigo:     #dc2626;
+  --cor-perigo-bg:  rgba(220, 38, 38, .12);
+  --cor-atencao:    #d97706;
+  --cor-atencao-bg: rgba(217, 119, 6, .12);
+  --cor-info:       #2563eb;
+  --cor-info-bg:    rgba(37, 99, 235, .12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent:       #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-light: rgba(45, 212, 191, .14);
+    --accent-text:  #072421;
+    --accent-rgb:   45, 212, 191;
+
+    --bg-main:  #0b1210;
+    --bg-card:  #111918;
+    --bg-hover: #182422;
+
+    --text-main:      #e6f3f1;
+    --text-secondary: #8ab5af;
+    --text-muted:     #5c7f79;
+
+    --card-border-color:  #223a35;
+    --shadow-color:        rgba(0, 0, 0, .3);
+    --shadow-color-forte:  rgba(0, 0, 0, .45);
+    --overlay-bg:          rgba(0, 0, 0, .6);
+
+    --cor-perigo:     #f87171;
+    --cor-perigo-bg:  rgba(248, 113, 113, .15);
+    --cor-atencao:    #fbbf24;
+    --cor-atencao-bg: rgba(251, 191, 36, .15);
+    --cor-info:       #60a5fa;
+    --cor-info-bg:    rgba(96, 165, 250, .15);
+  }
+}
+:root[data-theme="dark"] {
+  --accent:       #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-light: rgba(45, 212, 191, .14);
+  --accent-text:  #072421;
+  --accent-rgb:   45, 212, 191;
+
+  --bg-main:  #0b1210;
+  --bg-card:  #111918;
+  --bg-hover: #182422;
+
+  --text-main:      #e6f3f1;
+  --text-secondary: #8ab5af;
+  --text-muted:     #5c7f79;
+
+  --card-border-color:  #223a35;
+  --shadow-color:        rgba(0, 0, 0, .3);
+  --shadow-color-forte:  rgba(0, 0, 0, .45);
+  --overlay-bg:          rgba(0, 0, 0, .6);
+
+  --cor-perigo:     #f87171;
+  --cor-perigo-bg:  rgba(248, 113, 113, .15);
+  --cor-atencao:    #fbbf24;
+  --cor-atencao-bg: rgba(251, 191, 36, .15);
+  --cor-info:       #60a5fa;
+  --cor-info-bg:    rgba(96, 165, 250, .15);
+}

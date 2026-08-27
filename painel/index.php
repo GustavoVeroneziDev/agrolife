@@ -49,10 +49,10 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="row g-3 mb-4">
     <?php
     $stats = [
-        ['bi-exclamation-triangle-fill', '#dc2626', 'rgba(220,38,38,.12)',  'Vacinas atrasadas', $atrasadas, ''],
-        ['bi-clock-fill',                '#d97706', 'rgba(217,119,6,.12)', 'Vencendo em 30 dias', $vencendo, ''],
-        ['bi-clipboard2-pulse',          '#0d9488', 'rgba(13,148,136,.12)', 'Animais ativos', $totalAnimais, ''],
-        ['bi-people',                    '#2563eb', 'rgba(37,99,235,.12)', 'Donos cadastrados', $totalDonos, ''],
+        ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas', $atrasadas, ''],
+        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 30 dias', $vencendo, ''],
+        ['bi-clipboard2-pulse',          'var(--accent)',      'var(--accent-light)',   'Animais ativos', $totalAnimais, ''],
+        ['bi-people',                    'var(--cor-info)',    'var(--cor-info-bg)',    'Donos cadastrados', $totalDonos, ''],
     ];
     foreach ($stats as [$icon, $color, $bg, $label, $valor, $sub]):
     ?>
