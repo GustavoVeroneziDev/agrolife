@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($nome === '' || $raca === '' || $sexo === '') {
             redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Nome, raça e sexo são obrigatórios.', 'warning');
         }
+        if (!dataNascimentoValida($nasc)) {
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
+        }
 
         try {
             $pdo->prepare(
@@ -245,7 +248,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Nascimento</label>
-                            <input type="date" name="nascimento" class="form-control" max="<?= date('Y-m-d') ?>" value="<?= h($animal['DataNascimento']) ?>">
+                            <input type="date" name="nascimento" class="form-control" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>" value="<?= h($animal['DataNascimento']) ?>">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>

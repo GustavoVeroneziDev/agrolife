@@ -331,6 +331,27 @@ function formatarTelefoneExibicao(?string $tel): string
     return $tel;
 }
 
+/**
+ * Valida data de nascimento de animal: formato real, não pode ser no
+ * futuro, não pode passar de 100 anos atrás. Campo vazio é válido
+ * (nascimento é opcional) — quem exige preenchido valida isso à parte.
+ */
+function dataNascimentoValida(string $data): bool
+{
+    if ($data === '') return true;
+
+    $dt = DateTimeImmutable::createFromFormat('Y-m-d', $data);
+    if (!$dt || $dt->format('Y-m-d') !== $data) return false;
+
+    // Compara só a data (string 'Y-m-d'), nunca DateTime — createFromFormat()
+    // preenche a hora com o horário atual (não meia-noite), então comparar
+    // objetos DateTime aqui rejeitava até a data de hoje por causa da hora.
+    $hoje         = date('Y-m-d');
+    $limiteAntigo = date('Y-m-d', strtotime('-100 years'));
+
+    return $data <= $hoje && $data >= $limiteAntigo;
+}
+
 function formatarIdade(?string $dataNascimento): string
 {
     if (!$dataNascimento) return '';

@@ -21,6 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     if ($fkDono === '' || $nome === '' || $especie === '' || $raca === '' || $sexo === '') {
         redirecionarComMensagem(BASE . '/painel/animais.php', 'Dono, nome, espécie, raça e sexo são obrigatórios.', 'warning');
     }
+    if (!dataNascimentoValida($nasc)) {
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
+    }
 
     try {
         $novoId = gerarUuid();
@@ -255,7 +258,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">Nascimento</label>
-                            <input type="date" name="nascimento" class="form-control" max="<?= date('Y-m-d') ?>">
+                            <input type="date" name="nascimento" class="form-control" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
