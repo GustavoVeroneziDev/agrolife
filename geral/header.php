@@ -31,8 +31,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="<?= BASE ?>/assets/css/paleta.css">
-    <link rel="stylesheet" href="<?= BASE ?>/assets/css/estrutura.css">
+    <link rel="stylesheet" href="<?= BASE ?>/assets/css/paleta.css?v=<?= APP_VERSAO ?>">
+    <link rel="stylesheet" href="<?= BASE ?>/assets/css/estrutura.css?v=<?= APP_VERSAO ?>">
     <script>var BASE = '<?= BASE ?>';</script>
 </head>
 
