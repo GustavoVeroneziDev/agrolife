@@ -86,8 +86,22 @@ CREATE TABLE IF NOT EXISTS Especies (
     IDEspecie VARCHAR(36) NOT NULL,
     Nome      VARCHAR(50) NOT NULL,
     Icone     VARCHAR(10) NULL,
+    Ordem     INT         NOT NULL DEFAULT 0 COMMENT 'ordem de exibicao — mais comum primeiro, nao alfabetica',
     PRIMARY KEY (IDEspecie),
     UNIQUE KEY uq_especie_nome (Nome)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Racas (catalogo por especie — evita nome de raça variando)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS Racas (
+    IDRaca    VARCHAR(36)  NOT NULL,
+    FKEspecie VARCHAR(36)  NOT NULL,
+    Nome      VARCHAR(100) NOT NULL,
+    Ordem     INT          NOT NULL DEFAULT 0,
+    PRIMARY KEY (IDRaca),
+    UNIQUE KEY uq_raca_especie_nome (FKEspecie, Nome),
+    CONSTRAINT fk_raca_especie FOREIGN KEY (FKEspecie) REFERENCES Especies(IDEspecie) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

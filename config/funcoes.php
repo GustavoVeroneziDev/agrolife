@@ -350,6 +350,16 @@ function formatarIdade(?string $dataNascimento): string
     return $diff->d . ($diff->d === 1 ? ' dia' : ' dias');
 }
 
+function formatarSexo(?string $sexo): string
+{
+    return match ($sexo) {
+        'macho' => '♂ Macho',
+        'femea' => '♀ Fêmea',
+        'indeterminado' => 'Indeterminado',
+        default => '',
+    };
+}
+
 /**
  * Situação de vacinação a partir da ProximaData de um registro.
  * @return array{0:string,1:string,2:string} [label, cor-bootstrap, ícone]
@@ -370,4 +380,40 @@ function labelSituacaoVacina(?string $proximaData): string
 {
     [$label, $cor] = situacaoVacina($proximaData);
     return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
+}
+
+/**
+ * Gera o HTML de um campo picker (dropdown com busca) — ver initPicker() em
+ * geral/header.php. $valorInicial/$labelInicial preenchem o campo já
+ * selecionado (uso em telas de edição); deixe ambos vazios para um campo novo.
+ */
+function campoPicker(
+    string $prefixo,
+    string $nomeCampo,
+    string $placeholder,
+    string $placeholderBusca,
+    string $valorInicial = '',
+    string $labelInicial = '',
+    bool $obrigatorio = false
+): string {
+    $req      = $obrigatorio ? ' required' : '';
+    $temValor = $valorInicial !== '';
+    $labelTxt = $temValor ? $labelInicial : $placeholder;
+    $labelCls = $temValor ? 'picker-selected' : 'picker-placeholder';
+
+    return '
+    <input type="hidden" name="' . h($nomeCampo) . '" id="inp' . $prefixo . 'Id" value="' . h($valorInicial) . '"' . $req . '>
+    <div class="picker" id="' . $prefixo . 'Picker">
+        <div class="picker-trigger" id="' . $prefixo . 'Trigger" tabindex="0">
+            <span id="' . $prefixo . 'Label" class="' . $labelCls . '">' . h($labelTxt) . '</span>
+            <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
+        </div>
+        <div class="picker-dropdown d-none" id="' . $prefixo . 'Dropdown">
+            <div class="picker-search-wrap">
+                <i class="bi bi-search picker-search-icon"></i>
+                <input type="text" class="picker-search" id="' . $prefixo . 'Search" placeholder="' . h($placeholderBusca) . '" autocomplete="off">
+            </div>
+            <div class="picker-list" id="' . $prefixo . 'List"></div>
+        </div>
+    </div>';
 }

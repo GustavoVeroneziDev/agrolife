@@ -90,7 +90,8 @@ try {
     $stmt->execute();
     $animais = $stmt->fetchAll();
 
-    $especies = $pdo->query('SELECT * FROM Especies ORDER BY Nome ASC')->fetchAll();
+    $especies = $pdo->query('SELECT * FROM Especies ORDER BY Ordem ASC')->fetchAll();
+    $racas    = $pdo->query('SELECT IDRaca, FKEspecie, Nome FROM Racas ORDER BY Ordem ASC')->fetchAll();
     $donos    = $pdo->query(
         "SELECT IDUsuario, Nome, Email FROM Usuarios WHERE NivelAcesso = 'cliente' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
@@ -98,6 +99,7 @@ try {
     error_log('[Animais] ' . $e->getMessage());
     $animais    = [];
     $especies   = [];
+    $racas      = [];
     $donos      = [];
     $total      = 0;
     $totalGeral = 0;
@@ -239,26 +241,16 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Espécie *</label>
-                            <select name="especie" class="form-select" required>
-                                <option value="">Selecione</option>
-                                <?php foreach ($especies as $e): ?>
-                                    <option value="<?= h($e['IDEspecie']) ?>"><?= h($e['Icone']) ?> <?= h($e['Nome']) ?></option>
-                                <?php endforeach ?>
-                            </select>
+                            <?= campoPicker('naEspecie', 'especie', 'Selecione…', 'Buscar espécie…', obrigatorio: true) ?>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Sexo</label>
-                            <select name="sexo" class="form-select">
-                                <option value="">—</option>
-                                <option value="macho">Macho</option>
-                                <option value="femea">Fêmea</option>
-                                <option value="indeterminado">Indeterminado</option>
-                            </select>
+                            <?= campoPicker('naSexo', 'sexo', '—', '') ?>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Raça</label>
-                        <input type="text" name="raca" class="form-control">
+                        <?= campoPicker('naRaca', 'raca', 'Selecione a espécie primeiro', 'Buscar raça…') ?>
                     </div>
                     <div class="row g-2">
                         <div class="col-6">
@@ -284,6 +276,12 @@ require_once __DIR__ . '/../geral/header.php';
 var DONOS = <?= json_encode(array_map(fn($d) => [
     'id' => $d['IDUsuario'], 'nome' => $d['Nome'], 'email' => $d['Email'],
 ], $donos), JSON_UNESCAPED_UNICODE) ?>;
+var NA_ESPECIES = <?= json_encode(array_map(fn($e) => [
+    'id' => $e['IDEspecie'], 'nome' => $e['Nome'], 'icone' => $e['Icone'],
+], $especies), JSON_UNESCAPED_UNICODE) ?>;
+var NA_RACAS = <?= json_encode(array_map(fn($r) => [
+    'especie' => $r['FKEspecie'], 'nome' => $r['Nome'],
+], $racas), JSON_UNESCAPED_UNICODE) ?>;
 
 initPicker({
     pickerId: 'donoPicker', triggerId: 'donoTrigger', dropdownId: 'donoDropdown',
@@ -296,6 +294,8 @@ initPicker({
     },
     vazioMsg: 'Nenhum dono encontrado.',
 });
+
+initAnimalPickers('na', NA_ESPECIES, NA_RACAS);
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

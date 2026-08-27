@@ -68,7 +68,7 @@ try {
          WHERE tv.Ativo = 1
          ORDER BY tv.Nome ASC'
     )->fetchAll();
-    $especies = $pdo->query('SELECT * FROM Especies ORDER BY Nome ASC')->fetchAll();
+    $especies = $pdo->query('SELECT * FROM Especies ORDER BY Ordem ASC')->fetchAll();
 } catch (PDOException $e) {
     error_log('[TiposVacinaLista] ' . $e->getMessage());
     $tipos = $especies = [];

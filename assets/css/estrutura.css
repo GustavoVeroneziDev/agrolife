@@ -260,6 +260,12 @@ button, a, [role="button"] { touch-action: manipulation; }
   gap: .5rem;
 }
 .picker-trigger:hover { border-color: var(--accent); }
+.picker-trigger.disabled {
+  cursor: not-allowed;
+  opacity: .55;
+  background: var(--bg-hover);
+}
+.picker-trigger.disabled:hover { border-color: var(--card-border-color); }
 .picker-trigger.open {
   border-color: var(--accent);
   border-radius: var(--radius-btn) var(--radius-btn) 0 0;

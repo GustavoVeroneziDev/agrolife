@@ -65,7 +65,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
                 <?php if ($animal['Sexo']): ?>
                     <dt class="small text-secondary">Sexo</dt>
-                    <dd><?= h(ucfirst(str_replace('femea', 'fêmea', $animal['Sexo']))) ?></dd>
+                    <dd><?= formatarSexo($animal['Sexo']) ?></dd>
                 <?php endif ?>
                 <?php if ($animal['PesoKg']): ?>
                     <dt class="small text-secondary">Peso</dt>

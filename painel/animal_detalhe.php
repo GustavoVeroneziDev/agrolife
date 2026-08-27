@@ -85,9 +85,14 @@ try {
     );
     $historico->execute([':id' => $id]);
     $historico = $historico->fetchAll();
+
+    $racas = $pdo->prepare('SELECT Nome FROM Racas WHERE FKEspecie = :esp ORDER BY Ordem ASC');
+    $racas->execute([':esp' => $animal['FKEspecie']]);
+    $racas = $racas->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     error_log('[AnimalDetalhe] ' . $e->getMessage());
     $historico = [];
+    $racas     = [];
 }
 
 $paginaTitulo = h($animal['Nome']);
@@ -123,7 +128,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
                 <?php if ($animal['Sexo']): ?>
                     <dt class="small text-secondary">Sexo</dt>
-                    <dd><?= h(ucfirst(str_replace('femea', 'fêmea', $animal['Sexo']))) ?></dd>
+                    <dd><?= formatarSexo($animal['Sexo']) ?></dd>
                 <?php endif ?>
                 <?php if ($animal['PesoKg']): ?>
                     <dt class="small text-secondary">Peso</dt>
@@ -217,16 +222,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Raça</label>
-                            <input type="text" name="raca" class="form-control" value="<?= h($animal['Raca']) ?>">
+                            <?= campoPicker('eaRaca', 'raca', 'Selecione…', 'Buscar raça…', $animal['Raca'] ?? '', $animal['Raca'] ?? '') ?>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Sexo</label>
-                            <select name="sexo" class="form-select">
-                                <option value="">—</option>
-                                <option value="macho" <?= $animal['Sexo'] === 'macho' ? 'selected' : '' ?>>Macho</option>
-                                <option value="femea" <?= $animal['Sexo'] === 'femea' ? 'selected' : '' ?>>Fêmea</option>
-                                <option value="indeterminado" <?= $animal['Sexo'] === 'indeterminado' ? 'selected' : '' ?>>Indeterminado</option>
-                            </select>
+                            <?= campoPicker('eaSexo', 'sexo', '—', '', $animal['Sexo'] ?? '', formatarSexo($animal['Sexo'])) ?>
                         </div>
                     </div>
                     <div class="row g-2 mb-3">
@@ -258,6 +258,32 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <script>
+var EA_RACAS = <?= json_encode($racas, JSON_UNESCAPED_UNICODE) ?>.map(function (n) { return { nome: n }; });
+
+initPicker({
+    pickerId: 'eaRacaPicker', triggerId: 'eaRacaTrigger', dropdownId: 'eaRacaDropdown',
+    searchId: 'eaRacaSearch', listId: 'eaRacaList', hiddenId: 'inpeaRacaId', labelId: 'eaRacaLabel',
+    items: EA_RACAS,
+    chave: function (r) { return r.nome; },
+    renderItem: function (r) { return { title: r.nome }; },
+    matches: function (r, q) { return r.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhuma raça encontrada.',
+});
+
+initPicker({
+    pickerId: 'eaSexoPicker', triggerId: 'eaSexoTrigger', dropdownId: 'eaSexoDropdown',
+    searchId: 'eaSexoSearch', listId: 'eaSexoList', hiddenId: 'inpeaSexoId', labelId: 'eaSexoLabel',
+    items: [
+        { id: 'macho', label: '♂ Macho' },
+        { id: 'femea', label: '♀ Fêmea' },
+        { id: 'indeterminado', label: 'Indeterminado' },
+    ],
+    chave: function (s) { return s.id; },
+    renderItem: function (s) { return { title: s.label }; },
+    matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
+
 document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
         e.preventDefault();

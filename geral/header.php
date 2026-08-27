@@ -67,7 +67,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             document.removeEventListener('click', clickFora, true);
         }
         function clickFora(e) { if (!picker.contains(e.target)) fechar(); }
-        function toggle() { aberto ? fechar() : abrir(); }
+        function toggle() {
+            if (trigger.classList.contains('disabled')) return;
+            aberto ? fechar() : abrir();
+        }
         function filtrar(q) {
             q = q.toLowerCase();
             renderizar(opts.items.filter(function (it) { return opts.matches(it, q); }));
@@ -122,15 +125,85 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             iniciar();
         }
 
+        function limpar() {
+            selecionado = null;
+            if (hidden) hidden.value = '';
+            if (label) { label.textContent = opts.placeholder || ''; label.className = 'picker-placeholder'; }
+        }
+
         return {
             selecionar: selecionar,
-            limpar: function () {
-                selecionado = null;
-                if (hidden) hidden.value = '';
-                if (label) { label.textContent = opts.placeholder || ''; label.className = 'picker-placeholder'; }
-            },
+            limpar: limpar,
             getSelecionado: function () { return selecionado; },
+            // Troca a lista de itens (ex: raças mudam conforme a espécie escolhida).
+            // Limpa a seleção atual — o item selecionado pode não existir na lista nova.
+            setItems: function (novosItems, novoPlaceholder) {
+                opts.items = novosItems;
+                if (novoPlaceholder !== undefined) opts.placeholder = novoPlaceholder;
+                limpar();
+            },
+            desabilitar: function (motivoPlaceholder) {
+                if (trigger) trigger.classList.add('disabled');
+                limpar();
+                if (motivoPlaceholder !== undefined && label) label.textContent = motivoPlaceholder;
+            },
+            habilitar: function () {
+                if (trigger) trigger.classList.remove('disabled');
+            },
         };
+    }
+
+    // Amarra Espécie + Raça (raça filtra pela espécie escolhida) + Sexo, com
+    // os símbolos ♂/♀. Espera campos gerados por campoPicker() em funcoes.php
+    // com prefixo <base>Especie / <base>Raca / <base>Sexo.
+    // especies: [{id, nome, icone}] · racas: [{especie, nome}]
+    // especieInicialId: em tela de edição, a espécie já selecionada — filtra
+    // a raça de cara sem precisar reabrir o picker de espécie.
+    function initAnimalPickers(base, especies, racas, especieInicialId) {
+        var SEXOS = [
+            { id: 'macho', label: '♂ Macho' },
+            { id: 'femea', label: '♀ Fêmea' },
+            { id: 'indeterminado', label: 'Indeterminado' },
+        ];
+
+        var racaPk = initPicker({
+            pickerId: base + 'RacaPicker', triggerId: base + 'RacaTrigger', dropdownId: base + 'RacaDropdown',
+            searchId: base + 'RacaSearch', listId: base + 'RacaList', hiddenId: 'inp' + base + 'RacaId', labelId: base + 'RacaLabel',
+            items: especieInicialId ? racas.filter(function (r) { return r.especie === especieInicialId; }) : [],
+            chave: function (r) { return r.nome; },
+            renderItem: function (r) { return { title: r.nome }; },
+            matches: function (r, q) { return r.nome.toLowerCase().indexOf(q) !== -1; },
+            vazioMsg: 'Nenhuma raça encontrada.',
+        });
+        if (racaPk && !especieInicialId) racaPk.desabilitar('Selecione a espécie primeiro');
+
+        var especiePk = initPicker({
+            pickerId: base + 'EspeciePicker', triggerId: base + 'EspecieTrigger', dropdownId: base + 'EspecieDropdown',
+            searchId: base + 'EspecieSearch', listId: base + 'EspecieList', hiddenId: 'inp' + base + 'EspecieId', labelId: base + 'EspecieLabel',
+            items: especies,
+            chave: function (e) { return e.id; },
+            renderItem: function (e) { return { title: e.icone + ' ' + e.nome }; },
+            matches: function (e, q) { return e.nome.toLowerCase().indexOf(q) !== -1; },
+            vazioMsg: 'Nenhuma espécie encontrada.',
+            onSelect: function (e) {
+                if (!racaPk) return;
+                var filtradas = racas.filter(function (r) { return r.especie === e.id; });
+                racaPk.habilitar();
+                racaPk.setItems(filtradas, 'Selecione a raça…');
+            },
+        });
+
+        var sexoPk = initPicker({
+            pickerId: base + 'SexoPicker', triggerId: base + 'SexoTrigger', dropdownId: base + 'SexoDropdown',
+            searchId: base + 'SexoSearch', listId: base + 'SexoList', hiddenId: 'inp' + base + 'SexoId', labelId: base + 'SexoLabel',
+            items: SEXOS,
+            chave: function (s) { return s.id; },
+            renderItem: function (s) { return { title: s.label }; },
+            matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
+            vazioMsg: 'Nada encontrado.',
+        });
+
+        return { especiePk: especiePk, racaPk: racaPk, sexoPk: sexoPk };
     }
     </script>
 </head>
