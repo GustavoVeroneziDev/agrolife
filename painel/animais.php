@@ -5,11 +5,50 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 exigirLogin('admin');
 
-$busca   = trim($_GET['q'] ?? '');
+// Cadastro de animal via POST (usado tanto pelo CTA de estado vazio quanto pelo botão do topo)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_animal') {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Token inválido.', 'danger');
+    }
+    $fkDono  = trim($_POST['dono']       ?? '');
+    $nome    = trim($_POST['nome']       ?? '');
+    $especie = trim($_POST['especie']    ?? '');
+    $raca    = trim($_POST['raca']       ?? '');
+    $nasc    = trim($_POST['nascimento'] ?? '');
+    $sexo    = trim($_POST['sexo']       ?? '');
+    $peso    = trim($_POST['peso']       ?? '');
+
+    if ($fkDono === '' || $nome === '' || $especie === '') {
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Dono, nome e espécie são obrigatórios.', 'warning');
+    }
+
+    try {
+        $novoId = gerarUuid();
+        $pdo->prepare(
+            'INSERT INTO Animais (IDAnimal, FKDono, FKEspecie, Nome, Raca, DataNascimento, Sexo, PesoKg)
+             VALUES (:id, :dono, :esp, :nome, :raca, :nasc, :sexo, :peso)'
+        )->execute([
+            ':id'   => $novoId,
+            ':dono' => $fkDono,
+            ':esp'  => $especie,
+            ':nome' => $nome,
+            ':raca' => $raca ?: null,
+            ':nasc' => $nasc ?: null,
+            ':sexo' => $sexo ?: null,
+            ':peso' => $peso !== '' ? $peso : null,
+        ]);
+        redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $novoId, 'Animal cadastrado com sucesso!', 'success');
+    } catch (PDOException $e) {
+        error_log('[NovoAnimal] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Erro ao cadastrar animal.', 'danger');
+    }
+}
+
+$busca    = trim($_GET['q'] ?? '');
 $especieF = trim($_GET['especie'] ?? '');
-$pag     = max(1, (int) ($_GET['pag'] ?? 1));
-$por     = 24;
-$off     = ($pag - 1) * $por;
+$pag      = max(1, (int) ($_GET['pag'] ?? 1));
+$por      = 24;
+$off      = ($pag - 1) * $por;
 
 try {
     $where  = 'WHERE a.Ativo = 1';
@@ -28,6 +67,9 @@ try {
     );
     $cntStmt->execute($params);
     $total = (int) $cntStmt->fetchColumn();
+
+    // Total sem filtro — distingue "nenhum animal no sistema" de "busca sem resultado"
+    $totalGeral = (int) $pdo->query('SELECT COUNT(*) FROM Animais WHERE Ativo = 1')->fetchColumn();
 
     $stmt = $pdo->prepare(
         "SELECT a.*, e.Nome AS NomeEspecie, e.Icone AS IconeEspecie, u.Nome AS NomeDono,
@@ -49,11 +91,16 @@ try {
     $animais = $stmt->fetchAll();
 
     $especies = $pdo->query('SELECT * FROM Especies ORDER BY Nome ASC')->fetchAll();
+    $donos    = $pdo->query(
+        "SELECT IDUsuario, Nome, Email FROM Usuarios WHERE NivelAcesso = 'cliente' AND Ativo = 1 ORDER BY Nome ASC"
+    )->fetchAll();
 } catch (PDOException $e) {
     error_log('[Animais] ' . $e->getMessage());
-    $animais  = [];
-    $especies = [];
-    $total    = 0;
+    $animais    = [];
+    $especies   = [];
+    $donos      = [];
+    $total      = 0;
+    $totalGeral = 0;
 }
 
 $totalPag = max(1, (int) ceil($total / $por));
@@ -65,9 +112,16 @@ require_once __DIR__ . '/../geral/header.php';
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h4 class="fw-bold mb-0">Animais <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
-    <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent btn-sm">
-        <i class="bi bi-shield-plus me-1"></i> Registrar vacina
-    </a>
+    <div class="d-flex gap-2">
+        <?php if ($totalGeral > 0): ?>
+            <button class="btn btn-outline-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                <i class="bi bi-plus-lg me-1"></i> Novo animal
+            </button>
+        <?php endif ?>
+        <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent btn-sm">
+            <i class="bi bi-shield-plus me-1"></i> Registrar vacina
+        </a>
+    </div>
 </div>
 
 <form class="row g-2 mb-4" method="GET">
@@ -93,10 +147,20 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </form>
 
-<?php if (empty($animais)): ?>
+<?php if (empty($animais) && $totalGeral === 0): ?>
     <div class="card text-center py-5 text-secondary">
         <i class="bi bi-emoji-smile fs-1 d-block mb-2 opacity-25"></i>
-        <p class="mb-0">Nenhum animal encontrado.</p>
+        <p class="mb-3">Nenhum animal cadastrado ainda.</p>
+        <div>
+            <button class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                <i class="bi bi-plus-lg me-1"></i> Registrar primeiro animal
+            </button>
+        </div>
+    </div>
+<?php elseif (empty($animais)): ?>
+    <div class="card text-center py-5 text-secondary">
+        <i class="bi bi-search fs-1 d-block mb-2 opacity-25"></i>
+        <p class="mb-0">Nenhum animal encontrado para essa busca.</p>
     </div>
 <?php else: ?>
     <div class="row g-3">
@@ -136,5 +200,76 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     <?php endif ?>
 <?php endif ?>
+
+<div class="modal fade" id="modalNovoAnimal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                <input type="hidden" name="acao" value="novo_animal">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold">Cadastrar animal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Dono *</label>
+                        <select name="dono" class="form-select" required>
+                            <option value="">Selecione o dono</option>
+                            <?php foreach ($donos as $d): ?>
+                                <option value="<?= h($d['IDUsuario']) ?>"><?= h($d['Nome']) ?> — <?= h($d['Email']) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                        <?php if (empty($donos)): ?>
+                            <div class="form-text text-danger">Nenhum dono cadastrado ainda — <a href="<?= BASE ?>/painel/clientes.php?acao=novo">cadastre um primeiro</a>.</div>
+                        <?php endif ?>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Espécie *</label>
+                            <select name="especie" class="form-select" required>
+                                <option value="">Selecione</option>
+                                <?php foreach ($especies as $e): ?>
+                                    <option value="<?= h($e['IDEspecie']) ?>"><?= h($e['Icone']) ?> <?= h($e['Nome']) ?></option>
+                                <?php endforeach ?>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Sexo</label>
+                            <select name="sexo" class="form-select">
+                                <option value="">—</option>
+                                <option value="macho">Macho</option>
+                                <option value="femea">Fêmea</option>
+                                <option value="indeterminado">Indeterminado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Raça</label>
+                        <input type="text" name="raca" class="form-control">
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Nascimento</label>
+                            <input type="date" name="nascimento" class="form-control" max="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Peso (kg)</label>
+                            <input type="number" name="peso" class="form-control" step="0.1" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent"><i class="bi bi-plus-lg me-1"></i> Cadastrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

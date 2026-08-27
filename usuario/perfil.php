@@ -49,8 +49,8 @@ require_once __DIR__ . '/../geral/header.php';
                 </div>
                 <div class="mb-3">
                     <label class="form-label">E-mail</label>
-                    <input type="email" name="email" class="form-control" required maxlength="150"
-                           value="<?= h($usuario['Email']) ?>">
+                    <input type="email" class="form-control" value="<?= h($usuario['Email']) ?>" disabled>
+                    <div class="form-text">Para alterar seu e-mail, entre em contato com a clínica.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">WhatsApp</label>

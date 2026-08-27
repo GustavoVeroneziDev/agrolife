@@ -47,7 +47,6 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                     <span>VetSul</span>
                 </a>
             </div>
-            <small class="px-3 pb-2 d-block" style="margin-top:-.75rem;">Painel da Clínica</small>
             <?php
             $uri = $_SERVER['REQUEST_URI'];
             $menuItens = [
@@ -69,7 +68,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 <?php endforeach ?>
             </ul>
             <div class="sidebar-footer">
-                <div class="mb-1"><i class="bi bi-person-circle me-1"></i> <?= h($_nomeSession) ?></div>
+                <div class="mb-1 d-flex align-items-center">
+                    <i class="bi bi-person-circle me-1 flex-shrink-0"></i>
+                    <span class="nome-truncado"><?= h($_nomeSession) ?></span>
+                </div>
                 <a href="<?= BASE ?>/usuario/logout.php"><i class="bi bi-box-arrow-right me-1"></i> Sair</a>
                 <?php
                     // Nota: cada exec() usa no máximo um "%" — no Windows, escapeshellarg()
@@ -85,8 +87,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                         $gitVer = trim($hashOut[0]) . ' · ' . date('d/m/y H:i', strtotime(trim($dateOut[0])));
                     }
                 ?>
-                <div class="sidebar-version" title="Ambiente atual — confirme aqui se o deploy já chegou">
-                    <span class="badge bg-secondary me-1"><?= h(APP_AMBIENTE) ?></span>
+                <div class="sidebar-version" title="Confirme aqui se o deploy já chegou">
                     <?php if ($gitVer): ?>
                         <i class="bi bi-tag-fill me-1 opacity-50"></i><?= h($gitVer) ?>
                     <?php else: ?>
@@ -118,8 +119,9 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
 
                     <?php if (estaLogado()): ?>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle me-1"></i> <?= h($_nomeSession) ?>
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1 flex-shrink-0"></i>
+                                <span class="nome-truncado"><?= h($_nomeSession) ?></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/meus_animais.php">

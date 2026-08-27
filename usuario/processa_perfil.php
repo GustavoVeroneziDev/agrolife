@@ -19,14 +19,10 @@ $acao = $_POST['acao'] ?? '';
 
 if ($acao === 'dados') {
     $nome     = trim($_POST['nome']     ?? '');
-    $email    = trim($_POST['email']    ?? '');
     $telefone = trim($_POST['telefone'] ?? '');
 
-    if ($nome === '' || $email === '') {
-        redirecionarComMensagem(BASE . '/usuario/perfil.php', 'Nome e e-mail são obrigatórios.', 'warning');
-    }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        redirecionarComMensagem(BASE . '/usuario/perfil.php', 'E-mail inválido.', 'warning');
+    if ($nome === '') {
+        redirecionarComMensagem(BASE . '/usuario/perfil.php', 'Nome é obrigatório.', 'warning');
     }
 
     $telefoneFmt = $telefone !== '' ? sanitizarTelefone($telefone) : null;
@@ -35,14 +31,9 @@ if ($acao === 'dados') {
     }
 
     try {
-        $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :email AND IDUsuario != :id LIMIT 1');
-        $chk->execute([':email' => $email, ':id' => $uid]);
-        if ($chk->fetch()) {
-            redirecionarComMensagem(BASE . '/usuario/perfil.php', 'Este e-mail já está em uso.', 'warning');
-        }
-
-        $pdo->prepare('UPDATE Usuarios SET Nome = :nome, Email = :email, Telefone = :tel WHERE IDUsuario = :id')
-            ->execute([':nome' => $nome, ':email' => $email, ':tel' => $telefoneFmt, ':id' => $uid]);
+        // E-mail não é editável por aqui — só a clínica pode alterar
+        $pdo->prepare('UPDATE Usuarios SET Nome = :nome, Telefone = :tel WHERE IDUsuario = :id')
+            ->execute([':nome' => $nome, ':tel' => $telefoneFmt, ':id' => $uid]);
 
         $_SESSION['usuario_nome'] = $nome;
         redirecionarComMensagem(BASE . '/usuario/perfil.php', 'Dados atualizados com sucesso!', 'success');

@@ -134,6 +134,15 @@ button, a, [role="button"] { touch-action: manipulation; }
   align-items: center;
 }
 .sidebar-footer a:hover { color: var(--accent); }
+.nome-truncado {
+  display: inline-block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .sidebar-version {
   margin-top: .6rem;
   font-size: .68rem;
