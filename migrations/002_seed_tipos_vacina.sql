@@ -26,7 +26,7 @@ ON DUPLICATE KEY UPDATE Descricao = VALUES(Descricao), IntervaloMeses = VALUES(I
 -- IntervaloMeses NULL = dose única (ex: vacinas de viagem)
 
 INSERT INTO ConfiguracoesSistema (IDConfig, Chave, Valor) VALUES
-(UUID(), 'nome_clinica', 'VetSul'),
+(UUID(), 'nome_clinica', 'Agro Life'),
 (UUID(), 'telefone_clinica', ''),
 (UUID(), 'endereco_clinica', ''),
 (UUID(), 'msg_vacina_semana',

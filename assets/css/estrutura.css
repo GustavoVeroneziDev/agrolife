@@ -1,5 +1,5 @@
 /* ================================================================
-   VetSul — estrutura.css
+   Agro Life — estrutura.css
    Reset → tipografia → layout → componentes → responsivo.
    Nunca escreve uma cor "crua" — toda cor vem de var(--token),
    definido em paleta.css (carregado antes deste arquivo).

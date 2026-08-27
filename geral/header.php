@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 require_once __DIR__ . '/../config/versao.php';
 
-$paginaTitulo = $paginaTitulo ?? 'VetSul';
+$paginaTitulo = $paginaTitulo ?? APP_NOME;
 $areaAtual    = $areaAtual    ?? '';
 $ehPainel     = $areaAtual === 'painel';
 
@@ -24,7 +24,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($paginaTitulo) ?> — VetSul</title>
+    <title><?= h($paginaTitulo) ?> — <?= APP_NOME ?></title>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#0d9488">
 
@@ -261,7 +261,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             <div class="sidebar-brand">
                 <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none" style="color:inherit;">
                     <i class="bi bi-heart-pulse-fill" style="font-size:1.4rem;color:var(--accent);"></i>
-                    <span>VetSul</span>
+                    <span><?= APP_NOME ?></span>
                 </a>
             </div>
             <?php
@@ -321,7 +321,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 </button>
                 <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none">
                     <i class="bi bi-heart-pulse-fill" style="font-size:1.3rem;color:var(--accent);"></i>
-                    <span class="fw-bold" style="color:var(--text-main);">VetSul</span>
+                    <span class="fw-bold" style="color:var(--text-main);"><?= APP_NOME ?></span>
                 </a>
             </div>
 
@@ -331,7 +331,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             <nav class="navbar topnav sticky-top">
                 <div class="container-lg">
                     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= BASE ?>/index.php">
-                        <i class="bi bi-heart-pulse-fill"></i> VetSul
+                        <i class="bi bi-heart-pulse-fill"></i> <?= APP_NOME ?>
                     </a>
 
                     <?php if (estaLogado()): ?>

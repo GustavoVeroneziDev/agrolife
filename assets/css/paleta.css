@@ -1,5 +1,5 @@
 /* ================================================================
-   VetSul — paleta.css
+   Agro Life — paleta.css
    ÚNICA fonte de cores do sistema. estrutura.css e as páginas nunca
    escrevem uma cor "crua" (hex/rgb) — sempre var(--token) daqui.
    Trocar a paleta inteira do projeto é editar só este arquivo.

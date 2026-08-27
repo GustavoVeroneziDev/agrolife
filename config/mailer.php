@@ -19,14 +19,14 @@ function enviarEmail(string $para, string $assunto, string $htmlBody, string $te
 
 function _mailerNativo(string $para, string $assunto, string $html, string $texto): bool
 {
-    $from = defined('SMTP_FROM')      ? SMTP_FROM      : 'nao-responda@vetsul.local';
-    $nome = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'VetSul';
+    $from = defined('SMTP_FROM')      ? SMTP_FROM      : 'nao-responda@agrolife.local';
+    $nome = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : APP_NOME;
     $b    = md5(uniqid('vs_', true));
 
     $hdrs  = "From: =?UTF-8?B?" . base64_encode($nome) . "?= <{$from}>\r\n";
     $hdrs .= "MIME-Version: 1.0\r\n";
     $hdrs .= "Content-Type: multipart/alternative; boundary=\"{$b}\"\r\n";
-    $hdrs .= "X-Mailer: VetSul/1.0";
+    $hdrs .= "X-Mailer: " . APP_NOME . "/1.0";
 
     $body  = "--{$b}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$texto}\r\n\r\n";
     $body .= "--{$b}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{$html}\r\n\r\n--{$b}--";
@@ -42,7 +42,7 @@ function _mailerSmtp(string $para, string $assunto, string $html, string $texto)
     $user   = SMTP_USER;
     $pass   = SMTP_PASS;
     $from   = defined('SMTP_FROM')      ? SMTP_FROM      : $user;
-    $nome   = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'VetSul';
+    $nome   = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : APP_NOME;
 
     $ctx  = stream_context_create([
         'ssl' => ['verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true],
@@ -74,12 +74,12 @@ function _mailerSmtp(string $para, string $assunto, string $html, string $texto)
 
     $recv(); // saudação do servidor
 
-    $cmd('EHLO ' . (gethostname() ?: 'vetsul.local'));
+    $cmd('EHLO ' . (gethostname() ?: 'agrolife.local'));
 
     if ($secure === 'tls') {
         $cmd('STARTTLS');
         stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT);
-        $cmd('EHLO ' . (gethostname() ?: 'vetsul.local'));
+        $cmd('EHLO ' . (gethostname() ?: 'agrolife.local'));
     }
 
     $cmd('AUTH LOGIN');
@@ -102,7 +102,7 @@ function _mailerSmtp(string $para, string $assunto, string $html, string $texto)
     $msg .= "Subject: =?UTF-8?B?" . base64_encode($assunto) . "?=\r\n";
     $msg .= "MIME-Version: 1.0\r\n";
     $msg .= "Content-Type: multipart/alternative; boundary=\"{$b}\"\r\n";
-    $msg .= "X-Mailer: VetSul/1.0\r\n\r\n";
+    $msg .= "X-Mailer: " . APP_NOME . "/1.0\r\n\r\n";
     $msg .= "--{$b}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n{$texto}\r\n\r\n";
     $msg .= "--{$b}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n{$html}\r\n\r\n--{$b}--\r\n";
 
@@ -122,7 +122,8 @@ function _mailerSmtp(string $para, string $assunto, string $html, string $texto)
 
 function emailHtml(string $titulo, string $corpo): string
 {
-    $t = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
+    $t     = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
+    $marca = htmlspecialchars(APP_NOME, ENT_QUOTES, 'UTF-8');
     return <<<HTML
 <!DOCTYPE html><html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -132,7 +133,7 @@ function emailHtml(string $titulo, string $corpo): string
 <tr><td align="center">
 <table width="100%" style="max-width:520px;background:#fff;border-radius:14px;border:1px solid #b9e2dc;overflow:hidden;box-shadow:0 2px 12px rgba(13,36,32,.07);">
   <tr><td style="background:#0d9488;padding:20px 28px;text-align:center;">
-    <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;">VetSul</span>
+    <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;">{$marca}</span>
   </td></tr>
   <tr><td style="padding:28px 32px;color:#0d2420;line-height:1.6;">
     {$corpo}
