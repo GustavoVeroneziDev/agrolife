@@ -6,9 +6,11 @@
 SET NAMES utf8mb4;
 
 -- ------------------------------------------------------------
--- Espécies já existentes (001/002) não têm coluna Ordem ainda
+-- Espécies já existentes (001/002) não têm coluna Ordem ainda.
+-- "IF NOT EXISTS" em ADD COLUMN é extensão do MariaDB — não roda no
+-- MySQL puro (ex: HostGator). Sintaxe simples, roda uma vez só.
 -- ------------------------------------------------------------
-ALTER TABLE Especies ADD COLUMN IF NOT EXISTS Ordem INT NOT NULL DEFAULT 0
+ALTER TABLE Especies ADD COLUMN Ordem INT NOT NULL DEFAULT 0
     COMMENT 'ordem de exibicao — mais comum primeiro, nao alfabetica';
 
 CREATE TABLE IF NOT EXISTS Racas (
