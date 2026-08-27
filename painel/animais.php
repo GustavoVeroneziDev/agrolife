@@ -258,11 +258,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">Nascimento</label>
-                            <input type="date" name="nascimento" class="form-control" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>">
+                            <input type="date" name="nascimento" class="form-control" data-validar="nascimento" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
-                            <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,00" inputmode="numeric">
+                            <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,000" inputmode="numeric">
                             <input type="hidden" name="peso" id="naPesoReal">
                         </div>
                     </div>

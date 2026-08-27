@@ -111,6 +111,40 @@ function vsMascaraPeso(input) {
     input.setAttribute('inputmode', 'numeric');
 }
 document.querySelectorAll('[data-mask="peso"]').forEach(vsMascaraPeso);
+
+// ── Validação de data de nascimento — avisa e bloqueia o envio ANTES
+// de mandar pro servidor, não só depois de voltar com flash message.
+// O PHP (dataNascimentoValida() em funcoes.php) continua validando de
+// novo no backend — isso aqui é só pra dar feedback mais rápido.
+function vsValidarNascimento(input) {
+    var erro = document.createElement('div');
+    erro.className = 'small mt-1';
+    erro.style.color = 'var(--cor-perigo)';
+    erro.style.display = 'none';
+    input.insertAdjacentElement('afterend', erro);
+
+    function checar() {
+        if (!input.value) { erro.style.display = 'none'; return true; }
+        var hoje = new Date().toISOString().slice(0, 10);
+        var d = new Date();
+        d.setFullYear(d.getFullYear() - 100);
+        var limite = d.toISOString().slice(0, 10);
+        var invalido = input.value > hoje || input.value < limite;
+        erro.textContent = invalido ? 'Data inválida — não pode ser no futuro nem passar de 100 anos atrás.' : '';
+        erro.style.display = invalido ? '' : 'none';
+        return !invalido;
+    }
+    input.addEventListener('input', checar);
+    input.addEventListener('change', checar);
+
+    var form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (!checar()) { e.preventDefault(); input.focus(); }
+        });
+    }
+}
+document.querySelectorAll('[data-validar="nascimento"]').forEach(vsValidarNascimento);
 // initPicker()/escHtmlPicker() ficam no <head> de geral/header.php — precisam
 // existir antes do footer.php ser incluído (páginas chamam initPicker no
 // próprio <script>, que roda antes deste aqui).
