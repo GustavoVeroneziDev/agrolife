@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     $sexo    = trim($_POST['sexo']       ?? '');
     $peso    = trim($_POST['peso']       ?? '');
 
-    if ($fkDono === '' || $nome === '' || $especie === '') {
-        redirecionarComMensagem(BASE . '/painel/animais.php', 'Dono, nome e espécie são obrigatórios.', 'warning');
+    if ($fkDono === '' || $nome === '' || $especie === '' || $raca === '' || $sexo === '') {
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Dono, nome, espécie, raça e sexo são obrigatórios.', 'warning');
     }
 
     try {
@@ -32,9 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
             ':dono' => $fkDono,
             ':esp'  => $especie,
             ':nome' => $nome,
-            ':raca' => $raca ?: null,
+            ':raca' => $raca,
             ':nasc' => $nasc ?: null,
-            ':sexo' => $sexo ?: null,
+            ':sexo' => $sexo,
             ':peso' => $peso !== '' ? $peso : null,
         ]);
         redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $novoId, 'Animal cadastrado com sucesso!', 'success');
@@ -235,7 +235,7 @@ require_once __DIR__ . '/../geral/header.php';
                         <?php endif ?>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nome *</label>
+                        <label class="form-label">Nome do animal *</label>
                         <input type="text" name="nome" class="form-control" required>
                     </div>
                     <div class="row g-2 mb-3">
@@ -244,13 +244,13 @@ require_once __DIR__ . '/../geral/header.php';
                             <?= campoPicker('naEspecie', 'especie', 'Selecione…', 'Buscar espécie…', obrigatorio: true) ?>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Sexo</label>
-                            <?= campoPicker('naSexo', 'sexo', '—', '') ?>
+                            <label class="form-label">Sexo *</label>
+                            <?= campoPicker('naSexo', 'sexo', '—', '', obrigatorio: true, comBusca: false) ?>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Raça</label>
-                        <?= campoPicker('naRaca', 'raca', 'Selecione a espécie primeiro', 'Buscar raça…') ?>
+                        <label class="form-label">Raça *</label>
+                        <?= campoPicker('naRaca', 'raca', 'Selecione a espécie primeiro', 'Buscar raça…', obrigatorio: true) ?>
                     </div>
                     <div class="row g-2">
                         <div class="col-6">
@@ -259,7 +259,8 @@ require_once __DIR__ . '/../geral/header.php';
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
-                            <input type="number" name="peso" class="form-control" step="0.1" min="0">
+                            <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,00" inputmode="numeric">
+                            <input type="hidden" name="peso" id="naPesoReal">
                         </div>
                     </div>
                 </div>

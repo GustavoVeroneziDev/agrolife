@@ -91,6 +91,26 @@ function vsMascaraTel(input) {
     input.setAttribute('inputmode', 'numeric');
 }
 document.querySelectorAll('[data-mask="tel"]').forEach(vsMascaraTel);
+
+// ── Máscara de peso (estilo dinheiro — digita da direita pra esquerda,
+// "1050" vira "10,50") ─────────────────────────────────────────────
+// input: campo visível (texto). data-target aponta pro id do campo
+// hidden que recebe o valor real, com ponto, pro backend.
+function vsMascaraPeso(input) {
+    var alvo = input.dataset.target ? document.getElementById(input.dataset.target) : null;
+    function fmt() {
+        var d = input.value.replace(/\D/g, '').slice(0, 5); // máx 999,99 (cabe no DECIMAL(5,2))
+        if (!d) { input.value = ''; if (alvo) alvo.value = ''; return; }
+        while (d.length < 3) d = '0' + d;
+        var inteiro = d.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
+        var decimal = d.slice(-2);
+        input.value = inteiro + ',' + decimal;
+        if (alvo) alvo.value = inteiro + '.' + decimal;
+    }
+    input.addEventListener('input', fmt);
+    input.setAttribute('inputmode', 'numeric');
+}
+document.querySelectorAll('[data-mask="peso"]').forEach(vsMascaraPeso);
 // initPicker()/escHtmlPicker() ficam no <head> de geral/header.php — precisam
 // existir antes do footer.php ser incluído (páginas chamam initPicker no
 // próprio <script>, que roda antes deste aqui).

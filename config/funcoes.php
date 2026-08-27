@@ -394,25 +394,32 @@ function campoPicker(
     string $placeholderBusca,
     string $valorInicial = '',
     string $labelInicial = '',
-    bool $obrigatorio = false
+    bool $obrigatorio = false,
+    bool $comBusca = true,
+    string $iconeInicial = ''
 ): string {
     $req      = $obrigatorio ? ' required' : '';
     $temValor = $valorInicial !== '';
     $labelTxt = $temValor ? $labelInicial : $placeholder;
     $labelCls = $temValor ? 'picker-selected' : 'picker-placeholder';
+    // $iconeInicial é sempre uma classe fixa escrita no PHP chamador (ex: "bi-gender-male"),
+    // nunca dado de usuário — por isso entra como HTML confiável, sem passar por h().
+    $iconeHtml = $iconeInicial !== '' ? '<i class="bi ' . $iconeInicial . ' me-1"></i>' : '';
+
+    $busca = $comBusca ? '
+            <div class="picker-search-wrap">
+                <i class="bi bi-search picker-search-icon"></i>
+                <input type="text" class="picker-search" id="' . $prefixo . 'Search" placeholder="' . h($placeholderBusca) . '" autocomplete="off">
+            </div>' : '';
 
     return '
     <input type="hidden" name="' . h($nomeCampo) . '" id="inp' . $prefixo . 'Id" value="' . h($valorInicial) . '"' . $req . '>
     <div class="picker" id="' . $prefixo . 'Picker">
         <div class="picker-trigger" id="' . $prefixo . 'Trigger" tabindex="0">
-            <span id="' . $prefixo . 'Label" class="' . $labelCls . '">' . h($labelTxt) . '</span>
+            <span id="' . $prefixo . 'Label" class="' . $labelCls . '">' . $iconeHtml . h($labelTxt) . '</span>
             <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
         </div>
-        <div class="picker-dropdown d-none" id="' . $prefixo . 'Dropdown">
-            <div class="picker-search-wrap">
-                <i class="bi bi-search picker-search-icon"></i>
-                <input type="text" class="picker-search" id="' . $prefixo . 'Search" placeholder="' . h($placeholderBusca) . '" autocomplete="off">
-            </div>
+        <div class="picker-dropdown d-none" id="' . $prefixo . 'Dropdown">' . $busca . '
             <div class="picker-list" id="' . $prefixo . 'List"></div>
         </div>
     </div>';

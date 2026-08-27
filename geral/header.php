@@ -55,9 +55,11 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             aberto = true;
             trigger.classList.add('open');
             dropdown.classList.remove('d-none');
-            search.value = '';
             renderizar(opts.items);
-            setTimeout(function () { search.focus(); }, 40);
+            if (search) {
+                search.value = '';
+                setTimeout(function () { search.focus(); }, 40);
+            }
             document.addEventListener('click', clickFora, true);
         }
         function fechar() {
@@ -119,7 +121,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             trigger.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
             });
-            search.addEventListener('input', function () { filtrar(this.value); });
+            if (search) search.addEventListener('input', function () { filtrar(this.value); });
         }
 
         // initPicker() sempre roda num <script> que vem DEPOIS do HTML do

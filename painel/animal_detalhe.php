@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $chip  = trim($_POST['microchip'] ?? '');
         $obs   = trim($_POST['observacoes'] ?? '');
 
-        if ($nome === '') {
-            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Nome é obrigatório.', 'warning');
+        if ($nome === '' || $raca === '' || $sexo === '') {
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Nome, raça e sexo são obrigatórios.', 'warning');
         }
 
         try {
@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         PesoKg=:peso, Microchip=:chip, Observacoes=:obs
                  WHERE IDAnimal = :id'
             )->execute([
-                ':nome' => $nome, ':raca' => $raca ?: null, ':nasc' => $nasc ?: null,
-                ':sexo' => $sexo ?: null, ':peso' => $peso !== '' ? $peso : null,
+                ':nome' => $nome, ':raca' => $raca, ':nasc' => $nasc ?: null,
+                ':sexo' => $sexo, ':peso' => $peso !== '' ? $peso : null,
                 ':chip' => $chip ?: null, ':obs' => $obs ?: null, ':id' => $id,
             ]);
             redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Animal atualizado com sucesso!', 'success');
@@ -216,17 +216,30 @@ require_once __DIR__ . '/../geral/header.php';
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Nome *</label>
+                        <label class="form-label">Nome do animal *</label>
                         <input type="text" name="nome" class="form-control" required value="<?= h($animal['Nome']) ?>">
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label">Raça</label>
-                            <?= campoPicker('eaRaca', 'raca', 'Selecione…', 'Buscar raça…', $animal['Raca'] ?? '', $animal['Raca'] ?? '') ?>
+                            <label class="form-label">Raça *</label>
+                            <?= campoPicker('eaRaca', 'raca', 'Selecione…', 'Buscar raça…', $animal['Raca'] ?? '', $animal['Raca'] ?? '', obrigatorio: true) ?>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Sexo</label>
-                            <?= campoPicker('eaSexo', 'sexo', '—', '', $animal['Sexo'] ?? '', formatarSexo($animal['Sexo'])) ?>
+                            <label class="form-label">Sexo *</label>
+                            <?php
+                                $iconeSexoAtual = match ($animal['Sexo'] ?? '') {
+                                    'macho' => 'bi-gender-male',
+                                    'femea' => 'bi-gender-female',
+                                    default => '',
+                                };
+                                $textoSexoAtual = match ($animal['Sexo'] ?? '') {
+                                    'macho' => 'Macho',
+                                    'femea' => 'Fêmea',
+                                    'indeterminado' => 'Indeterminado',
+                                    default => '',
+                                };
+                            ?>
+                            <?= campoPicker('eaSexo', 'sexo', '—', '', $animal['Sexo'] ?? '', $textoSexoAtual, obrigatorio: true, comBusca: false, iconeInicial: $iconeSexoAtual) ?>
                         </div>
                     </div>
                     <div class="row g-2 mb-3">
@@ -236,7 +249,8 @@ require_once __DIR__ . '/../geral/header.php';
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
-                            <input type="number" name="peso" class="form-control" step="0.1" min="0" value="<?= h($animal['PesoKg']) ?>">
+                            <input type="text" id="eaPesoVisivel" class="form-control" data-mask="peso" data-target="eaPesoReal" placeholder="0,00" inputmode="numeric" value="<?= $animal['PesoKg'] ? h(number_format((float) $animal['PesoKg'], 2, ',', '')) : '' ?>">
+                            <input type="hidden" name="peso" id="eaPesoReal" value="<?= h($animal['PesoKg']) ?>">
                         </div>
                     </div>
                     <div class="mb-3">
