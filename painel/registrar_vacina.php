@@ -60,8 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 try {
     $animais = $pdo->query(
-        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono
-         FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono
+        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
+         FROM Animais a
+         JOIN Usuarios u ON u.IDUsuario = a.FKDono
+         JOIN Especies e ON e.IDEspecie = a.FKEspecie
          WHERE a.Ativo = 1 ORDER BY a.Nome ASC"
     )->fetchAll();
 
@@ -71,7 +73,11 @@ try {
 
     $animalPre = null;
     if ($animalPreId) {
-        $stmt = $pdo->prepare('SELECT IDAnimal, Nome FROM Animais WHERE IDAnimal = :id AND Ativo = 1 LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono
+             FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono
+             WHERE a.IDAnimal = :id AND a.Ativo = 1 LIMIT 1'
+        );
         $stmt->execute([':id' => $animalPreId]);
         $animalPre = $stmt->fetch();
     }
@@ -101,15 +107,22 @@ require_once __DIR__ . '/../geral/header.php';
 
                 <div class="mb-3">
                     <label class="form-label">Animal *</label>
-                    <select name="animal" id="selAnimal" class="form-select" required <?= $animalPre ? '' : '' ?>>
-                        <option value="">Selecione o animal</option>
-                        <?php foreach ($animais as $a): ?>
-                            <option value="<?= h($a['IDAnimal']) ?>" data-especie="<?= h($a['FKEspecie']) ?>"
-                                <?= $animalPre && $animalPre['IDAnimal'] === $a['IDAnimal'] ? 'selected' : '' ?>>
-                                <?= h($a['Nome']) ?> — <?= h($a['NomeDono']) ?>
-                            </option>
-                        <?php endforeach ?>
-                    </select>
+                    <input type="hidden" name="animal" id="inpAnimalId" required value="<?= $animalPre ? h($animalPre['IDAnimal']) : '' ?>">
+                    <div class="picker" id="animalPicker">
+                        <div class="picker-trigger" id="animalTrigger" tabindex="0">
+                            <span id="animalLabel" class="<?= $animalPre ? 'picker-selected' : 'picker-placeholder' ?>">
+                                <?= $animalPre ? h($animalPre['Nome']) . ' — ' . h($animalPre['NomeDono']) : 'Buscar animal ou dono…' ?>
+                            </span>
+                            <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
+                        </div>
+                        <div class="picker-dropdown d-none" id="animalDropdown">
+                            <div class="picker-search-wrap">
+                                <i class="bi bi-search picker-search-icon"></i>
+                                <input type="text" class="picker-search" id="animalSearch" placeholder="Nome do animal ou do dono…" autocomplete="off">
+                            </div>
+                            <div class="picker-list" id="animalList"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -163,25 +176,40 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <script>
-// Filtra o select de vacinas pela espécie do animal escolhido
-(function () {
-    var selAnimal = document.getElementById('selAnimal');
-    var selTipo   = document.getElementById('selTipo');
-    var opcoesTipo = Array.from(selTipo.options);
+var ANIMAIS = <?= json_encode(array_map(fn($a) => [
+    'id' => $a['IDAnimal'], 'nome' => $a['Nome'], 'dono' => $a['NomeDono'],
+    'especie' => $a['FKEspecie'], 'icone' => $a['IconeEspecie'],
+], $animais), JSON_UNESCAPED_UNICODE) ?>;
 
-    function filtrar() {
-        var opt = selAnimal.options[selAnimal.selectedIndex];
-        var especie = opt ? opt.dataset.especie : '';
-        opcoesTipo.forEach(function (o) {
-            if (!o.value) return;
-            var esp = o.dataset.especie;
-            o.hidden = !!(especie && esp && esp !== especie);
-        });
-        if (selTipo.selectedOptions[0] && selTipo.selectedOptions[0].hidden) selTipo.value = '';
-    }
-    selAnimal.addEventListener('change', filtrar);
-    filtrar();
-})();
+// Filtra o select de vacinas pela espécie do animal escolhido
+var selTipo    = document.getElementById('selTipo');
+var opcoesTipo = Array.from(selTipo.options);
+
+function filtrarVacinasPorEspecie(especie) {
+    opcoesTipo.forEach(function (o) {
+        if (!o.value) return;
+        var esp = o.dataset.especie;
+        o.hidden = !!(especie && esp && esp !== especie);
+    });
+    if (selTipo.selectedOptions[0] && selTipo.selectedOptions[0].hidden) selTipo.value = '';
+}
+
+var animalPicker = initPicker({
+    pickerId: 'animalPicker', triggerId: 'animalTrigger', dropdownId: 'animalDropdown',
+    searchId: 'animalSearch', listId: 'animalList', hiddenId: 'inpAnimalId', labelId: 'animalLabel',
+    items: ANIMAIS,
+    chave: function (a) { return a.id; },
+    renderItem: function (a) { return { title: (a.icone ? a.icone + ' ' : '') + a.nome, sub: a.dono }; },
+    matches: function (a, q) {
+        return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
+    },
+    vazioMsg: 'Nenhum animal encontrado.',
+    onSelect: function (a) { filtrarVacinasPorEspecie(a.especie); },
+});
+
+<?php if ($animalPre): ?>
+    filtrarVacinasPorEspecie(<?= json_encode($animalPre['FKEspecie']) ?>);
+<?php endif ?>
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

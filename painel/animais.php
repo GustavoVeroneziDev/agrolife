@@ -214,12 +214,20 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Dono *</label>
-                        <select name="dono" class="form-select" required>
-                            <option value="">Selecione o dono</option>
-                            <?php foreach ($donos as $d): ?>
-                                <option value="<?= h($d['IDUsuario']) ?>"><?= h($d['Nome']) ?> — <?= h($d['Email']) ?></option>
-                            <?php endforeach ?>
-                        </select>
+                        <input type="hidden" name="dono" id="inpDonoId" required>
+                        <div class="picker" id="donoPicker">
+                            <div class="picker-trigger" id="donoTrigger" tabindex="0">
+                                <span id="donoLabel" class="picker-placeholder">Buscar dono por nome ou e-mail…</span>
+                                <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
+                            </div>
+                            <div class="picker-dropdown d-none" id="donoDropdown">
+                                <div class="picker-search-wrap">
+                                    <i class="bi bi-search picker-search-icon"></i>
+                                    <input type="text" class="picker-search" id="donoSearch" placeholder="Nome ou e-mail…" autocomplete="off">
+                                </div>
+                                <div class="picker-list" id="donoList"></div>
+                            </div>
+                        </div>
                         <?php if (empty($donos)): ?>
                             <div class="form-text text-danger">Nenhum dono cadastrado ainda — <a href="<?= BASE ?>/painel/clientes.php?acao=novo">cadastre um primeiro</a>.</div>
                         <?php endif ?>
@@ -271,5 +279,23 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     </div>
 </div>
+
+<script>
+var DONOS = <?= json_encode(array_map(fn($d) => [
+    'id' => $d['IDUsuario'], 'nome' => $d['Nome'], 'email' => $d['Email'],
+], $donos), JSON_UNESCAPED_UNICODE) ?>;
+
+initPicker({
+    pickerId: 'donoPicker', triggerId: 'donoTrigger', dropdownId: 'donoDropdown',
+    searchId: 'donoSearch', listId: 'donoList', hiddenId: 'inpDonoId', labelId: 'donoLabel',
+    items: DONOS,
+    chave: function (d) { return d.id; },
+    renderItem: function (d) { return { title: d.nome, sub: d.email }; },
+    matches: function (d, q) {
+        return d.nome.toLowerCase().indexOf(q) !== -1 || d.email.toLowerCase().indexOf(q) !== -1;
+    },
+    vazioMsg: 'Nenhum dono encontrado.',
+});
+</script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>
