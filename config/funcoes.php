@@ -353,8 +353,8 @@ function formatarIdade(?string $dataNascimento): string
 function formatarSexo(?string $sexo): string
 {
     return match ($sexo) {
-        'macho' => '♂ Macho',
-        'femea' => '♀ Fêmea',
+        'macho' => '<i class="bi bi-gender-male me-1"></i>Macho',
+        'femea' => '<i class="bi bi-gender-female me-1"></i>Fêmea',
         'indeterminado' => 'Indeterminado',
         default => '',
     };

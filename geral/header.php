@@ -83,9 +83,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             }
             lista.forEach(function (it) {
                 var r = opts.renderItem(it);
+                var icone = r.icon ? '<i class="bi ' + r.icon + ' me-1"></i>' : '';
                 var div = document.createElement('div');
                 div.className = 'picker-item' + (selecionado && opts.chave(selecionado) === opts.chave(it) ? ' picker-active' : '');
-                div.innerHTML = '<div class="picker-item-titulo">' + escHtmlPicker(r.title) + '</div>'
+                div.innerHTML = '<div class="picker-item-titulo">' + icone + escHtmlPicker(r.title) + '</div>'
                     + (r.sub ? '<div class="picker-item-sub">' + escHtmlPicker(r.sub) + '</div>' : '');
                 div.addEventListener('mousedown', function (e) { e.preventDefault(); selecionar(it); });
                 list.appendChild(div);
@@ -95,7 +96,11 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             selecionado = it;
             hidden.value = opts.chave(it);
             var r = opts.renderItem(it);
-            label.textContent = r.title + (r.sub ? ' — ' + r.sub : '');
+            var icone = r.icon ? '<i class="bi ' + r.icon + ' me-1"></i>' : '';
+            // r.title/r.sub podem vir de dado do usuário (nome de dono, animal…) —
+            // sempre escapa antes de jogar em innerHTML, só o ícone é HTML confiável
+            // (vem sempre de uma classe fixa escrita no próprio renderItem()).
+            label.innerHTML = icone + escHtmlPicker(r.title) + (r.sub ? ' — ' + escHtmlPicker(r.sub) : '');
             label.className = 'picker-selected';
             fechar();
             if (opts.onSelect) opts.onSelect(it);
@@ -117,13 +122,14 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             search.addEventListener('input', function () { filtrar(this.value); });
         }
 
-        // O elemento pode ainda não existir no DOM se initPicker() for chamado
-        // antes do <body> terminar de carregar — adia pro DOMContentLoaded nesse caso.
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', iniciar);
-        } else {
-            iniciar();
-        }
+        // initPicker() sempre roda num <script> que vem DEPOIS do HTML do
+        // campo no documento (é assim em todo lugar que ela é chamada) —
+        // então os elementos já existem, mesmo com document.readyState ainda
+        // "loading" (o resto da página abaixo pode nao ter carregado, mas
+        // isso não importa aqui). Roda direto: adiar pro DOMContentLoaded
+        // quebrava desabilitar()/setItems() chamados logo após a criação,
+        // porque "trigger" etc. só seriam preenchidos depois, no futuro.
+        iniciar();
 
         function limpar() {
             selecionado = null;
@@ -154,16 +160,16 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     }
 
     // Amarra Espécie + Raça (raça filtra pela espécie escolhida) + Sexo, com
-    // os símbolos ♂/♀. Espera campos gerados por campoPicker() em funcoes.php
-    // com prefixo <base>Especie / <base>Raca / <base>Sexo.
+    // os ícones de gênero do Bootstrap Icons. Espera campos gerados por
+    // campoPicker() em funcoes.php com prefixo <base>Especie / <base>Raca / <base>Sexo.
     // especies: [{id, nome, icone}] · racas: [{especie, nome}]
     // especieInicialId: em tela de edição, a espécie já selecionada — filtra
     // a raça de cara sem precisar reabrir o picker de espécie.
     function initAnimalPickers(base, especies, racas, especieInicialId) {
         var SEXOS = [
-            { id: 'macho', label: '♂ Macho' },
-            { id: 'femea', label: '♀ Fêmea' },
-            { id: 'indeterminado', label: 'Indeterminado' },
+            { id: 'macho', label: 'Macho', icon: 'bi-gender-male' },
+            { id: 'femea', label: 'Fêmea', icon: 'bi-gender-female' },
+            { id: 'indeterminado', label: 'Indeterminado', icon: '' },
         ];
 
         var racaPk = initPicker({
@@ -198,7 +204,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             searchId: base + 'SexoSearch', listId: base + 'SexoList', hiddenId: 'inp' + base + 'SexoId', labelId: base + 'SexoLabel',
             items: SEXOS,
             chave: function (s) { return s.id; },
-            renderItem: function (s) { return { title: s.label }; },
+            renderItem: function (s) { return { title: s.label, icon: s.icon }; },
             matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
             vazioMsg: 'Nada encontrado.',
         });

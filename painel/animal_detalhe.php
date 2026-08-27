@@ -274,12 +274,12 @@ initPicker({
     pickerId: 'eaSexoPicker', triggerId: 'eaSexoTrigger', dropdownId: 'eaSexoDropdown',
     searchId: 'eaSexoSearch', listId: 'eaSexoList', hiddenId: 'inpeaSexoId', labelId: 'eaSexoLabel',
     items: [
-        { id: 'macho', label: '♂ Macho' },
-        { id: 'femea', label: '♀ Fêmea' },
-        { id: 'indeterminado', label: 'Indeterminado' },
+        { id: 'macho', label: 'Macho', icon: 'bi-gender-male' },
+        { id: 'femea', label: 'Fêmea', icon: 'bi-gender-female' },
+        { id: 'indeterminado', label: 'Indeterminado', icon: '' },
     ],
     chave: function (s) { return s.id; },
-    renderItem: function (s) { return { title: s.label }; },
+    renderItem: function (s) { return { title: s.label, icon: s.icon }; },
     matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nada encontrado.',
 });
