@@ -14,17 +14,18 @@
   --accent-rgb:   15, 118, 110;
 
   /* ── Superfícies ── */
-  --bg-main:  #f4fbfa;
+  --bg-main:  #f7fcfa;
   --bg-card:  #ffffff;
-  --bg-hover: #e6f7f5;
+  --bg-hover: #e9f6f2;
 
   /* ── Texto ── */
   --text-main:      #0d2420;
   --text-secondary: #3f6b66;
   --text-muted:     #5c8079;
 
-  /* ── Bordas / sombra / overlay ── */
-  --card-border-color: #b9e2dc;
+  /* ── Bordas / sombra / overlay — o verde escuro vive só aqui,
+     nunca em fundo ── */
+  --card-border-color: #1f4d3f;
   --shadow-color:       rgba(13, 36, 32, .06);
   --shadow-color-forte:  rgba(13, 36, 32, .1);
   --overlay-bg:          rgba(13, 36, 32, .45);
