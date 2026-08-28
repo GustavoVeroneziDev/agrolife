@@ -17,28 +17,30 @@ if (estaLogado()) {
     exit;
 }
 
-// Equipe da home — placeholders até a equipe de verdade ser cadastrada.
-// Editar aqui: nome, cargo, resumo curto e o ícone (qualquer classe do
-// Bootstrap Icons). Sem foto de verdade ainda, por isso o avatar é um
-// ícone — evita usar uma foto de banco de imagens só pra preencher.
+// Equipe da home — nomes ainda placeholder até preencher com os dados
+// reais (só trocar o 'nome' de cada um). Estrutura real: 2 médicos
+// veterinários + a equipe de atendimento (atuante na área, mas sem
+// formação de veterinário — por isso sem "Dr./Dra." e sem se passar por
+// profissional formado). Sem foto de verdade ainda, por isso o avatar é
+// um ícone — evita usar foto de banco de imagens só pra preencher.
 $equipeHome = [
     [
         'nome'   => 'Dra. [nome da veterinária]',
-        'cargo'  => 'Clínica Geral',
-        'bio'    => 'Consultas de rotina, check-ups e acompanhamento contínuo da saúde do animal.',
+        'cargo'  => 'Médica Veterinária',
+        'bio'    => 'Consultas, exames e acompanhamento clínico do seu animal.',
         'icone'  => 'bi-person-heart',
     ],
     [
         'nome'   => 'Dr. [nome do veterinário]',
-        'cargo'  => 'Cirurgia',
-        'bio'    => 'Procedimentos cirúrgicos com acompanhamento pré e pós-operatório completo.',
+        'cargo'  => 'Médico Veterinário',
+        'bio'    => 'Consultas, cirurgias e procedimentos com acompanhamento completo.',
         'icone'  => 'bi-person-badge',
     ],
     [
-        'nome'   => 'Dra. [nome da veterinária]',
-        'cargo'  => 'Exames e Diagnóstico',
-        'bio'    => 'Exames laboratoriais e de imagem para diagnósticos rápidos e precisos.',
-        'icone'  => 'bi-person-check',
+        'nome'   => 'Equipe de Atendimento',
+        'cargo'  => 'Suporte e Cuidado',
+        'bio'    => 'Time atuante que acompanha de perto cada visita, cuidando do conforto e bem-estar do seu animal.',
+        'icone'  => 'bi-people-fill',
     ],
 ];
 
@@ -170,10 +172,16 @@ require_once __DIR__ . '/geral/header.php';
                 <span class="home-eyebrow" style="color:var(--accent-text);opacity:.85;">Fale com a gente</span>
                 <h2>Vamos cuidar do seu animal juntos</h2>
                 <ul class="home-contato-lista mt-3">
-                    <li><i class="bi bi-geo-alt"></i>Endereço da clínica — a preencher</li>
+                    <li><i class="bi bi-geo-alt"></i>Sebastianópolis do Sul — SP</li>
                     <li><i class="bi bi-telephone"></i>(00) 00000-0000</li>
                     <li><i class="bi bi-envelope"></i>contato@agrolife.com</li>
                     <li><i class="bi bi-clock"></i>Segunda a sábado — horário a definir</li>
+                    <li>
+                        <i class="bi bi-instagram"></i>
+                        <a href="https://www.instagram.com/agrolife_sebas" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
+                            @agrolife_sebas
+                        </a>
+                    </li>
                 </ul>
             </div>
             <a href="<?= BASE ?>/usuario/cadastro.php" class="btn btn-light btn-lg">
