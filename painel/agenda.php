@@ -673,6 +673,14 @@ var agTipoPk = initPicker({
     onSelect: function (t) {
         var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === t.id; });
         agProcPk.setItems(itens, 'Personalizado');
+        // Abre o próximo picker sozinho, pra fluir direto sem precisar clicar
+        // de novo. Precisa do setTimeout: o clique que selecionou o Tipo ainda
+        // vai disparar um "click" nativo (mousedown já rodou, click vem na
+        // sequência) — abrir na hora faria o listener de "clique fora" do
+        // Procedimento fechar ele de novo imediatamente.
+        if (itens.length) {
+            setTimeout(function () { agProcPk.abrir(); }, 50);
+        }
     },
 });
 

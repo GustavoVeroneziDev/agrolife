@@ -201,6 +201,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         return {
             selecionar: selecionar,
             limpar: limpar,
+            abrir: function () { if (!trigger.classList.contains('disabled')) abrir(); },
             getSelecionado: function () { return selecionado; },
             // Troca a lista de itens (ex: raças mudam conforme a espécie escolhida).
             // Limpa a seleção atual — o item selecionado pode não existir na lista nova.
