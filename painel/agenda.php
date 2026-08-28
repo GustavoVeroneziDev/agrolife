@@ -228,21 +228,43 @@ try {
             $porDia[$dia][] = $ag;
         }
     } else {
-        // ── Vista mensal: grade de calendário com contagem por dia ──
+        // ── Vista mensal: grade de calendário, cada dia com seus agendamentos
+        // de verdade (não só contagem) — alimenta os pontinhos de status e o
+        // painel de detalhe que abre inline ao clicar num dia.
         $inicioMes = $mesFiltro . '-01';
         $fimMes    = date('Y-m-d', strtotime('+1 month', strtotime($inicioMes)));
 
         $stmt = $pdo->prepare(
-            "SELECT DATE(DataHoraInicio) AS Dia, COUNT(*) AS Total,
-                    SUM(Status = 'cancelado') AS Cancelados
-             FROM Agendamentos
-             WHERE DataHoraInicio >= :inicio AND DataHoraInicio < :fim
-             GROUP BY DATE(DataHoraInicio)"
+            "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
+                    a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
+                    u.Nome AS NomeDono, v.Nome AS NomeVeterinario
+             FROM Agendamentos ag
+             JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+             JOIN Especies e ON e.IDEspecie = a.FKEspecie
+             JOIN Usuarios u ON u.IDUsuario = a.FKDono
+             LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
+             WHERE ag.DataHoraInicio >= :inicio AND ag.DataHoraInicio < :fim
+               AND ag.Status != 'cancelado'
+             ORDER BY ag.DataHoraInicio ASC"
         );
         $stmt->execute([':inicio' => $inicioMes, ':fim' => $fimMes]);
-        $contagemPorDia = [];
-        foreach ($stmt->fetchAll() as $row) {
-            $contagemPorDia[$row['Dia']] = $row;
+
+        $porDiaMes = [];
+        $mesJson   = [];
+        foreach ($stmt->fetchAll() as $ag) {
+            $dia = substr($ag['DataHoraInicio'], 0, 10);
+            $porDiaMes[$dia][] = $ag;
+            $mesJson[$dia][] = [
+                'id'     => $ag['IDAgendamento'],
+                'hora'   => date('H:i', strtotime($ag['DataHoraInicio'])),
+                'tipo'   => $tiposAgenda[$ag['Tipo']] ?? $ag['Tipo'],
+                'titulo' => $ag['Titulo'],
+                'animal' => $ag['NomeAnimal'],
+                'icone'  => $ag['IconeEspecie'],
+                'dono'   => $ag['NomeDono'],
+                'vet'    => $ag['NomeVeterinario'],
+                'status' => $ag['Status'],
+            ];
         }
 
         $primeiroDiaSemana = (int) date('w', strtotime($inicioMes)); // 0 = domingo
@@ -251,7 +273,7 @@ try {
         $celulas = array_fill(0, $primeiroDiaSemana, null);
         for ($d = 1; $d <= $diasNoMes; $d++) {
             $dataStr   = sprintf('%s-%02d', $mesFiltro, $d);
-            $celulas[] = ['data' => $dataStr, 'dia' => $d, 'info' => $contagemPorDia[$dataStr] ?? null];
+            $celulas[] = ['data' => $dataStr, 'dia' => $d, 'ags' => $porDiaMes[$dataStr] ?? []];
         }
         while (count($celulas) % 7 !== 0) {
             $celulas[] = null;
@@ -271,7 +293,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log('[Agenda] ' . $e->getMessage());
-    $animais = $vets = $agendamentos = $porDia = $mesGrade = [];
+    $animais = $vets = $agendamentos = $porDia = $mesGrade = $mesJson = [];
     $animalPre = null;
     // Garante que a vista semanal sempre tem um período pra renderizar,
     // mesmo se a query tiver falhado antes de calculá-lo.
@@ -343,26 +365,62 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <?php if ($vista === 'mes'): ?>
-    <?php $nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']; ?>
-    <div class="card p-2 mb-4">
-        <div class="calendario-grade">
+    <?php
+        $nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        $hojeStr   = date('Y-m-d');
+    ?>
+    <div class="card p-3 mb-3">
+        <div class="d-flex flex-wrap gap-3 mb-3">
+            <?php foreach (['pendente', 'confirmado', 'concluido', 'faltou'] as $st): ?>
+                <span class="small d-flex align-items-center gap-1">
+                    <span class="cal-dot cal-dot-<?= $st ?>"></span> <?= h(ucfirst($st === 'concluido' ? 'Concluído' : $st)) ?>
+                </span>
+            <?php endforeach ?>
+        </div>
+
+        <div class="calendario-grade mb-1">
             <?php foreach ($nomesDias as $nd): ?>
                 <div class="calendario-cabecalho"><?= $nd ?></div>
             <?php endforeach ?>
+        </div>
+        <div class="calendario-grade">
             <?php foreach ($mesGrade as $semana): foreach ($semana as $cel): ?>
                 <?php if ($cel === null): ?>
                     <div class="calendario-dia calendario-dia-vazio"></div>
                 <?php else: ?>
-                    <a href="?vista=semana&dia=<?= $cel['data'] ?>"
-                       class="calendario-dia text-decoration-none <?= $cel['data'] === date('Y-m-d') ? 'calendario-dia-hoje' : '' ?>">
+                    <?php $temAgs = !empty($cel['ags']); ?>
+                    <div class="calendario-dia <?= $cel['data'] === $hojeStr ? 'calendario-dia-hoje' : '' ?> <?= !$temAgs ? 'calendario-dia-sem-ag' : '' ?>"
+                         role="button" tabindex="0"
+                         onclick="mostrarDiaMes('<?= $cel['data'] ?>', <?= $cel['dia'] ?>)"
+                         onkeydown="if(event.key==='Enter')mostrarDiaMes('<?= $cel['data'] ?>', <?= $cel['dia'] ?>)">
                         <span class="calendario-dia-numero"><?= $cel['dia'] ?></span>
-                        <?php if ($cel['info'] && (int) $cel['info']['Total'] > (int) $cel['info']['Cancelados']): ?>
-                            <span class="calendario-dia-badge"><?= (int) $cel['info']['Total'] - (int) $cel['info']['Cancelados'] ?></span>
+                        <?php if ($temAgs): ?>
+                            <div class="cal-dots">
+                                <?php foreach (array_slice($cel['ags'], 0, 4) as $ag): ?>
+                                    <span class="cal-dot cal-dot-<?= h($ag['Status']) ?>"></span>
+                                <?php endforeach ?>
+                            </div>
+                            <span class="calendario-dia-badge"><?= count($cel['ags']) ?></span>
                         <?php endif ?>
-                    </a>
+                    </div>
                 <?php endif ?>
             <?php endforeach; endforeach ?>
         </div>
+    </div>
+
+    <div id="painelDiaMes" class="card mb-4" style="display:none;border-color:var(--accent) !important;">
+        <div class="card-header d-flex align-items-center justify-content-between gap-2 px-3 py-2">
+            <h6 class="fw-bold mb-0" id="painelDiaMesTitulo"></h6>
+            <div class="d-flex gap-2">
+                <a href="#" id="painelDiaMesNovo" class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
+                    <i class="bi bi-plus-lg me-1"></i> Novo
+                </a>
+                <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('painelDiaMes').style.display='none';">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div id="painelDiaMesConteudo"></div>
     </div>
 <?php else: ?>
     <?php
@@ -579,23 +637,27 @@ initPicker({
     vazioMsg: 'Nenhum veterinário encontrado.',
 });
 
-document.querySelectorAll('.btn-concluir').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        document.getElementById('concluirId').value = btn.dataset.id;
-        document.getElementById('concluirTitulo').textContent = btn.dataset.titulo;
+// Delegação no document (em vez de listener por botão) — assim funciona tanto
+// pros botões já na página quanto pros que o painel de dia da vista mensal
+// injeta dinamicamente via mostrarDiaMes().
+document.addEventListener('click', function (e) {
+    var btnConcluir = e.target.closest('.btn-concluir');
+    if (btnConcluir) {
+        document.getElementById('concluirId').value = btnConcluir.dataset.id;
+        document.getElementById('concluirTitulo').textContent = btnConcluir.dataset.titulo;
         new bootstrap.Modal(document.getElementById('modalConcluir')).show();
-    });
-});
+        return;
+    }
 
-document.querySelectorAll('.btn-acao-agendamento').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
+    var btnAcao = e.target.closest('.btn-acao-agendamento');
+    if (btnAcao) {
         e.preventDefault();
         e.stopPropagation();
         function executar() {
             fetch(BASE + '/painel/api_agendamento.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: btn.dataset.acao, id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
+                body: JSON.stringify({ acao: btnAcao.dataset.acao, id: btnAcao.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
             })
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -607,13 +669,73 @@ document.querySelectorAll('.btn-acao-agendamento').forEach(function (btn) {
             })
             .catch(function () { vsToast('Falha na conexão.', 'danger'); });
         }
-        if (btn.dataset.confirm) {
-            vsConfirm(btn.dataset.confirm, executar);
+        if (btnAcao.dataset.confirm) {
+            vsConfirm(btnAcao.dataset.confirm, executar);
         } else {
             executar();
         }
-    });
+    }
 });
+
+// ── Painel de detalhe do dia (vista mensal) ─────────────────────
+var MES_DADOS = <?= json_encode($mesJson ?? [], JSON_UNESCAPED_UNICODE) ?>;
+
+var STATUS_LABEL = {
+    pendente: 'Pendente', confirmado: 'Confirmado', concluido: 'Concluído',
+    cancelado: 'Cancelado', faltou: 'Faltou',
+};
+var STATUS_COR = {
+    pendente: 'secondary', confirmado: 'info', concluido: 'success',
+    cancelado: 'danger', faltou: 'warning',
+};
+
+function mostrarDiaMes(data, diaNum) {
+    var itens = MES_DADOS[data] || [];
+    document.getElementById('painelDiaMesTitulo').textContent =
+        'Dia ' + diaNum + ' — ' + itens.length + ' agendamento' + (itens.length === 1 ? '' : 's');
+    document.getElementById('painelDiaMesNovo').addEventListener('click', function () {
+        var campoData = document.querySelector('#modalNovoAgendamento input[name="data"]');
+        if (campoData) campoData.value = data;
+    }, { once: true });
+
+    var html;
+    if (!itens.length) {
+        html = '<div class="text-center py-4 text-secondary small">Nenhum agendamento nesse dia.</div>';
+    } else {
+        html = '<ul class="list-group list-group-flush">' + itens.map(function (ag) {
+            var acoes = '';
+            if (ag.status === 'pendente') {
+                acoes = '<button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="' + ag.id + '">Confirmar</button>'
+                      + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
+            } else if (ag.status === 'confirmado') {
+                acoes = '<button class="btn btn-sm btn-accent btn-concluir" data-id="' + ag.id + '" data-titulo="' + escHtmlPicker(ag.titulo) + '">Concluir</button>'
+                      + '<button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="' + ag.id + '" data-confirm="Marcar falta nesse agendamento?">Faltou</button>'
+                      + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
+            } else {
+                acoes = '<button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="' + ag.id + '" data-confirm="Reabrir esse agendamento?">Reabrir</button>';
+            }
+            return '<li class="list-group-item px-3 py-2">'
+                 + '<div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">'
+                 + '<span class="fw-bold text-accent" style="min-width:42px;">' + ag.hora + '</span>'
+                 + '<div class="flex-grow-1 min-w-0">'
+                 + '<div class="d-flex align-items-center gap-1 flex-wrap">'
+                 + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
+                 + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
+                 + '<span class="fw-medium">' + (ag.icone || '') + ' ' + escHtmlPicker(ag.animal) + '</span>'
+                 + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'
+                 + '</div>'
+                 + '<span class="text-secondary small d-block">' + escHtmlPicker(ag.titulo) + (ag.vet ? ' · ' + escHtmlPicker(ag.vet) : ' · sem veterinário definido') + '</span>'
+                 + '</div>'
+                 + '<div class="d-flex gap-1 flex-wrap flex-shrink-0">' + acoes + '</div>'
+                 + '</div></li>';
+        }).join('') + '</ul>';
+    }
+    document.getElementById('painelDiaMesConteudo').innerHTML = html;
+
+    var painel = document.getElementById('painelDiaMes');
+    painel.style.display = '';
+    painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 </script>
 
 <?php if (($_GET['acao'] ?? '') === 'novo' || $animalPre): ?>
