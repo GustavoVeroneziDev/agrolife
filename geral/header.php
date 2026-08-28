@@ -65,6 +65,21 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         console.log.apply(console, ['[picker:' + id + ']'].concat(args));
     }
 
+    // Compartilhado entre TODOS os pickers da página (não é local de cada
+    // instância) — marca a última vez que qualquer um deles processou uma
+    // seleção. Existe por causa de um comportamento do navegador: ao
+    // selecionar um item, o elemento clicado (mousedown) pode sumir da
+    // tela antes do "click" nativo desse mesmo clique terminar de
+    // disparar — o navegador então redireciona esse clique pro ancestral
+    // visível mais próximo (o modal, tipicamente), um clique "órfão" que
+    // cai fora de QUALQUER picker e fecharia (errado) o próximo que o
+    // encadeamento acabou de abrir. Não dá pra prever o alvo nem o
+    // timing exatos desse clique fantasma, então em vez de tentar timing
+    // fino, todo clickFora ignora clique-fora por uma janela curta depois
+    // de qualquer seleção — nesse intervalo, quase certeza que um clique
+    // "de fora" é esse fantasma, não uma intenção real do usuário.
+    var ultimaSelecaoPickerEm = -Infinity;
+
     // ── Picker de busca (dropdown com campo de busca) ──────────
     // Fica no <head> (não no footer) de propósito: páginas podem chamar
     // initPicker() no próprio <script> antes do footer.php ser incluído,
@@ -123,13 +138,16 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             document.removeEventListener('click', clickFora, true);
         }
         function clickFora(e) {
-            // Ignora um clique "fantasma" de uma seleção anterior — o
-            // encadeamento (Tipo -> Procedimento, Espécie -> Sexo -> Raça
-            // etc.) abre este picker via setTimeout depois que outro
-            // fechou; se por qualquer motivo (aparelho mais lento, clique
-            // rápido demais) esse evento de clique só terminar de ser
-            // processado DEPOIS desse picker já ter aberto, ele não pode
-            // contar como "clique fora" e fechar o que acabou de abrir.
+            // Ignora um clique "fantasma" de uma seleção recente — ver
+            // comentário de ultimaSelecaoPickerEm lá em cima. O alvo desse
+            // clique pode ser QUALQUER ancestral (o navegador redireciona
+            // pra onde estiver visível), então não dá pra filtrar pelo
+            // alvo — só pela proximidade no tempo com a última seleção.
+            var desdeSelecao = performance.now() - ultimaSelecaoPickerEm;
+            if (desdeSelecao < 200) {
+                pickerLog(opts.pickerId, 'clickFora IGNORADO (seleção recente, ' + desdeSelecao.toFixed(1) + 'ms atrás)', 'target=', e.target);
+                return;
+            }
             if (e.timeStamp < abertoEm) {
                 pickerLog(opts.pickerId, 'clickFora IGNORADO (timeStamp velho)', 'e.timeStamp=' + e.timeStamp, 'abertoEm=' + abertoEm, 'target=', e.target);
                 return;
@@ -175,19 +193,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             // (vem sempre de uma classe fixa escrita no próprio renderItem()).
             label.innerHTML = icone + escHtmlPicker(r.title) + (r.sub ? ' — ' + escHtmlPicker(r.sub) : '');
             label.className = 'picker-selected';
-            // fechar() escondido pra depois (não síncrono): fechar já-já some
-            // com o item que acabou de receber o mousedown (dropdown vira
-            // d-none). Se isso acontecer ANTES do navegador terminar de
-            // despachar o "click" nativo que ainda vem desse mesmo clique
-            // (mousedown já rodou, o click vem na sequência), o navegador
-            // redireciona esse clique pro ancestral visível mais próximo (o
-            // modal, tipicamente) — e esse clique "órfão" cai fora de
-            // qualquer picker, fechando (errado) o PRÓXIMO picker que o
-            // encadeamento acabou de abrir. Adiando um tick, o item ainda
-            // existe/está visível quando o click nativo chega, então o alvo
-            // continua sendo ele mesmo (dentro do picker atual) em vez de
-            // "vazar" pro ancestral.
-            setTimeout(fechar, 0);
+            ultimaSelecaoPickerEm = performance.now();
+            fechar();
             if (opts.onSelect) opts.onSelect(it);
         }
         function iniciar() {
