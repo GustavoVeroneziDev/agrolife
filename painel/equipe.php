@@ -13,6 +13,12 @@ $cargos = [
     'outro'       => 'Outro',
 ];
 
+// "Dev" = admin sem cargo — não é dono/veterinário atendendo, é quem
+// mantém o sistema. Só esse perfil pode editar nome/telefone/cargo/senha
+// de qualquer outro membro direto, sem passar pelo fluxo de e-mail com
+// link de redefinição (o resto, incluindo outros admins, não pode).
+$souDev = ($_SESSION['nivel_acesso'] ?? '') === 'admin' && ($_SESSION['cargo'] ?? '') === '';
+
 // Cadastro de funcionário via POST — sempre nível "funcionario" (só vê,
 // não escreve/edita/exclui). Nível "admin" é reservado pros donos, setado
 // direto no banco, não por aqui.
@@ -76,13 +82,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
     }
 }
 
+// Edição direta (nome/telefone/cargo/senha) — só o dev, sem confirmação
+// da pessoa dona da conta. Não mexe em NivelAcesso/Email por aqui.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'editar_membro') {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Token inválido.', 'danger');
+    }
+    if (!$souDev) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Só o desenvolvedor do sistema pode editar outros membros direto.', 'danger');
+    }
+    $idAlvo    = trim($_POST['id']   ?? '');
+    $nome      = trim($_POST['nome'] ?? '');
+    $tel       = trim($_POST['tel']  ?? '');
+    $cargo     = trim($_POST['cargo'] ?? '');
+    $novaSenha = $_POST['nova_senha'] ?? '';
+
+    if ($idAlvo === '' || $nome === '') {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Nome é obrigatório.', 'warning');
+    }
+    if ($cargo !== '' && !isset($cargos[$cargo])) {
+        $cargo = '';
+    }
+    if ($novaSenha !== '' && strlen($novaSenha) < 4) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'A nova senha deve ter pelo menos 4 caracteres.', 'warning');
+    }
+
+    try {
+        // Só mexe em quem é equipe de verdade (admin/funcionario) — não
+        // deixa esse endpoint ser usado em cima de conta de cliente.
+        $chkStmt = $pdo->prepare("SELECT NivelAcesso FROM Usuarios WHERE IDUsuario = :id LIMIT 1");
+        $chkStmt->execute([':id' => $idAlvo]);
+        $nivelAlvo = $chkStmt->fetchColumn();
+        if (!in_array($nivelAlvo, ['admin', 'funcionario'], true)) {
+            redirecionarComMensagem(BASE . '/painel/equipe.php', 'Membro não encontrado.', 'warning');
+        }
+
+        $params = [
+            ':nome'  => $nome,
+            ':tel'   => $tel !== '' ? sanitizarTelefone($tel) : null,
+            ':cargo' => $cargo !== '' ? $cargo : null,
+            ':id'    => $idAlvo,
+        ];
+        $sql = 'UPDATE Usuarios SET Nome=:nome, Telefone=:tel, Cargo=:cargo';
+        if ($novaSenha !== '') {
+            $sql .= ', Senha=:senha';
+            $params[':senha'] = password_hash($novaSenha, PASSWORD_DEFAULT);
+        }
+        $sql .= ' WHERE IDUsuario=:id';
+        $pdo->prepare($sql)->execute($params);
+
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Membro atualizado com sucesso!', 'success');
+    } catch (PDOException $e) {
+        error_log('[EditarMembroEquipe] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Erro ao atualizar.', 'danger');
+    }
+}
+
 try {
-    // Não filtra por Cargo — a lista aqui é toda a equipe de acesso
-    // "funcionario", independente da função de cada um.
+    // Todo funcionario entra (independente de ter cargo definido ou não)
+    // + admin, mas só quem tiver cargo (mostra os donos que também
+    // atendem, ex: José/Dayvid como veterinário — sem cargo, um admin
+    // "só de sistema" não precisa aparecer no quadro da equipe).
     $vets = $pdo->query(
-        "SELECT IDUsuario, Nome, Email, Telefone, Cargo, MomentoRegistro
+        "SELECT IDUsuario, Nome, Email, Telefone, Cargo, NivelAcesso, MomentoRegistro
          FROM Usuarios
-         WHERE NivelAcesso = 'funcionario' AND Ativo = 1
+         WHERE Ativo = 1
+           AND (NivelAcesso = 'funcionario' OR (NivelAcesso = 'admin' AND Cargo IS NOT NULL))
          ORDER BY Nome ASC"
     )->fetchAll();
 } catch (PDOException $e) {
@@ -119,16 +184,25 @@ require_once __DIR__ . '/../geral/header.php';
                     <thead style="background:var(--bg-hover);">
                         <tr>
                             <th class="px-4 py-3">Nome</th>
+                            <th>Nível</th>
                             <th>Cargo</th>
                             <th class="d-none d-md-table-cell email-cell">E-mail</th>
                             <th class="d-none d-md-table-cell">WhatsApp</th>
                             <th class="d-none d-md-table-cell">Cadastro</th>
+                            <?php if ($souDev): ?><th></th><?php endif ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($vets as $v): ?>
                             <tr>
                                 <td class="px-4 fw-medium"><?= h($v['Nome']) ?></td>
+                                <td class="small">
+                                    <?php if ($v['NivelAcesso'] === 'admin'): ?>
+                                        <span class="badge bg-secondary">Admin</span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background:var(--bg-hover);color:var(--text-secondary);">Funcionário</span>
+                                    <?php endif ?>
+                                </td>
                                 <td class="small">
                                     <?php if ($v['Cargo'] && isset($cargos[$v['Cargo']])): ?>
                                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($cargos[$v['Cargo']]) ?></span>
@@ -149,6 +223,14 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell small text-secondary"><?= formatarData($v['MomentoRegistro']) ?></td>
+                                <?php if ($souDev): ?>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-accent"
+                                            onclick='abrirModalEditarMembro(<?= json_encode($v, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                <?php endif ?>
                             </tr>
                         <?php endforeach ?>
                     </tbody>
@@ -202,6 +284,49 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </div>
 
+<?php if ($souDev): ?>
+<div class="modal fade" id="modalEditarMembro" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                <input type="hidden" name="acao" value="editar_membro">
+                <input type="hidden" name="id" id="editId">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold">Editar <span id="editNomeAtual"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome completo *</label>
+                        <input type="text" name="nome" id="editNome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">WhatsApp</label>
+                        <input type="tel" name="tel" id="editTel" class="form-control" data-mask="tel" placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cargo</label>
+                        <?= campoPicker('editCargo', 'cargo', 'Selecione…', '', obrigatorio: false, comBusca: false) ?>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Nova senha</label>
+                        <input type="password" name="nova_senha" id="editSenha" class="form-control" minlength="4" maxlength="72" autocomplete="new-password">
+                        <div class="form-text">Deixe em branco pra manter a senha atual. Preenchendo, troca na hora — sem e-mail nem confirmação da pessoa.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent">
+                        <i class="bi bi-check2 me-1"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif ?>
+
 <script>
 var CARGOS = <?= json_encode(array_map(fn($valor, $label) => [
     'id' => $valor, 'nome' => $label,
@@ -216,6 +341,44 @@ initPicker({
     matches: function (c, q) { return c.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nada encontrado.',
 });
+
+<?php if ($souDev): ?>
+var editCargoPk = initPicker({
+    pickerId: 'editCargoPicker', triggerId: 'editCargoTrigger', dropdownId: 'editCargoDropdown',
+    searchId: 'editCargoSearch', listId: 'editCargoList', hiddenId: 'inpeditCargoId', labelId: 'editCargoLabel',
+    items: CARGOS,
+    chave: function (c) { return c.id; },
+    renderItem: function (c) { return { title: c.nome }; },
+    matches: function (c, q) { return c.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
+
+function abrirModalEditarMembro(dados) {
+    document.getElementById('editNomeAtual').textContent = dados.Nome;
+    document.getElementById('editId').value    = dados.IDUsuario;
+    document.getElementById('editNome').value  = dados.Nome;
+    document.getElementById('editSenha').value = '';
+
+    // Telefone é salvo com "55" na frente (padrão de sanitizarTelefone()) —
+    // tira isso antes de preencher, senão mostra sem máscara nenhuma; o
+    // "input" manual dispara o vsMascaraTel() pra formatar igual quando a
+    // pessoa digita.
+    var telField  = document.getElementById('editTel');
+    var telDigits = (dados.Telefone || '').replace(/\D/g, '');
+    if (telDigits.length === 13 && telDigits.indexOf('55') === 0) {
+        telDigits = telDigits.slice(2);
+    }
+    telField.value = telDigits;
+    telField.dispatchEvent(new Event('input'));
+    var cargoAtual = CARGOS.filter(function (c) { return c.id === dados.Cargo; })[0];
+    if (cargoAtual) {
+        editCargoPk.selecionar(cargoAtual);
+    } else {
+        editCargoPk.limpar();
+    }
+    new bootstrap.Modal(document.getElementById('modalEditarMembro')).show();
+}
+<?php endif ?>
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>
