@@ -12,35 +12,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'salvar') {
-        $id       = trim($_POST['id'] ?? '');
-        $nome     = trim($_POST['nome'] ?? '');
-        $desc     = trim($_POST['descricao'] ?? '');
+        $id        = trim($_POST['id'] ?? '');
+        $nome      = trim($_POST['nome'] ?? '');
+        $categoria = trim($_POST['categoria'] ?? '');
+        $desc      = trim($_POST['descricao'] ?? '');
         $intervalo = trim($_POST['intervalo'] ?? '');
-        $especie  = trim($_POST['especie'] ?? '');
+        $especie   = trim($_POST['especie'] ?? '');
 
         if ($nome === '') {
             redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Nome é obrigatório.', 'warning');
+        }
+        if (!in_array($categoria, ['vacina', 'medicamento'], true)) {
+            $categoria = 'vacina';
         }
 
         try {
             if ($id) {
                 $pdo->prepare(
-                    'UPDATE TiposVacina SET Nome=:nome, Descricao=:desc, IntervaloMeses=:int, FKEspecie=:esp WHERE IDTipo=:id'
+                    'UPDATE TiposVacina SET Nome=:nome, Categoria=:cat, Descricao=:desc, IntervaloMeses=:int, FKEspecie=:esp WHERE IDTipo=:id'
                 )->execute([
-                    ':nome' => $nome, ':desc' => $desc ?: null,
+                    ':nome' => $nome, ':cat' => $categoria, ':desc' => $desc ?: null,
                     ':int'  => $intervalo !== '' ? $intervalo : null,
                     ':esp'  => $especie ?: null, ':id' => $id,
                 ]);
-                redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Vacina atualizada com sucesso!', 'success');
+                redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Item atualizado com sucesso!', 'success');
             } else {
                 $pdo->prepare(
-                    'INSERT INTO TiposVacina (IDTipo, Nome, Descricao, IntervaloMeses, FKEspecie)
-                     VALUES (:id, :nome, :desc, :int, :esp)'
+                    'INSERT INTO TiposVacina (IDTipo, Nome, Categoria, Descricao, IntervaloMeses, FKEspecie)
+                     VALUES (:id, :nome, :cat, :desc, :int, :esp)'
                 )->execute([
-                    ':id' => gerarUuid(), ':nome' => $nome, ':desc' => $desc ?: null,
+                    ':id' => gerarUuid(), ':nome' => $nome, ':cat' => $categoria, ':desc' => $desc ?: null,
                     ':int' => $intervalo !== '' ? $intervalo : null, ':esp' => $especie ?: null,
                 ]);
-                redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Vacina cadastrada com sucesso!', 'success');
+                redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Item cadastrado com sucesso!', 'success');
             }
         } catch (PDOException $e) {
             error_log('[TiposVacina] ' . $e->getMessage());
@@ -79,12 +83,13 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
     <h4 class="fw-bold mb-0">Catálogo de Vacinas</h4>
     <button class="btn btn-accent btn-sm" onclick="abrirModalVacina()">
-        <i class="bi bi-plus-lg me-1"></i> Nova vacina
+        <i class="bi bi-plus-lg me-1"></i> Novo item
     </button>
 </div>
+<p class="text-secondary small mb-4">Vacinas e outros cuidados preventivos periódicos (vermífugo, exames de rotina…).</p>
 
 <div class="card">
     <div class="card-body p-0">
@@ -108,8 +113,13 @@ require_once __DIR__ . '/../geral/header.php';
                         <?php foreach ($tipos as $t): ?>
                             <tr>
                                 <td class="px-4">
-                                    <div class="fw-medium"><?= h($t['Nome']) ?></div>
-                                    <?php if ($t['Descricao']): ?><div class="small text-secondary"><?= h($t['Descricao']) ?></div><?php endif ?>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge <?= $t['Categoria'] === 'medicamento' ? 'bg-info' : '' ?>" style="<?= $t['Categoria'] === 'medicamento' ? '' : 'background:var(--accent-light);color:var(--accent);' ?>">
+                                            <?= $t['Categoria'] === 'medicamento' ? 'Medicamento' : 'Vacina' ?>
+                                        </span>
+                                        <span class="fw-medium"><?= h($t['Nome']) ?></span>
+                                    </div>
+                                    <?php if ($t['Descricao']): ?><div class="small text-secondary mt-1"><?= h($t['Descricao']) ?></div><?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell small">
                                     <?= $t['NomeEspecie'] ? especieIconeHtml($t['IconeEspecie']) . ' ' . h($t['NomeEspecie']) : 'Todas' ?>
@@ -144,10 +154,17 @@ require_once __DIR__ . '/../geral/header.php';
                 <input type="hidden" name="acao" value="salvar">
                 <input type="hidden" name="id" id="fId">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-semibold" id="tituloModalVacina">Nova vacina</h5>
+                    <h5 class="modal-title fw-semibold" id="tituloModalVacina">Novo item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Categoria *</label>
+                        <select name="categoria" id="fCategoria" class="form-select" required>
+                            <option value="vacina">Vacina</option>
+                            <option value="medicamento">Medicamento / cuidado periódico</option>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Nome *</label>
                         <input type="text" name="nome" id="fNome" class="form-control" required>
@@ -183,8 +200,9 @@ require_once __DIR__ . '/../geral/header.php';
 
 <script>
 function abrirModalVacina(dados) {
-    document.getElementById('tituloModalVacina').textContent = dados ? 'Editar vacina' : 'Nova vacina';
+    document.getElementById('tituloModalVacina').textContent = dados ? 'Editar item' : 'Novo item';
     document.getElementById('fId').value        = dados ? dados.IDTipo : '';
+    document.getElementById('fCategoria').value = dados ? (dados.Categoria || 'vacina') : 'vacina';
     document.getElementById('fNome').value      = dados ? dados.Nome : '';
     document.getElementById('fDescricao').value = dados ? (dados.Descricao || '') : '';
     document.getElementById('fIntervalo').value = dados ? (dados.IntervaloMeses || '') : '';
