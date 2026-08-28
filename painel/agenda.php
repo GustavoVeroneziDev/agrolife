@@ -522,17 +522,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Tipo *</label>
-                            <select name="tipo" id="selTipoAgendamento" class="form-select" required>
-                                <?php foreach ($tiposAgenda as $valor => $label): ?>
-                                    <option value="<?= h($valor) ?>" <?= $valor === 'consulta' ? 'selected' : '' ?>><?= h($label) ?></option>
-                                <?php endforeach ?>
-                            </select>
+                            <?= campoPicker('agTipo', 'tipo', '—', '', 'consulta', 'Consulta', obrigatorio: true, comBusca: false) ?>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Procedimento</label>
-                            <select id="selProcedimento" class="form-select">
-                                <option value="">— Personalizado —</option>
-                            </select>
+                            <?= campoPicker('agProc', 'procedimento_ref', 'Personalizado', '', obrigatorio: false, comBusca: false) ?>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -632,22 +626,14 @@ var PROCEDIMENTOS = <?= json_encode(array_map(fn($p) => [
 
 // Tipo -> filtra os procedimentos disponíveis; escolher um procedimento
 // preenche duração e título automaticamente (mas continuam editáveis).
-var selTipoAgendamento = document.getElementById('selTipoAgendamento');
-var selProcedimento    = document.getElementById('selProcedimento');
+var TIPOS_AGENDA = <?= json_encode(array_map(fn($valor, $label) => [
+    'id' => $valor, 'nome' => $label,
+], array_keys($tiposAgenda), $tiposAgenda), JSON_UNESCAPED_UNICODE) ?>;
+
 var selDuracaoAgendamento = document.getElementById('selDuracaoAgendamento');
 var inpTituloAgendamento  = document.getElementById('inpTituloAgendamento');
 
-function popularProcedimentos() {
-    var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === selTipoAgendamento.value; });
-    selProcedimento.innerHTML = '<option value="">— Personalizado —</option>' + itens.map(function (p) {
-        return '<option value="' + p.id + '">' + escHtmlPicker(p.nome) + ' (' + p.duracao + ' min)</option>';
-    }).join('');
-}
-selTipoAgendamento.addEventListener('change', popularProcedimentos);
-popularProcedimentos();
-
-selProcedimento.addEventListener('change', function () {
-    var item = PROCEDIMENTOS.find(function (p) { return p.id === selProcedimento.value; });
+function selecionarProcedimento(item) {
     if (!item) return;
     // Duração do procedimento pode não bater com nenhuma das opções fixas
     // (ex: 20min) — cria a opção na hora se precisar, em vez de falhar
@@ -663,6 +649,31 @@ selProcedimento.addEventListener('change', function () {
     }
     selDuracaoAgendamento.value = item.duracao;
     inpTituloAgendamento.value = item.nome;
+}
+
+var agProcPk = initPicker({
+    pickerId: 'agProcPicker', triggerId: 'agProcTrigger', dropdownId: 'agProcDropdown',
+    searchId: 'agProcSearch', listId: 'agProcList', hiddenId: 'inpagProcId', labelId: 'agProcLabel',
+    items: PROCEDIMENTOS.filter(function (p) { return p.categoria === 'consulta'; }),
+    chave: function (p) { return p.id; },
+    renderItem: function (p) { return { title: p.nome + ' (' + p.duracao + ' min)' }; },
+    matches: function (p, q) { return p.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhum procedimento cadastrado nesse tipo.',
+    onSelect: selecionarProcedimento,
+});
+
+var agTipoPk = initPicker({
+    pickerId: 'agTipoPicker', triggerId: 'agTipoTrigger', dropdownId: 'agTipoDropdown',
+    searchId: 'agTipoSearch', listId: 'agTipoList', hiddenId: 'inpagTipoId', labelId: 'agTipoLabel',
+    items: TIPOS_AGENDA,
+    chave: function (t) { return t.id; },
+    renderItem: function (t) { return { title: t.nome }; },
+    matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+    onSelect: function (t) {
+        var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === t.id; });
+        agProcPk.setItems(itens, 'Personalizado');
+    },
 });
 
 initPicker({
