@@ -131,14 +131,7 @@ require_once __DIR__ . '/../geral/header.php';
 
                 <div class="mb-3">
                     <label class="form-label">Vacina *</label>
-                    <select name="tipo" id="selTipo" class="form-select" required>
-                        <option value="">Selecione a vacina</option>
-                        <?php foreach ($tipos as $t): ?>
-                            <option value="<?= h($t['IDTipo']) ?>" data-especie="<?= h($t['FKEspecie'] ?? '') ?>">
-                                <?= h($t['Nome']) ?><?= $t['IntervaloMeses'] ? ' (reforço em ' . $t['IntervaloMeses'] . ' meses)' : ' (dose única)' ?>
-                            </option>
-                        <?php endforeach ?>
-                    </select>
+                    <?= campoPicker('rvTipo', 'tipo', 'Selecione a vacina', '', obrigatorio: true, comBusca: false) ?>
                 </div>
 
                 <div class="row g-2 mb-3">
@@ -191,18 +184,29 @@ var VETS = <?= json_encode(array_map(fn($v) => [
     'id' => $v['IDUsuario'], 'nome' => $v['Nome'],
 ], $vets), JSON_UNESCAPED_UNICODE) ?>;
 
-// Filtra o select de vacinas pela espécie do animal escolhido
-var selTipo    = document.getElementById('selTipo');
-var opcoesTipo = Array.from(selTipo.options);
+var TIPOS_VACINA = <?= json_encode(array_map(fn($t) => [
+    'id' => $t['IDTipo'], 'nome' => $t['Nome'], 'especie' => $t['FKEspecie'] ?? '', 'intervalo' => $t['IntervaloMeses'],
+], $tipos), JSON_UNESCAPED_UNICODE) ?>;
 
-function filtrarVacinasPorEspecie(especie) {
-    opcoesTipo.forEach(function (o) {
-        if (!o.value) return;
-        var esp = o.dataset.especie;
-        o.hidden = !!(especie && esp && esp !== especie);
-    });
-    if (selTipo.selectedOptions[0] && selTipo.selectedOptions[0].hidden) selTipo.value = '';
+function labelVacina(t) {
+    return t.nome + (t.intervalo ? ' (reforço em ' + t.intervalo + ' meses)' : ' (dose única)');
 }
+
+// Filtra a lista de vacinas pela espécie do animal escolhido — vacina sem
+// espécie fixada (FKEspecie null) serve pra qualquer uma.
+function vacinasParaEspecie(especie) {
+    return TIPOS_VACINA.filter(function (t) { return !especie || !t.especie || t.especie === especie; });
+}
+
+var rvTipoPk = initPicker({
+    pickerId: 'rvTipoPicker', triggerId: 'rvTipoTrigger', dropdownId: 'rvTipoDropdown',
+    searchId: 'rvTipoSearch', listId: 'rvTipoList', hiddenId: 'inprvTipoId', labelId: 'rvTipoLabel',
+    items: TIPOS_VACINA,
+    chave: function (t) { return t.id; },
+    renderItem: function (t) { return { title: labelVacina(t) }; },
+    matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhuma vacina encontrada.',
+});
 
 var animalPicker = initPicker({
     pickerId: 'animalPicker', triggerId: 'animalTrigger', dropdownId: 'animalDropdown',
@@ -214,11 +218,11 @@ var animalPicker = initPicker({
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },
     vazioMsg: 'Nenhum animal encontrado.',
-    onSelect: function (a) { filtrarVacinasPorEspecie(a.especie); },
+    onSelect: function (a) { rvTipoPk.setItems(vacinasParaEspecie(a.especie), 'Selecione a vacina'); },
 });
 
 <?php if ($animalPre): ?>
-    filtrarVacinasPorEspecie(<?= json_encode($animalPre['FKEspecie']) ?>);
+    rvTipoPk.setItems(vacinasParaEspecie(<?= json_encode($animalPre['FKEspecie']) ?>), 'Selecione a vacina');
 <?php endif ?>
 
 initPicker({

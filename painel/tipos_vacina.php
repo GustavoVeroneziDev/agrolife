@@ -160,10 +160,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Categoria *</label>
-                        <select name="categoria" id="fCategoria" class="form-select" required>
-                            <option value="vacina">Vacina</option>
-                            <option value="medicamento">Medicamento / cuidado periódico</option>
-                        </select>
+                        <?= campoPicker('fCat', 'categoria', 'Vacina', '', 'vacina', 'Vacina', obrigatorio: true, comBusca: false) ?>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Nome *</label>
@@ -180,12 +177,7 @@ require_once __DIR__ . '/../geral/header.php';
                         </div>
                         <div class="col-6">
                             <label class="form-label">Espécie</label>
-                            <select name="especie" id="fEspecie" class="form-select">
-                                <option value="">Todas as espécies</option>
-                                <?php foreach ($especies as $e): ?>
-                                    <option value="<?= h($e['IDEspecie']) ?>"><?= h($e['Nome']) ?></option>
-                                <?php endforeach ?>
-                            </select>
+                            <?= campoPicker('fEsp', 'especie', 'Todas as espécies', '', obrigatorio: false, comBusca: false) ?>
                         </div>
                     </div>
                 </div>
@@ -199,14 +191,44 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <script>
+var CATEGORIAS_TV = [
+    { id: 'vacina', nome: 'Vacina' },
+    { id: 'medicamento', nome: 'Medicamento / cuidado periódico' },
+];
+var ESPECIES_TV = [{ id: '', nome: 'Todas as espécies', icone: '' }].concat(<?= json_encode(array_map(fn($e) => [
+    'id' => $e['IDEspecie'], 'nome' => $e['Nome'], 'icone' => $e['Icone'],
+], $especies), JSON_UNESCAPED_UNICODE) ?>);
+
+var fCatPk = initPicker({
+    pickerId: 'fCatPicker', triggerId: 'fCatTrigger', dropdownId: 'fCatDropdown',
+    searchId: 'fCatSearch', listId: 'fCatList', hiddenId: 'inpfCatId', labelId: 'fCatLabel',
+    items: CATEGORIAS_TV,
+    chave: function (c) { return c.id; },
+    renderItem: function (c) { return { title: c.nome }; },
+    matches: function (c, q) { return c.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
+
+var fEspPk = initPicker({
+    pickerId: 'fEspPicker', triggerId: 'fEspTrigger', dropdownId: 'fEspDropdown',
+    searchId: 'fEspSearch', listId: 'fEspList', hiddenId: 'inpfEspId', labelId: 'fEspLabel',
+    items: ESPECIES_TV,
+    chave: function (e) { return e.id; },
+    renderItem: function (e) { return { title: e.nome, icon: e.icone }; },
+    matches: function (e, q) { return e.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhuma espécie encontrada.',
+});
+
 function abrirModalVacina(dados) {
     document.getElementById('tituloModalVacina').textContent = dados ? 'Editar item' : 'Novo item';
     document.getElementById('fId').value        = dados ? dados.IDTipo : '';
-    document.getElementById('fCategoria').value = dados ? (dados.Categoria || 'vacina') : 'vacina';
+    var cat = dados ? (dados.Categoria || 'vacina') : 'vacina';
+    fCatPk.selecionar(CATEGORIAS_TV.filter(function (c) { return c.id === cat; })[0] || CATEGORIAS_TV[0]);
     document.getElementById('fNome').value      = dados ? dados.Nome : '';
     document.getElementById('fDescricao').value = dados ? (dados.Descricao || '') : '';
     document.getElementById('fIntervalo').value = dados ? (dados.IntervaloMeses || '') : '';
-    document.getElementById('fEspecie').value   = dados ? (dados.FKEspecie || '') : '';
+    var esp = dados ? (dados.FKEspecie || '') : '';
+    fEspPk.selecionar(ESPECIES_TV.filter(function (e) { return e.id === esp; })[0] || ESPECIES_TV[0]);
     new bootstrap.Modal(document.getElementById('modalVacina')).show();
 }
 </script>

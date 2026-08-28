@@ -144,11 +144,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Tipo *</label>
-                        <select name="tipo" class="form-select" required>
-                            <?php foreach ($tiposClinico as $valor => $label): ?>
-                                <option value="<?= h($valor) ?>"><?= h($label) ?></option>
-                            <?php endforeach ?>
-                        </select>
+                        <?= campoPicker('rcTipo', 'tipo', '—', '', 'cirurgia', 'Cirurgia', obrigatorio: true, comBusca: false) ?>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Data *</label>
@@ -198,6 +194,19 @@ var ANIMAIS = <?= json_encode(array_map(fn($a) => [
 var VETS = <?= json_encode(array_map(fn($v) => [
     'id' => $v['IDUsuario'], 'nome' => $v['Nome'],
 ], $vets), JSON_UNESCAPED_UNICODE) ?>;
+var TIPOS_CLINICO = <?= json_encode(array_map(fn($valor, $label) => [
+    'id' => $valor, 'nome' => $label,
+], array_keys($tiposClinico), $tiposClinico), JSON_UNESCAPED_UNICODE) ?>;
+
+initPicker({
+    pickerId: 'rcTipoPicker', triggerId: 'rcTipoTrigger', dropdownId: 'rcTipoDropdown',
+    searchId: 'rcTipoSearch', listId: 'rcTipoList', hiddenId: 'inprcTipoId', labelId: 'rcTipoLabel',
+    items: TIPOS_CLINICO,
+    chave: function (t) { return t.id; },
+    renderItem: function (t) { return { title: t.nome }; },
+    matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
 
 initPicker({
     pickerId: 'animalPicker', triggerId: 'animalTrigger', dropdownId: 'animalDropdown',

@@ -167,6 +167,14 @@ if (!preg_match('/^\d{4}-\d{2}$/', $mesFiltro)) {
 }
 
 $statusValidos = ['pendente' => 1, 'confirmado' => 1, 'concluido' => 1, 'cancelado' => 1, 'faltou' => 1];
+$statusFiltroLabels = [
+    ''          => 'Sem cancelados',
+    'pendente'  => 'Pendentes',
+    'confirmado' => 'Confirmados',
+    'concluido' => 'Concluídos',
+    'cancelado' => 'Cancelados',
+    'faltou'    => 'Faltas',
+];
 
 // Se veio de um clique num dia da vista mensal, pula pra semana que contém esse dia
 $semanaOffset = (int) ($_GET['semana'] ?? 0);
@@ -353,14 +361,9 @@ require_once __DIR__ . '/../geral/header.php';
         <?php endif ?>
 
         <?php if ($vista === 'semana'): ?>
-            <select class="form-select form-select-sm" style="width:auto;" onchange="location.href='?vista=semana&semana=<?= $semanaOffset ?>&status='+this.value">
-                <option value="">Sem cancelados</option>
-                <option value="pendente" <?= $filtroStatus === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
-                <option value="confirmado" <?= $filtroStatus === 'confirmado' ? 'selected' : '' ?>>Confirmados</option>
-                <option value="concluido" <?= $filtroStatus === 'concluido' ? 'selected' : '' ?>>Concluídos</option>
-                <option value="cancelado" <?= $filtroStatus === 'cancelado' ? 'selected' : '' ?>>Cancelados</option>
-                <option value="faltou" <?= $filtroStatus === 'faltou' ? 'selected' : '' ?>>Faltas</option>
-            </select>
+            <div style="width:170px;">
+                <?= campoPicker('agStatusFiltro', 'status_filtro', 'Sem cancelados', '', $filtroStatus, $statusFiltroLabels[$filtroStatus] ?? 'Sem cancelados', obrigatorio: false, comBusca: false) ?>
+            </div>
         <?php endif ?>
 
         <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
@@ -535,14 +538,7 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Duração</label>
-                        <select name="duracao" id="selDuracaoAgendamento" class="form-select">
-                            <option value="15">15 min</option>
-                            <option value="30" selected>30 min</option>
-                            <option value="45">45 min</option>
-                            <option value="60">1 hora</option>
-                            <option value="90">1h30</option>
-                            <option value="120">2 horas</option>
-                        </select>
+                        <?= campoPicker('agDur', 'duracao', '30 min', '', '30', '30 min', obrigatorio: true, comBusca: false) ?>
                         <div class="form-text">Escolher um procedimento acima já preenche isso — pode ajustar se precisar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
                     </div>
                     <div class="row g-2 mb-3">
@@ -630,24 +626,35 @@ var TIPOS_AGENDA = <?= json_encode(array_map(fn($valor, $label) => [
     'id' => $valor, 'nome' => $label,
 ], array_keys($tiposAgenda), $tiposAgenda), JSON_UNESCAPED_UNICODE) ?>;
 
-var selDuracaoAgendamento = document.getElementById('selDuracaoAgendamento');
 var inpTituloAgendamento  = document.getElementById('inpTituloAgendamento');
+
+// Rótulo de uma duração em minutos — cobre valores fora da lista fixa (ex:
+// 20min de algum procedimento) sem precisar de opção pré-cadastrada.
+function labelDuracao(min) {
+    if (min === 60) return '1 hora';
+    if (min > 60 && min % 60 === 0) return (min / 60) + ' horas';
+    if (min > 60) return Math.floor(min / 60) + 'h' + (min % 60);
+    return min + ' min';
+}
+
+var DURACOES = [15, 30, 45, 60, 90, 120].map(function (m) { return { id: m, nome: labelDuracao(m) }; });
+
+var agDurPk = initPicker({
+    pickerId: 'agDurPicker', triggerId: 'agDurTrigger', dropdownId: 'agDurDropdown',
+    searchId: 'agDurSearch', listId: 'agDurList', hiddenId: 'inpagDurId', labelId: 'agDurLabel',
+    items: DURACOES,
+    chave: function (d) { return d.id; },
+    renderItem: function (d) { return { title: d.nome }; },
+    matches: function (d, q) { return d.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
 
 function selecionarProcedimento(item) {
     if (!item) return;
     // Duração do procedimento pode não bater com nenhuma das opções fixas
-    // (ex: 20min) — cria a opção na hora se precisar, em vez de falhar
-    // silenciosamente ao tentar selecionar um valor que não existe.
-    var existe = Array.prototype.some.call(selDuracaoAgendamento.options, function (o) {
-        return Number(o.value) === item.duracao;
-    });
-    if (!existe) {
-        var op = document.createElement('option');
-        op.value = item.duracao;
-        op.textContent = item.duracao + ' min';
-        selDuracaoAgendamento.appendChild(op);
-    }
-    selDuracaoAgendamento.value = item.duracao;
+    // (ex: 20min) — seleciona um item sintético direto, sem precisar de
+    // opção pré-cadastrada na lista.
+    agDurPk.selecionar({ id: item.duracao, nome: labelDuracao(item.duracao) });
     inpTituloAgendamento.value = item.nome;
 }
 
@@ -683,6 +690,19 @@ var agTipoPk = initPicker({
         }
     },
 });
+
+<?php if ($vista === 'semana'): ?>
+initPicker({
+    pickerId: 'agStatusFiltroPicker', triggerId: 'agStatusFiltroTrigger', dropdownId: 'agStatusFiltroDropdown',
+    searchId: 'agStatusFiltroSearch', listId: 'agStatusFiltroList', hiddenId: 'inpagStatusFiltroId', labelId: 'agStatusFiltroLabel',
+    items: <?= json_encode(array_map(fn($id, $nome) => ['id' => $id, 'nome' => $nome], array_keys($statusFiltroLabels), $statusFiltroLabels), JSON_UNESCAPED_UNICODE) ?>,
+    chave: function (s) { return s.id; },
+    renderItem: function (s) { return { title: s.nome }; },
+    matches: function (s, q) { return s.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+    onSelect: function (s) { location.href = '?vista=semana&semana=<?= $semanaOffset ?>&status=' + s.id; },
+});
+<?php endif ?>
 
 initPicker({
     pickerId: 'animalPicker', triggerId: 'animalTrigger', dropdownId: 'animalDropdown',

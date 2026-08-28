@@ -139,7 +139,7 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </div>
 
-<form class="row g-2 mb-4" method="GET">
+<form class="row g-2 mb-4" method="GET" id="formAnimais">
     <div class="col-sm-7">
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -148,14 +148,13 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     </div>
     <div class="col-sm-3">
-        <select name="especie" class="form-select" onchange="this.form.submit()">
-            <option value="">Todas as espécies</option>
-            <?php foreach ($especies as $e): ?>
-                <option value="<?= h($e['IDEspecie']) ?>" <?= $especieF === $e['IDEspecie'] ? 'selected' : '' ?>>
-                    <?= h($e['Nome']) ?>
-                </option>
-            <?php endforeach ?>
-        </select>
+        <?php
+            $especieFNome = 'Todas as espécies';
+            foreach ($especies as $e) {
+                if ($e['IDEspecie'] === $especieF) { $especieFNome = $e['Nome']; break; }
+            }
+        ?>
+        <?= campoPicker('animaisEspecie', 'especie', 'Todas as espécies', '', $especieF, $especieFNome, obrigatorio: false, comBusca: false) ?>
     </div>
     <div class="col-sm-2 d-grid">
         <button class="btn btn-accent" type="submit">Buscar</button>
@@ -320,6 +319,17 @@ initPicker({
 });
 
 initAnimalPickers('na', NA_ESPECIES, NA_RACAS);
+
+initPicker({
+    pickerId: 'animaisEspeciePicker', triggerId: 'animaisEspecieTrigger', dropdownId: 'animaisEspecieDropdown',
+    searchId: 'animaisEspecieSearch', listId: 'animaisEspecieList', hiddenId: 'inpanimaisEspecieId', labelId: 'animaisEspecieLabel',
+    items: [{ id: '', nome: 'Todas as espécies', icone: '' }].concat(NA_ESPECIES),
+    chave: function (e) { return e.id; },
+    renderItem: function (e) { return { title: e.nome, icon: e.icone }; },
+    matches: function (e, q) { return e.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhuma espécie encontrada.',
+    onSelect: function () { document.getElementById('formAnimais').submit(); },
+});
 </script>
 
 <?php if (($_GET['acao'] ?? '') === 'novo'): ?>

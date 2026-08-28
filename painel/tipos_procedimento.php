@@ -152,11 +152,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Categoria *</label>
-                        <select name="categoria" id="fCategoria" class="form-select" required>
-                            <?php foreach ($categorias as $valor => $label): ?>
-                                <option value="<?= h($valor) ?>"><?= h($label) ?></option>
-                            <?php endforeach ?>
-                        </select>
+                        <?= campoPicker('fCat', 'categoria', '—', '', 'consulta', 'Consulta', obrigatorio: true, comBusca: false) ?>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Nome *</label>
@@ -177,10 +173,25 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <script>
+var CATEGORIAS_TP = <?= json_encode(array_map(fn($valor, $label) => [
+    'id' => $valor, 'nome' => $label,
+], array_keys($categorias), $categorias), JSON_UNESCAPED_UNICODE) ?>;
+
+var fCatPk = initPicker({
+    pickerId: 'fCatPicker', triggerId: 'fCatTrigger', dropdownId: 'fCatDropdown',
+    searchId: 'fCatSearch', listId: 'fCatList', hiddenId: 'inpfCatId', labelId: 'fCatLabel',
+    items: CATEGORIAS_TP,
+    chave: function (c) { return c.id; },
+    renderItem: function (c) { return { title: c.nome }; },
+    matches: function (c, q) { return c.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nada encontrado.',
+});
+
 function abrirModalProcedimento(dados) {
     document.getElementById('tituloModalProcedimento').textContent = dados ? 'Editar procedimento' : 'Novo procedimento';
     document.getElementById('fId').value        = dados ? dados.IDTipo : '';
-    document.getElementById('fCategoria').value = dados ? dados.Categoria : 'consulta';
+    var cat = dados ? dados.Categoria : 'consulta';
+    fCatPk.selecionar(CATEGORIAS_TP.filter(function (c) { return c.id === cat; })[0] || CATEGORIAS_TP[0]);
     document.getElementById('fNome').value      = dados ? dados.Nome : '';
     document.getElementById('fDuracao').value   = dados ? dados.DuracaoPadraoMinutos : 30;
     new bootstrap.Modal(document.getElementById('modalProcedimento')).show();
