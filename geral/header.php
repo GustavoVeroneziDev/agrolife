@@ -91,8 +91,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             trigger.style.borderColor = '';
         }
 
+        var abertoEm = 0;
         function abrir() {
             aberto = true;
+            abertoEm = performance.now();
             trigger.classList.add('open');
             dropdown.classList.remove('d-none');
             renderizar(opts.items);
@@ -108,7 +110,17 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             dropdown.classList.add('d-none');
             document.removeEventListener('click', clickFora, true);
         }
-        function clickFora(e) { if (!picker.contains(e.target)) fechar(); }
+        function clickFora(e) {
+            // Ignora um clique "fantasma" de uma seleção anterior — o
+            // encadeamento (Tipo -> Procedimento, Espécie -> Sexo -> Raça
+            // etc.) abre este picker via setTimeout depois que outro
+            // fechou; se por qualquer motivo (aparelho mais lento, clique
+            // rápido demais) esse evento de clique só terminar de ser
+            // processado DEPOIS desse picker já ter aberto, ele não pode
+            // contar como "clique fora" e fechar o que acabou de abrir.
+            if (e.timeStamp < abertoEm) return;
+            if (!picker.contains(e.target)) fechar();
+        }
         function toggle() {
             if (trigger.classList.contains('disabled')) return;
             aberto ? fechar() : abrir();
