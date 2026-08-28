@@ -321,6 +321,66 @@ button, a, [role="button"] { touch-action: manipulation; }
 .picker-item:hover .picker-item-titulo, .picker-item.picker-active .picker-item-titulo { color: var(--accent); }
 .picker-empty { padding: .9rem; text-align: center; color: var(--text-secondary); font-size: .85rem; }
 
+/* ── Agenda: switch de vista e navegação de período ───────────── */
+.vista-switch {
+  display: inline-flex;
+  background: var(--bg-hover);
+  border: 1px solid var(--card-border-color);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.vista-btn {
+  height: 32px;
+  padding: 0 .7rem;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 500;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.vista-btn.ativo { background: var(--accent); color: var(--accent-text); box-shadow: var(--shadow-card); }
+.vista-btn:hover:not(.ativo) { background: var(--card-border-color); }
+
+.nav-periodo {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--card-border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.nav-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+.nav-btn:hover { background: var(--bg-hover); }
+.nav-label {
+  padding: 0 .85rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  border-left: 1px solid var(--card-border-color);
+  border-right: 1px solid var(--card-border-color);
+  white-space: nowrap;
+  min-width: 96px;
+  text-align: center;
+  line-height: 34px;
+}
+
+.agenda-dia-hoje { border-color: var(--accent) !important; }
+.agenda-dia-hoje-header { background: var(--accent-light); }
+
 /* ── Calendário (vista mensal da agenda) ──────────────────────── */
 .calendario-grade {
   display: grid;

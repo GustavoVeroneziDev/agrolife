@@ -149,19 +149,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Vista salva em cookie — igual padrão da referência (Belos Cílios): lembra a
+// última visão escolhida entre visitas, só re-grava quando vem explícita na URL.
+if (isset($_GET['vista'])) {
+    $vista = $_GET['vista'] === 'mes' ? 'mes' : 'semana';
+    setcookie('agenda_vista', $vista, time() + 60 * 60 * 24 * 365, '/');
+} else {
+    $vista = ($_COOKIE['agenda_vista'] ?? '') === 'mes' ? 'mes' : 'semana';
+}
+
 $filtroStatus = trim($_GET['status'] ?? '');
 $animalPreId  = trim($_GET['animal'] ?? '');
-$vista        = ($_GET['vista'] ?? 'dias') === 'mes' ? 'mes' : 'dias';
-$diaFiltro    = trim($_GET['dia'] ?? '');
-if ($diaFiltro !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $diaFiltro)) {
-    $diaFiltro = '';
-}
+
 $mesFiltro = trim($_GET['mes'] ?? '');
 if (!preg_match('/^\d{4}-\d{2}$/', $mesFiltro)) {
     $mesFiltro = date('Y-m');
 }
 
 $statusValidos = ['pendente' => 1, 'confirmado' => 1, 'concluido' => 1, 'cancelado' => 1, 'faltou' => 1];
+
+// Se veio de um clique num dia da vista mensal, pula pra semana que contém esse dia
+$semanaOffset = (int) ($_GET['semana'] ?? 0);
+if ($vista === 'semana' && !empty($_GET['dia']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['dia'])) {
+    $segAlvo  = strtotime('monday this week', strtotime($_GET['dia']));
+    $segAtual = strtotime('monday this week');
+    $semanaOffset = (int) round(($segAlvo - $segAtual) / (7 * 86400));
+}
 
 try {
     $animais = $pdo->query(
@@ -176,17 +189,23 @@ try {
         "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
-    $porDia = [];
+    $porDia   = [];
     $mesGrade = [];
-    if ($vista === 'dias') {
-        $where  = $diaFiltro !== ''
-            ? 'WHERE DATE(ag.DataHoraInicio) = :dia'
-            : "WHERE ag.DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
-        $params = $diaFiltro !== '' ? [':dia' => $diaFiltro] : [];
+
+    if ($vista === 'semana') {
+        // ── Vista semanal: sempre os 7 dias, de segunda a domingo ──
+        $inicioPeriodo = strtotime("monday this week +{$semanaOffset} week");
+        $fimPeriodo    = strtotime("sunday this week +{$semanaOffset} week");
+        $iniSQL        = date('Y-m-d', $inicioPeriodo);
+        $fimSQL        = date('Y-m-d', $fimPeriodo);
+        $fimSQLNext    = date('Y-m-d', strtotime($fimSQL . ' +1 day'));
+
+        $where  = 'WHERE ag.DataHoraInicio >= :ini AND ag.DataHoraInicio < :fim';
+        $params = [':ini' => $iniSQL, ':fim' => $fimSQLNext];
         if (isset($statusValidos[$filtroStatus])) {
             $where .= ' AND ag.Status = :status';
             $params[':status'] = $filtroStatus;
-        } elseif ($diaFiltro === '') {
+        } else {
             $where .= " AND ag.Status != 'cancelado'";
         }
 
@@ -204,13 +223,12 @@ try {
         $stmt->execute($params);
         $agendamentos = $stmt->fetchAll();
 
-        // Agrupa por dia pra organizar a lista visualmente
         foreach ($agendamentos as $ag) {
             $dia = substr($ag['DataHoraInicio'], 0, 10);
             $porDia[$dia][] = $ag;
         }
     } else {
-        // Vista mensal: grade de calendário com contagem por dia
+        // ── Vista mensal: grade de calendário com contagem por dia ──
         $inicioMes = $mesFiltro . '-01';
         $fimMes    = date('Y-m-d', strtotime('+1 month', strtotime($inicioMes)));
 
@@ -232,8 +250,8 @@ try {
 
         $celulas = array_fill(0, $primeiroDiaSemana, null);
         for ($d = 1; $d <= $diasNoMes; $d++) {
-            $dataStr    = sprintf('%s-%02d', $mesFiltro, $d);
-            $celulas[]  = ['data' => $dataStr, 'dia' => $d, 'info' => $contagemPorDia[$dataStr] ?? null];
+            $dataStr   = sprintf('%s-%02d', $mesFiltro, $d);
+            $celulas[] = ['data' => $dataStr, 'dia' => $d, 'info' => $contagemPorDia[$dataStr] ?? null];
         }
         while (count($celulas) % 7 !== 0) {
             $celulas[] = null;
@@ -255,6 +273,10 @@ try {
     error_log('[Agenda] ' . $e->getMessage());
     $animais = $vets = $agendamentos = $porDia = $mesGrade = [];
     $animalPre = null;
+    // Garante que a vista semanal sempre tem um período pra renderizar,
+    // mesmo se a query tiver falhado antes de calculá-lo.
+    $inicioPeriodo = $inicioPeriodo ?? strtotime("monday this week +{$semanaOffset} week");
+    $fimPeriodo    = $fimPeriodo    ?? strtotime("sunday this week +{$semanaOffset} week");
 }
 
 $paginaTitulo = 'Agenda';
@@ -262,16 +284,50 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-    <h4 class="fw-bold mb-0">Agenda</h4>
-    <div class="d-flex gap-2 flex-wrap">
-        <div class="btn-group btn-group-sm" role="group">
-            <a href="?vista=dias" class="btn <?= $vista === 'dias' ? 'btn-accent' : 'btn-outline-accent' ?>">Dias</a>
-            <a href="?vista=mes&mes=<?= h($mesFiltro) ?>" class="btn <?= $vista === 'mes' ? 'btn-accent' : 'btn-outline-accent' ?>">Mês</a>
+<?php
+    $mesesPt = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
+    if ($vista === 'mes') {
+        $periodoAnteriorHref = '?vista=mes&mes=' . date('Y-m', strtotime($mesFiltro . '-01 -1 month'));
+        $periodoProximoHref  = '?vista=mes&mes=' . date('Y-m', strtotime($mesFiltro . '-01 +1 month'));
+        $periodoLabel        = $mesesPt[(int) date('n', strtotime($mesFiltro . '-01'))] . ' de ' . date('Y', strtotime($mesFiltro . '-01'));
+        $noPeriodoAtual       = $mesFiltro === date('Y-m');
+        $hojeHref             = '?vista=mes&mes=' . date('Y-m');
+    } else {
+        $periodoAnteriorHref = '?vista=semana&semana=' . ($semanaOffset - 1);
+        $periodoProximoHref  = '?vista=semana&semana=' . ($semanaOffset + 1);
+        $periodoLabel        = date('d/m', $inicioPeriodo) . ' – ' . date('d/m', $fimPeriodo);
+        $noPeriodoAtual       = $semanaOffset === 0;
+        $hojeHref             = '?vista=semana&semana=0';
+    }
+?>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+        <i class="bi bi-calendar-week" style="color:var(--accent);"></i> Agenda
+    </h4>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="vista-switch" role="group" aria-label="Visão da agenda">
+            <a href="?vista=semana" class="vista-btn <?= $vista === 'semana' ? 'ativo' : '' ?>">
+                <i class="bi bi-list-ul me-1"></i> Semana
+            </a>
+            <a href="?vista=mes&mes=<?= h($mesFiltro) ?>" class="vista-btn <?= $vista === 'mes' ? 'ativo' : '' ?>">
+                <i class="bi bi-grid-3x3-gap me-1"></i> Mês
+            </a>
         </div>
-        <?php if ($vista === 'dias'): ?>
-            <select class="form-select form-select-sm" style="width:auto;" onchange="location.href='?vista=dias&status='+this.value">
-                <option value="">Próximos (sem cancelados)</option>
+
+        <div class="nav-periodo">
+            <a href="<?= $periodoAnteriorHref ?>" class="nav-btn" title="Anterior"><i class="bi bi-chevron-left"></i></a>
+            <span class="nav-label"><?= h($periodoLabel) ?></span>
+            <a href="<?= $periodoProximoHref ?>" class="nav-btn" title="Próximo"><i class="bi bi-chevron-right"></i></a>
+        </div>
+
+        <?php if (!$noPeriodoAtual): ?>
+            <a href="<?= $hojeHref ?>" class="btn btn-outline-accent btn-sm">Hoje</a>
+        <?php endif ?>
+
+        <?php if ($vista === 'semana'): ?>
+            <select class="form-select form-select-sm" style="width:auto;" onchange="location.href='?vista=semana&semana=<?= $semanaOffset ?>&status='+this.value">
+                <option value="">Sem cancelados</option>
                 <option value="pendente" <?= $filtroStatus === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
                 <option value="confirmado" <?= $filtroStatus === 'confirmado' ? 'selected' : '' ?>>Confirmados</option>
                 <option value="concluido" <?= $filtroStatus === 'concluido' ? 'selected' : '' ?>>Concluídos</option>
@@ -279,35 +335,15 @@ require_once __DIR__ . '/../geral/header.php';
                 <option value="faltou" <?= $filtroStatus === 'faltou' ? 'selected' : '' ?>>Faltas</option>
             </select>
         <?php endif ?>
+
         <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
             <i class="bi bi-calendar-plus me-1"></i> Novo agendamento
         </button>
     </div>
 </div>
 
-<?php if ($vista === 'dias' && $diaFiltro !== ''): ?>
-    <div class="d-flex align-items-center gap-2 mb-4">
-        <a href="?vista=dias&dia=<?= date('Y-m-d', strtotime($diaFiltro . ' -1 day')) ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
-        <span class="fw-semibold"><?= h(formatarData($diaFiltro)) ?></span>
-        <a href="?vista=dias&dia=<?= date('Y-m-d', strtotime($diaFiltro . ' +1 day')) ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
-        <a href="?vista=dias" class="btn btn-sm btn-outline-secondary ms-2">Voltar pros próximos</a>
-    </div>
-<?php endif ?>
-
 <?php if ($vista === 'mes'): ?>
-    <?php
-        $mesAnterior = date('Y-m', strtotime($mesFiltro . '-01 -1 month'));
-        $mesProximo  = date('Y-m', strtotime($mesFiltro . '-01 +1 month'));
-        $nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        // monta o nome do mês manualmente em vez de strftime() (deprecated, some do PHP)
-        $mesesPt = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
-        $nomeMes = $mesesPt[(int) date('n', strtotime($mesFiltro . '-01'))] . ' de ' . date('Y', strtotime($mesFiltro . '-01'));
-    ?>
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <a href="?vista=mes&mes=<?= $mesAnterior ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
-        <span class="fw-semibold"><?= h($nomeMes) ?></span>
-        <a href="?vista=mes&mes=<?= $mesProximo ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
-    </div>
+    <?php $nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']; ?>
     <div class="card p-2 mb-4">
         <div class="calendario-grade">
             <?php foreach ($nomesDias as $nd): ?>
@@ -317,7 +353,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php if ($cel === null): ?>
                     <div class="calendario-dia calendario-dia-vazio"></div>
                 <?php else: ?>
-                    <a href="?vista=dias&dia=<?= $cel['data'] ?>"
+                    <a href="?vista=semana&dia=<?= $cel['data'] ?>"
                        class="calendario-dia text-decoration-none <?= $cel['data'] === date('Y-m-d') ? 'calendario-dia-hoje' : '' ?>">
                         <span class="calendario-dia-numero"><?= $cel['dia'] ?></span>
                         <?php if ($cel['info'] && (int) $cel['info']['Total'] > (int) $cel['info']['Cancelados']): ?>
@@ -328,67 +364,66 @@ require_once __DIR__ . '/../geral/header.php';
             <?php endforeach; endforeach ?>
         </div>
     </div>
-<?php elseif (empty($agendamentos)): ?>
-    <div class="card text-center py-5 text-secondary">
-        <i class="bi bi-calendar3 fs-1 d-block mb-2 opacity-25"></i>
-        <p class="mb-0">Nenhum agendamento encontrado.</p>
-    </div>
 <?php else: ?>
-    <?php foreach ($porDia as $dia => $lista): ?>
-        <h6 class="fw-semibold text-secondary mt-4 mb-2">
-            <?= h(formatarData($dia)) ?>
-            <?php if ($dia === date('Y-m-d')): ?>
-                <span class="badge" style="background:var(--accent-light);color:var(--accent);">Hoje</span>
+    <?php
+        $diasSemanaPt = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+        for ($d = 0; $d < 7; $d++):
+            $ts    = strtotime("+{$d} days", $inicioPeriodo);
+            $dia   = date('Y-m-d', $ts);
+            $lista = $porDia[$dia] ?? [];
+            $eHoje = $dia === date('Y-m-d');
+    ?>
+        <div class="card mb-3<?= $eHoje ? ' agenda-dia-hoje' : '' ?>">
+            <div class="card-header d-flex flex-wrap align-items-center gap-2 px-3 py-2<?= $eHoje ? ' agenda-dia-hoje-header' : '' ?>">
+                <span class="fw-semibold<?= $eHoje ? ' text-accent' : '' ?>"><?= $diasSemanaPt[$d] ?></span>
+                <span class="text-secondary small"><?= date('d/m', $ts) ?></span>
+                <?php if ($eHoje): ?><span class="badge" style="background:var(--accent);">Hoje</span><?php endif ?>
+                <span class="badge bg-secondary ms-auto"><?= count($lista) ?> ag.</span>
+            </div>
+            <?php if (empty($lista)): ?>
+                <div class="text-center py-3 text-secondary small">Sem agendamentos</div>
+            <?php else: ?>
+                <ul class="list-group list-group-flush">
+                    <?php foreach ($lista as $ag): ?>
+                        <li class="list-group-item px-3 py-2" data-id-agendamento="<?= h($ag['IDAgendamento']) ?>">
+                            <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
+                                <span class="fw-bold text-accent" style="min-width:42px;"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                                        <?= labelStatusAgendamento($ag['Status']) ?>
+                                        <span class="fw-medium"><?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
+                                        <span class="text-secondary small">— <?= h($ag['NomeDono']) ?></span>
+                                    </div>
+                                    <span class="text-secondary small d-block">
+                                        <?= h($ag['Titulo']) ?><?= $ag['NomeVeterinario'] ? ' · ' . h($ag['NomeVeterinario']) : ' · sem veterinário definido' ?>
+                                    </span>
+                                    <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
+                                        <span class="text-secondary small d-block mt-1"><strong>Pós-consulta:</strong> <?= nl2br(h($ag['ObservacoesPos'])) ?></span>
+                                    <?php endif ?>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap flex-shrink-0">
+                                    <?php if ($ag['Status'] === 'pendente'): ?>
+                                        <button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="<?= h($ag['IDAgendamento']) ?>">Confirmar</button>
+                                        <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
+                                    <?php elseif ($ag['Status'] === 'confirmado'): ?>
+                                        <button class="btn btn-sm btn-accent btn-concluir"
+                                            data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>">
+                                            Concluir
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
+                                        <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
+                                    <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
+                                        <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
+                                    <?php endif ?>
+                                </div>
+                            </div>
+                        </li>
+                    <?php endforeach ?>
+                </ul>
             <?php endif ?>
-        </h6>
-        <div class="d-flex flex-column gap-2 mb-2">
-            <?php foreach ($lista as $ag): ?>
-                <div class="card p-3" data-id-agendamento="<?= h($ag['IDAgendamento']) ?>">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="text-center" style="min-width:52px;">
-                                <div class="fw-bold"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></div>
-                                <div class="small text-secondary"><?= date('H:i', strtotime($ag['DataHoraFim'])) ?></div>
-                            </div>
-                            <div>
-                                <div>
-                                    <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
-                                    <?= labelStatusAgendamento($ag['Status']) ?>
-                                </div>
-                                <div class="fw-medium mt-1">
-                                    <?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?>
-                                    <span class="text-secondary fw-normal">— <?= h($ag['NomeDono']) ?></span>
-                                </div>
-                                <div class="small text-secondary">
-                                    <?= h($ag['Titulo']) ?><?= $ag['NomeVeterinario'] ? ' · ' . h($ag['NomeVeterinario']) : ' · sem veterinário definido' ?>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <?php if ($ag['Status'] === 'pendente'): ?>
-                                <button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="<?= h($ag['IDAgendamento']) ?>">Confirmar</button>
-                                <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
-                            <?php elseif ($ag['Status'] === 'confirmado'): ?>
-                                <button class="btn btn-sm btn-accent btn-concluir"
-                                    data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>">
-                                    Concluir
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
-                                <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
-                            <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
-                                <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
-                            <?php endif ?>
-                        </div>
-                    </div>
-                    <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
-                        <div class="small mt-2 pt-2 border-top" style="border-color:var(--card-border-color) !important;">
-                            <strong>Pós-consulta:</strong> <?= nl2br(h($ag['ObservacoesPos'])) ?>
-                        </div>
-                    <?php endif ?>
-                </div>
-            <?php endforeach ?>
         </div>
-    <?php endforeach ?>
+    <?php endfor ?>
 <?php endif ?>
 
 <div class="modal fade" id="modalNovoAgendamento" tabindex="-1">
