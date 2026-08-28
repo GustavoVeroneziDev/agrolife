@@ -398,35 +398,35 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .calendario-dia {
   position: relative;
-  aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  min-height: 72px;
+  padding: .35rem .4rem;
   border-radius: var(--radius-btn);
-  border: 1px solid transparent;
+  border: 1px solid var(--card-border-color);
+  background: var(--bg-card);
   color: var(--text-main);
+  cursor: pointer;
+  overflow: hidden;
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
-.calendario-dia:hover { background: var(--bg-hover); border-color: var(--card-border-color); }
-.calendario-dia-vazio { visibility: hidden; }
-.calendario-dia-hoje { border-color: var(--accent); font-weight: 700; background: var(--accent-light); }
+.calendario-dia:hover { background: var(--bg-hover); }
+.calendario-dia-vazio { visibility: hidden; border-color: transparent; }
+.calendario-dia-hoje { border-color: var(--accent); background: var(--accent-light); }
 .calendario-dia-sem-ag { cursor: default; }
-.calendario-dia-numero { font-size: .9rem; }
+.calendario-dia-numero { display: block; font-size: .8rem; font-weight: 600; line-height: 1; margin-bottom: .25rem; }
+.calendario-dia-hoje .calendario-dia-numero { color: var(--accent); }
 .calendario-dia-badge {
   position: absolute;
-  bottom: .2rem;
-  right: .3rem;
+  bottom: .3rem;
+  right: .4rem;
   font-size: .65rem;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
 }
-.calendario-dia { cursor: pointer; }
 
 /* Pontinhos de status no dia do calendário — mesma linguagem de cor dos
    badges de status (bg-secondary/info/success/danger/warning do Bootstrap) */
-.cal-dots { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: .2rem; }
+.cal-dots { display: flex; flex-wrap: wrap; gap: 2px; }
 .cal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .cal-dot-pendente   { background: var(--bs-secondary); }
 .cal-dot-confirmado { background: var(--bs-info); }
@@ -441,6 +441,10 @@ button, a, [role="button"] { touch-action: manipulation; }
   .painel-content { margin-left: 0; padding: 1rem; }
   .card { box-shadow: 0 1px 6px var(--shadow-color); }
   .topnav .navbar-brand { font-size: 1rem; }
+  .calendario-dia { min-height: 46px; padding: .25rem .3rem; }
+  .calendario-dia-numero { font-size: .72rem; }
+  .cal-dots { display: none; }
+  .calendario-dia-badge { font-size: .6rem; }
 }
 
 @media (max-width: 479.98px) {
