@@ -1,0 +1,164 @@
+/* ================================================================
+   Agro Life — home.css
+   Estilos exclusivos da página inicial pública (index.php, visitante
+   deslogado). Não é carregado em nenhuma outra tela — por isso fica
+   separado de estrutura.css, que é comum a todo o painel/app.
+   Usa só os tokens de paleta.css, igual o resto do sistema.
+   ================================================================ */
+
+.home-section { padding: 4.5rem 0; }
+.home-section-head { max-width: 640px; margin: 0 auto 2.75rem; text-align: center; }
+.home-eyebrow {
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .6rem;
+}
+.home-section-head h2 { font-weight: 800; letter-spacing: -.01em; margin-bottom: .6rem; }
+.home-section-head p { color: var(--text-secondary); margin-bottom: 0; }
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.home-hero {
+  background: linear-gradient(180deg, var(--bg-hover) 0%, var(--bg-main) 100%);
+  border-bottom: 1px solid var(--card-border-color);
+  padding: 4.5rem 0 5rem;
+}
+.home-hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 3rem;
+  align-items: center;
+}
+@media (max-width: 991.98px) {
+  .home-hero-grid { grid-template-columns: 1fr; text-align: center; gap: 2.5rem; }
+}
+.home-hero h1 {
+  font-size: clamp(2rem, 1.5rem + 2vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  color: var(--text-main);
+  margin-bottom: 1.1rem;
+}
+.home-hero .lead {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 46ch;
+  margin-bottom: 2rem;
+}
+@media (max-width: 991.98px) { .home-hero .lead { max-width: none; margin-inline: auto; } }
+.home-hero-cta { display: flex; gap: .75rem; flex-wrap: wrap; }
+@media (max-width: 991.98px) { .home-hero-cta { justify-content: center; } }
+
+.home-hero-mark {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 340px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--bg-card), var(--accent-light) 72%);
+  box-shadow: var(--shadow-card);
+}
+.home-hero-mark img { width: 62%; height: 62%; object-fit: contain; filter: drop-shadow(0 8px 20px var(--shadow-color-forte)); }
+
+.home-trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.25rem;
+  margin-top: 2.75rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--card-border-color);
+}
+@media (max-width: 991.98px) { .home-trust-row { justify-content: center; } }
+.home-trust-item { display: flex; align-items: center; gap: .55rem; color: var(--text-secondary); font-size: .92rem; font-weight: 500; }
+.home-trust-item i { color: var(--accent); font-size: 1.15rem; }
+
+/* ── Espécies ─────────────────────────────────────────────────── */
+.home-especies { background: var(--bg-card); }
+.home-especies-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2.25rem 3rem;
+}
+.home-especie-item { display: flex; flex-direction: column; align-items: center; gap: .65rem; width: 84px; }
+.home-especie-badge {
+  width: 76px; height: 76px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-light);
+  transition: transform .18s ease, background-color .18s ease;
+}
+.home-especie-item:hover .home-especie-badge { background: var(--accent); transform: translateY(-3px); }
+.home-especie-item:hover .home-especie-badge .especie-icone { background-color: var(--accent-text); }
+.home-especie-item span { font-size: .84rem; font-weight: 600; color: var(--text-secondary); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .home-especie-badge { transition: none; } }
+
+/* ── Serviços ─────────────────────────────────────────────────── */
+.home-servicos { background: var(--bg-main); }
+.home-servico-card {
+  height: 100%;
+  padding: 1.75rem 1.5rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.home-servico-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px var(--shadow-color-forte); }
+@media (prefers-reduced-motion: reduce) { .home-servico-card, .home-servico-card:hover { transition: none; transform: none; } }
+.home-servico-icone {
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-btn);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 1.5rem;
+  margin-bottom: 1.1rem;
+}
+.home-servico-card h3 { font-size: 1.08rem; font-weight: 700; margin-bottom: .5rem; color: var(--text-main); }
+.home-servico-card p { color: var(--text-secondary); font-size: .92rem; margin-bottom: 0; }
+
+/* ── Equipe ───────────────────────────────────────────────────── */
+.home-equipe { background: var(--bg-card); }
+.home-equipe-card { height: 100%; text-align: center; padding: 2rem 1.5rem 1.75rem; }
+.home-equipe-avatar {
+  width: 92px; height: 92px;
+  margin: 0 auto 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 2.4rem;
+}
+.home-equipe-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: .15rem; color: var(--text-main); }
+.home-equipe-cargo { color: var(--accent); font-weight: 600; font-size: .85rem; margin-bottom: .75rem; display: block; }
+.home-equipe-card p { color: var(--text-secondary); font-size: .88rem; margin-bottom: 0; }
+.home-equipe-placeholder-tag {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border-radius: 999px;
+  padding: .25rem .7rem;
+}
+
+/* ── Contato / CTA final ──────────────────────────────────────── */
+.home-contato {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.home-contato h2 { color: var(--accent-text); }
+.home-contato-grid { display: grid; grid-template-columns: 1fr auto; gap: 2.5rem; align-items: center; }
+@media (max-width: 767.98px) { .home-contato-grid { grid-template-columns: 1fr; text-align: center; } }
+.home-contato-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .65rem; }
+.home-contato-lista li { display: flex; align-items: center; gap: .65rem; opacity: .95; }
+@media (max-width: 767.98px) { .home-contato-lista li { justify-content: center; } }
+.home-contato-lista i { font-size: 1.1rem; flex-shrink: 0; }
+.home-contato .btn-light { font-weight: 600; border-radius: var(--radius-btn); min-height: 48px; }

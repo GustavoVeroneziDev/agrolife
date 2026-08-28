@@ -31,7 +31,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($paginaTitulo) ?> — <?= APP_NOME ?></title>
-    <meta name="robots" content="noindex, nofollow">
+    <meta name="robots" content="<?= h($metaRobots ?? 'noindex, nofollow') ?>">
+    <?php if (!empty($metaDescricao)): ?>
+    <meta name="description" content="<?= h($metaDescricao) ?>">
+    <?php endif ?>
     <meta name="theme-color" content="#0d9488">
 
     <link rel="icon" href="<?= BASE ?>/assets/img/icone.ico">
@@ -46,6 +49,9 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/paleta.css?v=<?= APP_VERSAO ?>">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/estrutura.css?v=<?= APP_VERSAO ?>">
+    <?php foreach ($paginaCssExtra ?? [] as $_css): ?>
+    <link rel="stylesheet" href="<?= BASE ?>/assets/css/<?= h($_css) ?>?v=<?= APP_VERSAO ?>">
+    <?php endforeach ?>
     <script>
     var BASE = '<?= BASE ?>';
 
@@ -411,6 +417,6 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 </div>
             </nav>
 
-            <main class="container-lg py-4">
+            <main<?= empty($paginaSemContainer) ? ' class="container-lg py-4"' : '' ?>>
                 <?php flashMsg() ?>
             <?php endif ?>
