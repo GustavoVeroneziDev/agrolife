@@ -33,37 +33,6 @@ try {
     $proximos = $anteriores = [];
 }
 
-function renderCardAgendamento(array $ag, array $tiposAgenda): void
-{
-    ?>
-    <div class="card p-3 mb-2">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div class="d-flex align-items-center gap-3">
-                <div class="text-center" style="min-width:64px;">
-                    <div class="fw-bold small"><?= formatarData($ag['DataHoraInicio']) ?></div>
-                    <div class="small text-secondary"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></div>
-                </div>
-                <div>
-                    <div>
-                        <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
-                        <?= labelStatusAgendamento($ag['Status']) ?>
-                    </div>
-                    <div class="fw-medium mt-1"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?> — <?= h($ag['Titulo']) ?></div>
-                    <?php if ($ag['NomeVeterinario']): ?>
-                        <div class="small text-secondary">Com <?= h($ag['NomeVeterinario']) ?></div>
-                    <?php endif ?>
-                </div>
-            </div>
-        </div>
-        <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
-            <div class="small mt-2 pt-2 border-top" style="border-color:var(--card-border-color) !important;">
-                <strong>Observações:</strong> <?= nl2br(h($ag['ObservacoesPos'])) ?>
-            </div>
-        <?php endif ?>
-    </div>
-    <?php
-}
-
 $paginaTitulo = 'Meus Agendamentos';
 $areaAtual    = 'cliente';
 require_once __DIR__ . '/../geral/header.php';
