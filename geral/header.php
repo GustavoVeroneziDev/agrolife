@@ -175,7 +175,19 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             // (vem sempre de uma classe fixa escrita no próprio renderItem()).
             label.innerHTML = icone + escHtmlPicker(r.title) + (r.sub ? ' — ' + escHtmlPicker(r.sub) : '');
             label.className = 'picker-selected';
-            fechar();
+            // fechar() escondido pra depois (não síncrono): fechar já-já some
+            // com o item que acabou de receber o mousedown (dropdown vira
+            // d-none). Se isso acontecer ANTES do navegador terminar de
+            // despachar o "click" nativo que ainda vem desse mesmo clique
+            // (mousedown já rodou, o click vem na sequência), o navegador
+            // redireciona esse clique pro ancestral visível mais próximo (o
+            // modal, tipicamente) — e esse clique "órfão" cai fora de
+            // qualquer picker, fechando (errado) o PRÓXIMO picker que o
+            // encadeamento acabou de abrir. Adiando um tick, o item ainda
+            // existe/está visível quando o click nativo chega, então o alvo
+            // continua sendo ele mesmo (dentro do picker atual) em vez de
+            // "vazar" pro ancestral.
+            setTimeout(fechar, 0);
             if (opts.onSelect) opts.onSelect(it);
         }
         function iniciar() {
