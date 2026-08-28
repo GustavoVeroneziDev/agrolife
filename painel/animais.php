@@ -3,13 +3,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 // Cadastro de animal via POST (usado tanto pelo CTA de estado vazio quanto pelo botão do topo)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_animal') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/animais.php', 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/animais.php');
     $fkDono  = trim($_POST['dono']       ?? '');
     $nome    = trim($_POST['nome']       ?? '');
     $especie = trim($_POST['especie']    ?? '');
@@ -125,18 +126,21 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
+<?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h4 class="fw-bold mb-0">Animais <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
-    <div class="d-flex gap-2">
-        <?php if ($totalGeral > 0): ?>
-            <button class="btn btn-outline-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
-                <i class="bi bi-plus-lg me-1"></i> Novo animal
-            </button>
-        <?php endif ?>
-        <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent btn-sm">
-            <i class="bi bi-shield-plus me-1"></i> Registrar vacina
-        </a>
-    </div>
+    <?php if ($souAdmin): ?>
+        <div class="d-flex gap-2">
+            <?php if ($totalGeral > 0): ?>
+                <button class="btn btn-outline-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                    <i class="bi bi-plus-lg me-1"></i> Novo animal
+                </button>
+            <?php endif ?>
+            <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent btn-sm">
+                <i class="bi bi-shield-plus me-1"></i> Registrar vacina
+            </a>
+        </div>
+    <?php endif ?>
 </div>
 
 <form class="row g-2 mb-4" method="GET" id="formAnimais">
@@ -165,11 +169,13 @@ require_once __DIR__ . '/../geral/header.php';
     <div class="card text-center py-5 text-secondary">
         <i class="bi bi-emoji-smile fs-1 d-block mb-2 opacity-25"></i>
         <p class="mb-3">Nenhum animal cadastrado ainda.</p>
-        <div>
-            <button class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
-                <i class="bi bi-plus-lg me-1"></i> Registrar primeiro animal
-            </button>
-        </div>
+        <?php if ($souAdmin): ?>
+            <div>
+                <button class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                    <i class="bi bi-plus-lg me-1"></i> Registrar primeiro animal
+                </button>
+            </div>
+        <?php endif ?>
     </div>
 <?php elseif (empty($animais)): ?>
     <div class="card text-center py-5 text-secondary">
@@ -332,7 +338,7 @@ initPicker({
 });
 </script>
 
-<?php if (($_GET['acao'] ?? '') === 'novo'): ?>
+<?php if ($souAdmin && ($_GET['acao'] ?? '') === 'novo'): ?>
 <script>new bootstrap.Modal(document.getElementById('modalNovoAnimal')).show();</script>
 <?php endif ?>
 

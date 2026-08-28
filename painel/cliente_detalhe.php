@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 $id = trim($_GET['id'] ?? '');
 if (!$id) {
@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
     $nome     = trim($_POST['nome']      ?? '');
     $especie  = trim($_POST['especie']   ?? '');
     $raca     = trim($_POST['raca']      ?? '');
@@ -125,6 +126,7 @@ try {
     $proximoPorAnimal = [];
 }
 
+$souAdmin     = ($_SESSION['nivel_acesso'] ?? '') === 'admin';
 $paginaTitulo = h($dono['Nome']);
 $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
@@ -178,9 +180,11 @@ require_once __DIR__ . '/../geral/header.php';
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
                 <span><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Animais</span>
-                <button class="btn btn-sm btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
-                    <i class="bi bi-plus-lg me-1"></i> Novo animal
-                </button>
+                <?php if ($souAdmin): ?>
+                    <button class="btn btn-sm btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                        <i class="bi bi-plus-lg me-1"></i> Novo animal
+                    </button>
+                <?php endif ?>
             </div>
             <div class="card-body p-0">
                 <?php if (empty($animais)): ?>

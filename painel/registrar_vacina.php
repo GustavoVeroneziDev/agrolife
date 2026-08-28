@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin');
 
 $animalPreId = trim($_GET['animal'] ?? '');
 
@@ -72,7 +72,7 @@ try {
     )->fetchAll();
 
     $vets = $pdo->query(
-        "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
+        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
     // $animais já carrega todo mundo ativo (Nome/NomeDono/FKEspecie inclusos)

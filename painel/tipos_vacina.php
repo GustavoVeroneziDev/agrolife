@@ -3,12 +3,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/tipos_vacina.php');
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'salvar') {
@@ -83,11 +84,14 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
+<?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
     <h4 class="fw-bold mb-0">Catálogo de Vacinas</h4>
-    <button class="btn btn-accent btn-sm" onclick="abrirModalVacina()">
-        <i class="bi bi-plus-lg me-1"></i> Novo item
-    </button>
+    <?php if ($souAdmin): ?>
+        <button class="btn btn-accent btn-sm" onclick="abrirModalVacina()">
+            <i class="bi bi-plus-lg me-1"></i> Novo item
+        </button>
+    <?php endif ?>
 </div>
 <p class="text-secondary small mb-4">Vacinas e outros cuidados preventivos periódicos (vermífugo, exames de rotina…).</p>
 
@@ -126,16 +130,18 @@ require_once __DIR__ . '/../geral/header.php';
                                 </td>
                                 <td class="small"><?= $t['IntervaloMeses'] ? $t['IntervaloMeses'] . ' meses' : 'Dose única' ?></td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-accent"
-                                        onclick='abrirModalVacina(<?= json_encode($t, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <form method="POST" class="d-inline" data-confirm="Remover a vacina &quot;<?= h($t['Nome']) ?>&quot; do catálogo?">
-                                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
-                                        <input type="hidden" name="acao" value="desativar">
-                                        <input type="hidden" name="id" value="<?= h($t['IDTipo']) ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <?php if ($souAdmin): ?>
+                                        <button class="btn btn-sm btn-outline-accent"
+                                            onclick='abrirModalVacina(<?= json_encode($t, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="POST" class="d-inline" data-confirm="Remover a vacina &quot;<?= h($t['Nome']) ?>&quot; do catálogo?">
+                                            <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                                            <input type="hidden" name="acao" value="desativar">
+                                            <input type="hidden" name="id" value="<?= h($t['IDTipo']) ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    <?php endif ?>
                                 </td>
                             </tr>
                         <?php endforeach ?>

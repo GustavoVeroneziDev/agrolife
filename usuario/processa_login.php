@@ -35,7 +35,7 @@ if ($email === '' || $senha === '') {
 
 try {
     $stmt = $pdo->prepare(
-        'SELECT IDUsuario, Nome, Email, Senha, NivelAcesso, Ativo FROM Usuarios WHERE Email = :email LIMIT 1'
+        'SELECT IDUsuario, Nome, Email, Senha, NivelAcesso, Cargo, Ativo FROM Usuarios WHERE Email = :email LIMIT 1'
     );
     $stmt->execute([':email' => $email]);
     $usuario = $stmt->fetch();
@@ -61,6 +61,7 @@ unset($_SESSION['login_tentativas'], $_SESSION['login_ultima']);
 $_SESSION['usuario_id']   = $usuario['IDUsuario'];
 $_SESSION['usuario_nome'] = $usuario['Nome'];
 $_SESSION['nivel_acesso'] = $usuario['NivelAcesso'];
+$_SESSION['cargo']        = $usuario['Cargo'];
 
 if (!empty($_POST['lembrar_me'])) {
     criarTokenLembrarMe($pdo, $usuario['IDUsuario']);
@@ -74,7 +75,7 @@ unset($_SESSION['login_next']);
 
 if ($next) {
     header('Location: ' . $next);
-} elseif (in_array($usuario['NivelAcesso'], ['admin', 'veterinario'], true)) {
+} elseif (in_array($usuario['NivelAcesso'], ['admin', 'funcionario'], true)) {
     header('Location: ' . BASE . '/painel/index.php');
 } else {
     header('Location: ' . BASE . '/usuario/meus_animais.php');

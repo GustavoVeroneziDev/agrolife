@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 $tiposAgenda = [
     'cirurgia'     => 'Cirurgia',
@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/agenda.php', 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/agenda.php');
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'novo_agendamento') {
@@ -166,6 +167,7 @@ if (isset($_GET['vista'])) {
 
 $filtroStatus = trim($_GET['status'] ?? '');
 $animalPreId  = trim($_GET['animal'] ?? '');
+$souAdmin     = ($_SESSION['nivel_acesso'] ?? '') === 'admin';
 
 $mesFiltro = trim($_GET['mes'] ?? '');
 if (!preg_match('/^\d{4}-\d{2}$/', $mesFiltro)) {
@@ -205,7 +207,7 @@ try {
     )->fetchAll();
 
     $vets = $pdo->query(
-        "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
+        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
     $porDia   = [];
@@ -373,9 +375,11 @@ require_once __DIR__ . '/../geral/header.php';
             </div>
         <?php endif ?>
 
-        <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
-            <i class="bi bi-calendar-plus me-1"></i> Novo agendamento
-        </button>
+        <?php if ($souAdmin): ?>
+            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
+                <i class="bi bi-calendar-plus me-1"></i> Novo agendamento
+            </button>
+        <?php endif ?>
     </div>
 </div>
 
@@ -427,9 +431,11 @@ require_once __DIR__ . '/../geral/header.php';
         <div class="card-header d-flex align-items-center justify-content-between gap-2 px-3 py-2">
             <h6 class="fw-bold mb-0" id="painelDiaMesTitulo"></h6>
             <div class="d-flex gap-2">
-                <a href="#" id="painelDiaMesNovo" class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
-                    <i class="bi bi-plus-lg me-1"></i> Novo
-                </a>
+                <?php if ($souAdmin): ?>
+                    <a href="#" id="painelDiaMesNovo" class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
+                        <i class="bi bi-plus-lg me-1"></i> Novo
+                    </a>
+                <?php endif ?>
                 <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('painelDiaMes').style.display='none';">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -476,18 +482,20 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php endif ?>
                                 </div>
                                 <div class="d-flex gap-1 flex-wrap flex-shrink-0">
-                                    <?php if ($ag['Status'] === 'pendente'): ?>
-                                        <button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="<?= h($ag['IDAgendamento']) ?>">Confirmar</button>
-                                        <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
-                                    <?php elseif ($ag['Status'] === 'confirmado'): ?>
-                                        <button class="btn btn-sm btn-accent btn-concluir"
-                                            data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>">
-                                            Concluir
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
-                                        <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
-                                    <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
-                                        <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
+                                    <?php if ($souAdmin): ?>
+                                        <?php if ($ag['Status'] === 'pendente'): ?>
+                                            <button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="<?= h($ag['IDAgendamento']) ?>">Confirmar</button>
+                                            <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
+                                        <?php elseif ($ag['Status'] === 'confirmado'): ?>
+                                            <button class="btn btn-sm btn-accent btn-concluir"
+                                                data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>">
+                                                Concluir
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
+                                            <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
+                                        <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
+                                            <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
+                                        <?php endif ?>
                                     <?php endif ?>
                                 </div>
                             </div>
@@ -616,6 +624,7 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <script>
+var SOU_ADMIN = <?= $souAdmin ? 'true' : 'false' ?>;
 var ANIMAIS = <?= json_encode(array_map(fn($a) => [
     'id' => $a['IDAnimal'], 'nome' => $a['Nome'], 'dono' => $a['NomeDono'],
     'especie' => $a['FKEspecie'], 'icone' => $a['IconeEspecie'],
@@ -789,10 +798,13 @@ function mostrarDiaMes(data, diaNum) {
     var itens = MES_DADOS[data] || [];
     document.getElementById('painelDiaMesTitulo').textContent =
         'Dia ' + diaNum + ' — ' + itens.length + ' agendamento' + (itens.length === 1 ? '' : 's');
-    document.getElementById('painelDiaMesNovo').addEventListener('click', function () {
-        var campoData = document.querySelector('#modalNovoAgendamento input[name="data"]');
-        if (campoData) campoData.value = data;
-    }, { once: true });
+    var btnNovo = document.getElementById('painelDiaMesNovo');
+    if (btnNovo) {
+        btnNovo.addEventListener('click', function () {
+            var campoData = document.querySelector('#modalNovoAgendamento input[name="data"]');
+            if (campoData) campoData.value = data;
+        }, { once: true });
+    }
 
     var html;
     if (!itens.length) {
@@ -800,7 +812,9 @@ function mostrarDiaMes(data, diaNum) {
     } else {
         html = '<ul class="list-group list-group-flush">' + itens.map(function (ag) {
             var acoes = '';
-            if (ag.status === 'pendente') {
+            if (!SOU_ADMIN) {
+                // funcionario só visualiza — nenhuma ação de escrita aqui
+            } else if (ag.status === 'pendente') {
                 acoes = '<button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="' + ag.id + '">Confirmar</button>'
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
             } else if (ag.status === 'confirmado') {
@@ -834,7 +848,7 @@ function mostrarDiaMes(data, diaNum) {
 }
 </script>
 
-<?php if (($_GET['acao'] ?? '') === 'novo' || $animalPre): ?>
+<?php if ($souAdmin && (($_GET['acao'] ?? '') === 'novo' || $animalPre)): ?>
 <script>new bootstrap.Modal(document.getElementById('modalNovoAgendamento')).show();</script>
 <?php endif ?>
 

@@ -206,6 +206,18 @@ function exigirLogin(string ...$niveis): void
     }
 }
 
+// Equipe (nível "funcionario") pode ver tudo no painel, mas só admin pode
+// criar/editar/excluir — chamar no início de cada bloco de escrita (POST),
+// depois do exigirLogin() da página já ter garantido que tá logado.
+// $voltar é pra onde manda de volta se barrar (mesma URL que os outros
+// redirects de erro daquele mesmo bloco já usam).
+function exigirAdmin(string $voltar): void
+{
+    if (($_SESSION['nivel_acesso'] ?? '') !== 'admin') {
+        redirecionarComMensagem($voltar, 'Apenas administradores podem realizar essa ação.', 'danger');
+    }
+}
+
 function criarTokenLembrarMe(PDO $pdo, string $idUsuario, int $dias = 30): void
 {
     try {
@@ -252,7 +264,7 @@ function tentarLoginLembrado(PDO $pdo): void
     try {
         $stmt = $pdo->prepare(
             'SELECT t.IDToken, t.FKUsuario, t.TokenHash,
-                    u.Nome, u.NivelAcesso, u.Ativo
+                    u.Nome, u.NivelAcesso, u.Cargo, u.Ativo
              FROM TokensLembrarMe t
              JOIN Usuarios u ON u.IDUsuario = t.FKUsuario
              WHERE t.IDToken = :id AND t.Expira > NOW()
@@ -295,6 +307,7 @@ function tentarLoginLembrado(PDO $pdo): void
     $_SESSION['usuario_id']   = $row['FKUsuario'];
     $_SESSION['usuario_nome'] = $row['Nome'];
     $_SESSION['nivel_acesso'] = $row['NivelAcesso'];
+    $_SESSION['cargo']        = $row['Cargo'];
 }
 
 function _limparCookieLembrarMe(): void

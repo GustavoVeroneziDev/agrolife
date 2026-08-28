@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 $id = trim($_GET['id'] ?? '');
 if (!$id) {
@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/animal_detalhe.php?id=' . $id);
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'editar') {
@@ -155,6 +156,7 @@ $tiposClinicoLabel = [
     'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
 ];
 
+$souAdmin     = ($_SESSION['nivel_acesso'] ?? '') === 'admin';
 $paginaTitulo = h($animal['Nome']);
 $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
@@ -179,9 +181,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <h5 class="fw-bold mb-0"><?= h($animal['Nome']) ?></h5>
                     <p class="small text-secondary mb-0"><?= h($animal['NomeEspecie']) ?><?= $animal['Raca'] ? ' · ' . h($animal['Raca']) : '' ?></p>
                 </div>
-                <button class="btn btn-sm btn-outline-accent" data-bs-toggle="modal" data-bs-target="#modalEditarAnimal">
-                    <i class="bi bi-pencil"></i>
-                </button>
+                <?php if ($souAdmin): ?>
+                    <button class="btn btn-sm btn-outline-accent" data-bs-toggle="modal" data-bs-target="#modalEditarAnimal">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                <?php endif ?>
             </div>
             <dl class="mb-3">
                 <dt class="small text-secondary">Dono</dt>
@@ -224,22 +228,24 @@ require_once __DIR__ . '/../geral/header.php';
                     <?php endforeach ?>
                 </div>
             <?php endif ?>
-            <a href="<?= BASE ?>/painel/agenda.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
-                <i class="bi bi-calendar-plus me-1"></i> Agendar
-            </a>
-            <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
-                <i class="bi bi-shield-plus me-1"></i> Registrar vacina
-            </a>
-            <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
-                <i class="bi bi-journal-medical me-1"></i> Registrar clínico
-            </a>
-            <form method="POST" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita.">
-                <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
-                <input type="hidden" name="acao" value="desativar">
-                <button type="submit" class="btn btn-outline-danger w-100">
-                    <i class="bi bi-trash me-1"></i> Remover animal
-                </button>
-            </form>
+            <?php if ($souAdmin): ?>
+                <a href="<?= BASE ?>/painel/agenda.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
+                    <i class="bi bi-calendar-plus me-1"></i> Agendar
+                </a>
+                <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
+                    <i class="bi bi-shield-plus me-1"></i> Registrar vacina
+                </a>
+                <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
+                    <i class="bi bi-journal-medical me-1"></i> Registrar clínico
+                </a>
+                <form method="POST" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita.">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="acao" value="desativar">
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash me-1"></i> Remover animal
+                    </button>
+                </form>
+            <?php endif ?>
         </div>
     </div>
 
@@ -274,11 +280,13 @@ require_once __DIR__ . '/../geral/header.php';
                                         <td class="small"><?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?></td>
                                         <td><?= labelSituacaoVacina($reg['ProximaData']) ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-danger btn-excluir-vacina"
-                                                data-id="<?= h($reg['IDRegistro']) ?>"
-                                                data-confirm="Excluir este registro de vacina?">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                            <?php if ($souAdmin): ?>
+                                                <button class="btn btn-sm btn-outline-danger btn-excluir-vacina"
+                                                    data-id="<?= h($reg['IDRegistro']) ?>"
+                                                    data-confirm="Excluir este registro de vacina?">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php endif ?>
                                         </td>
                                     </tr>
                                 <?php endforeach ?>
@@ -308,11 +316,13 @@ require_once __DIR__ . '/../geral/header.php';
                                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposClinicoLabel[$reg['Tipo']] ?? $reg['Tipo']) ?></span>
                                         <span class="fw-medium ms-1"><?= h($reg['Titulo']) ?></span>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger btn-excluir-clinico"
-                                        data-id="<?= h($reg['IDRegistro']) ?>"
-                                        data-confirm="Excluir este registro clínico?">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <?php if ($souAdmin): ?>
+                                        <button class="btn btn-sm btn-outline-danger btn-excluir-clinico"
+                                            data-id="<?= h($reg['IDRegistro']) ?>"
+                                            data-confirm="Excluir este registro clínico?">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    <?php endif ?>
                                 </div>
                                 <p class="small text-secondary mb-2">
                                     <?= formatarData($reg['DataRegistro']) ?><?= $reg['NomeVeterinario'] ? ' · ' . h($reg['NomeVeterinario']) : '' ?>

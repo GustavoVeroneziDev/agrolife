@@ -9,7 +9,7 @@ if (!estaLogado() && !empty($_COOKIE['vs_lembrar'])) {
 }
 
 if (estaLogado()) {
-    if (($_SESSION['nivel_acesso'] ?? '') === 'admin') {
+    if (in_array($_SESSION['nivel_acesso'] ?? '', ['admin', 'funcionario'], true)) {
         header('Location: ' . BASE . '/painel/index.php');
     } else {
         header('Location: ' . BASE . '/usuario/meus_animais.php');

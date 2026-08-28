@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/conexao.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!in_array($_SESSION['nivel_acesso'] ?? '', ['admin', 'veterinario'], true)) {
+if (($_SESSION['nivel_acesso'] ?? '') !== 'admin') {
     http_response_code(403);
     echo json_encode(['ok' => false, 'msg' => 'Acesso não permitido.']);
     exit;

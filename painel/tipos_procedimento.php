@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 $categorias = [
     'cirurgia'     => 'Cirurgia',
@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/tipos_procedimento.php');
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'salvar') {
@@ -78,6 +79,7 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
+<?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
 <div class="d-flex align-items-center gap-2 mb-1">
     <a href="<?= BASE ?>/painel/agenda.php" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
@@ -86,9 +88,11 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <p class="text-secondary small mb-0">Cada procedimento tem uma duração padrão — ao agendar, escolher o procedimento já preenche a duração (mas dá pra ajustar).</p>
-    <button class="btn btn-accent btn-sm" onclick="abrirModalProcedimento()">
-        <i class="bi bi-plus-lg me-1"></i> Novo procedimento
-    </button>
+    <?php if ($souAdmin): ?>
+        <button class="btn btn-accent btn-sm" onclick="abrirModalProcedimento()">
+            <i class="bi bi-plus-lg me-1"></i> Novo procedimento
+        </button>
+    <?php endif ?>
 </div>
 
 <div class="card">
@@ -118,16 +122,18 @@ require_once __DIR__ . '/../geral/header.php';
                                 <td class="fw-medium"><?= h($p['Nome']) ?></td>
                                 <td class="small"><?= (int) $p['DuracaoPadraoMinutos'] ?> min</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-accent"
-                                        onclick='abrirModalProcedimento(<?= json_encode($p, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <form method="POST" class="d-inline" data-confirm="Remover &quot;<?= h($p['Nome']) ?>&quot; do catálogo?">
-                                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
-                                        <input type="hidden" name="acao" value="desativar">
-                                        <input type="hidden" name="id" value="<?= h($p['IDTipo']) ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <?php if ($souAdmin): ?>
+                                        <button class="btn btn-sm btn-outline-accent"
+                                            onclick='abrirModalProcedimento(<?= json_encode($p, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="POST" class="d-inline" data-confirm="Remover &quot;<?= h($p['Nome']) ?>&quot; do catálogo?">
+                                            <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                                            <input type="hidden" name="acao" value="desativar">
+                                            <input type="hidden" name="id" value="<?= h($p['IDTipo']) ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    <?php endif ?>
                                 </td>
                             </tr>
                         <?php endforeach ?>

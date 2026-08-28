@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 try {
     $totalAnimais = (int) $pdo->query("SELECT COUNT(*) FROM Animais WHERE Ativo = 1")->fetchColumn();
@@ -34,10 +34,13 @@ try {
          LIMIT 10"
     )->fetchAll();
 
-    // Lembrete do próprio veterinário: só os agendamentos dele. Admin vê tudo.
+    // Lembrete de quem tem cargo de veterinário: só os agendamentos dele
+    // (é sobre a função clínica, não o nível de acesso — admin donos que
+    // também são veterinários caem aqui igual). Quem não é veterinário
+    // (nem cargo nem admin sem esse cargo) vê tudo.
     $whereAg  = "WHERE ag.Status IN ('pendente','confirmado') AND ag.DataHoraInicio >= NOW()";
     $paramsAg = [];
-    if (($_SESSION['nivel_acesso'] ?? '') === 'veterinario') {
+    if (($_SESSION['cargo'] ?? '') === 'veterinario') {
         $whereAg .= ' AND ag.FKVeterinario = :uid';
         $paramsAg[':uid'] = $_SESSION['usuario_id'];
     }
@@ -93,7 +96,7 @@ require_once __DIR__ . '/../geral/header.php';
 <?php if (!empty($proximosAgendamentos)): ?>
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
-        <span><i class="bi bi-calendar3 me-2 text-accent"></i><?= ($_SESSION['nivel_acesso'] ?? '') === 'veterinario' ? 'Seus próximos agendamentos' : 'Próximos agendamentos' ?></span>
+        <span><i class="bi bi-calendar3 me-2 text-accent"></i><?= ($_SESSION['cargo'] ?? '') === 'veterinario' ? 'Seus próximos agendamentos' : 'Próximos agendamentos' ?></span>
         <a href="<?= BASE ?>/painel/agenda.php" class="small">Ver agenda</a>
     </div>
     <div class="card-body p-0">
@@ -173,22 +176,32 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     </div>
 
+    <?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
     <div class="col-lg-4">
         <div class="card p-4">
             <h6 class="fw-semibold mb-3"><i class="bi bi-lightning me-2 text-accent"></i>Ações rápidas</h6>
             <div class="d-grid gap-2">
-                <a href="<?= BASE ?>/painel/agenda.php?acao=novo" class="btn btn-accent">
-                    <i class="bi bi-calendar-plus me-2"></i>Novo agendamento
-                </a>
-                <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-outline-accent">
-                    <i class="bi bi-shield-plus me-2"></i>Registrar vacina
-                </a>
-                <a href="<?= BASE ?>/painel/animais.php?acao=novo" class="btn btn-outline-accent">
-                    <i class="bi bi-clipboard2-plus me-2"></i>Cadastrar animal
-                </a>
-                <a href="<?= BASE ?>/painel/clientes.php?acao=novo" class="btn btn-outline-accent">
-                    <i class="bi bi-person-plus me-2"></i>Cadastrar dono
-                </a>
+                <?php if ($souAdmin): ?>
+                    <a href="<?= BASE ?>/painel/agenda.php?acao=novo" class="btn btn-accent">
+                        <i class="bi bi-calendar-plus me-2"></i>Novo agendamento
+                    </a>
+                    <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-outline-accent">
+                        <i class="bi bi-shield-plus me-2"></i>Registrar vacina
+                    </a>
+                    <a href="<?= BASE ?>/painel/animais.php?acao=novo" class="btn btn-outline-accent">
+                        <i class="bi bi-clipboard2-plus me-2"></i>Cadastrar animal
+                    </a>
+                    <a href="<?= BASE ?>/painel/clientes.php?acao=novo" class="btn btn-outline-accent">
+                        <i class="bi bi-person-plus me-2"></i>Cadastrar dono
+                    </a>
+                <?php else: ?>
+                    <a href="<?= BASE ?>/painel/agenda.php" class="btn btn-outline-accent">
+                        <i class="bi bi-calendar3 me-2"></i>Ver agenda
+                    </a>
+                    <a href="<?= BASE ?>/painel/clientes.php" class="btn btn-outline-accent">
+                        <i class="bi bi-people me-2"></i>Ver clientes
+                    </a>
+                <?php endif ?>
                 <a href="<?= BASE ?>/painel/animais.php" class="btn btn-outline-secondary d-md-none">
                     <i class="bi bi-clipboard2-pulse me-2"></i>Ver todos os animais
                 </a>

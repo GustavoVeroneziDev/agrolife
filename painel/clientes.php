@@ -3,13 +3,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin', 'veterinario');
+exigirLogin('admin', 'funcionario');
 
 // Cadastro rápido via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastrar') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/clientes.php', 'Token inválido.', 'danger');
     }
+    exigirAdmin(BASE . '/painel/clientes.php');
     $nome  = trim($_POST['nome']  ?? '');
     $email = trim($_POST['email'] ?? '');
     $tel   = trim($_POST['tel']   ?? '');
@@ -103,6 +104,7 @@ try {
 
 $totalPag = max(1, (int) ceil($total / $por));
 
+$souAdmin     = ($_SESSION['nivel_acesso'] ?? '') === 'admin';
 $paginaTitulo = 'Donos';
 $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
@@ -110,9 +112,11 @@ require_once __DIR__ . '/../geral/header.php';
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h4 class="fw-bold mb-0">Donos <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
-    <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoDono">
-        <i class="bi bi-person-plus me-1"></i> Novo dono
-    </button>
+    <?php if ($souAdmin): ?>
+        <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoDono">
+            <i class="bi bi-person-plus me-1"></i> Novo dono
+        </button>
+    <?php endif ?>
 </div>
 
 <form class="mb-4" method="GET">
@@ -235,7 +239,7 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </div>
 
-<?php if (($_GET['acao'] ?? '') === 'novo'): ?>
+<?php if ($souAdmin && ($_GET['acao'] ?? '') === 'novo'): ?>
 <script>new bootstrap.Modal(document.getElementById('modalNovoDono')).show();</script>
 <?php endif ?>
 
