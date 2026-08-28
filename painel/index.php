@@ -33,10 +33,30 @@ try {
          ORDER BY rv.ProximaData ASC
          LIMIT 10"
     )->fetchAll();
+
+    // Lembrete do próprio veterinário: só os agendamentos dele. Admin vê tudo.
+    $whereAg  = "WHERE ag.Status IN ('pendente','confirmado') AND ag.DataHoraInicio >= NOW()";
+    $paramsAg = [];
+    if (($_SESSION['nivel_acesso'] ?? '') === 'veterinario') {
+        $whereAg .= ' AND ag.FKVeterinario = :uid';
+        $paramsAg[':uid'] = $_SESSION['usuario_id'];
+    }
+    $stmtAg = $pdo->prepare(
+        "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
+         FROM Agendamentos ag
+         JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+         JOIN Especies e ON e.IDEspecie = a.FKEspecie
+         {$whereAg}
+         ORDER BY ag.DataHoraInicio ASC
+         LIMIT 6"
+    );
+    $stmtAg->execute($paramsAg);
+    $proximosAgendamentos = $stmtAg->fetchAll();
 } catch (PDOException $e) {
     error_log('[PainelDash] ' . $e->getMessage());
     $totalAnimais = $totalDonos = $vencendo = $atrasadas = 0;
     $proximas = [];
+    $proximosAgendamentos = [];
 }
 
 $paginaTitulo = 'Dashboard';
@@ -69,6 +89,37 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     <?php endforeach ?>
 </div>
+
+<?php if (!empty($proximosAgendamentos)): ?>
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
+        <span><i class="bi bi-calendar3 me-2 text-accent"></i><?= ($_SESSION['nivel_acesso'] ?? '') === 'veterinario' ? 'Seus próximos agendamentos' : 'Próximos agendamentos' ?></span>
+        <a href="<?= BASE ?>/painel/agenda.php" class="small">Ver agenda</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background:var(--bg-hover);">
+                    <tr>
+                        <th class="px-4 py-3">Quando</th>
+                        <th>Animal</th>
+                        <th>Título</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($proximosAgendamentos as $ag): ?>
+                        <tr>
+                            <td class="px-4 small fw-medium"><?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
+                            <td class="small"><?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
+                            <td class="small"><?= h($ag['Titulo']) ?></td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif ?>
 
 <div class="row g-4">
     <div class="col-lg-8">
@@ -126,7 +177,10 @@ require_once __DIR__ . '/../geral/header.php';
         <div class="card p-4">
             <h6 class="fw-semibold mb-3"><i class="bi bi-lightning me-2 text-accent"></i>Ações rápidas</h6>
             <div class="d-grid gap-2">
-                <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent">
+                <a href="<?= BASE ?>/painel/agenda.php?acao=novo" class="btn btn-accent">
+                    <i class="bi bi-calendar-plus me-2"></i>Novo agendamento
+                </a>
+                <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-outline-accent">
                     <i class="bi bi-shield-plus me-2"></i>Registrar vacina
                 </a>
                 <a href="<?= BASE ?>/painel/animais.php?acao=novo" class="btn btn-outline-accent">

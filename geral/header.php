@@ -281,6 +281,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             $uri = $_SERVER['REQUEST_URI'];
             $menuItens = [
                 ['href' => BASE . '/painel/index.php',        'icon' => 'bi-house-door',    'label' => 'Dashboard'],
+                ['href' => BASE . '/painel/agenda.php',       'icon' => 'bi-calendar3',     'label' => 'Agenda'],
                 ['href' => BASE . '/painel/animais.php',      'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
                 ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Clientes'],
                 ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
@@ -360,6 +361,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/meus_animais.php">
                                         <i class="bi bi-clipboard2-pulse me-2"></i>Meus Animais</a></li>
+                                <li><a class="dropdown-item" href="<?= BASE ?>/usuario/meus_agendamentos.php">
+                                        <i class="bi bi-calendar3 me-2"></i>Meus Agendamentos</a></li>
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/perfil.php">
                                         <i class="bi bi-person me-2"></i>Meu Perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>

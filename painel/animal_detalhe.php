@@ -183,7 +183,10 @@ require_once __DIR__ . '/../geral/header.php';
                     <dd><?= nl2br(h($animal['Observacoes'])) ?></dd>
                 <?php endif ?>
             </dl>
-            <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
+            <a href="<?= BASE ?>/painel/agenda.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
+                <i class="bi bi-calendar-plus me-1"></i> Agendar
+            </a>
+            <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
                 <i class="bi bi-shield-plus me-1"></i> Registrar vacina
             </a>
             <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">

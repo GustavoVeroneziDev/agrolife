@@ -499,6 +499,19 @@ function labelSituacaoVacina(?string $proximaData): string
     return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
 }
 
+function labelStatusAgendamento(string $status): string
+{
+    [$label, $cor] = match ($status) {
+        'pendente'   => ['Pendente', 'secondary'],
+        'confirmado' => ['Confirmado', 'info'],
+        'concluido'  => ['Concluído', 'success'],
+        'cancelado'  => ['Cancelado', 'danger'],
+        'faltou'     => ['Faltou', 'warning'],
+        default      => [$status, 'secondary'],
+    };
+    return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
+}
+
 /**
  * Gera o HTML de um campo picker (dropdown com busca) — ver initPicker() em
  * geral/header.php. $valorInicial/$labelInicial preenchem o campo já
