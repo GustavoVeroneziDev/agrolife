@@ -277,8 +277,12 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 ['href' => BASE . '/painel/animais.php',      'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
                 ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Donos'],
                 ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
-                ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',          'label' => 'Configurações'],
             ];
+            // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários
+            if ($nivelAcesso === 'admin') {
+                $menuItens[] = ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge', 'label' => 'Equipe'];
+                $menuItens[] = ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',         'label' => 'Configurações'];
+            }
             ?>
             <ul class="sidebar-nav">
                 <?php foreach ($menuItens as $item): ?>

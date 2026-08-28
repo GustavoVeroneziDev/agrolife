@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin');
+exigirLogin('admin', 'veterinario');
 
 $animalPreId = trim($_GET['animal'] ?? '');
 
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->prepare(
-            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Veterinario, Lote, Observacoes)
+            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKVeterinario, Lote, Observacoes)
              VALUES (:id, :animal, :tipo, :data, :proxima, :vet, :lote, :obs)'
         )->execute([
             ':id'      => gerarUuid(),
@@ -71,6 +71,10 @@ try {
         "SELECT IDTipo, Nome, IntervaloMeses, FKEspecie FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
+    $vets = $pdo->query(
+        "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
+    )->fetchAll();
+
     $animalPre = null;
     if ($animalPreId) {
         $stmt = $pdo->prepare(
@@ -83,7 +87,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log('[RegistrarVacinaForm] ' . $e->getMessage());
-    $animais = $tipos = [];
+    $animais = $tipos = $vets = [];
     $animalPre = null;
 }
 
@@ -152,7 +156,10 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Veterinário</label>
-                        <input type="text" name="veterinario" class="form-control">
+                        <?= campoPicker('vetResp', 'veterinario', 'Selecione…', 'Buscar veterinário…') ?>
+                        <?php if (empty($vets)): ?>
+                            <div class="form-text">Nenhum veterinário cadastrado — <a href="<?= BASE ?>/painel/equipe.php">cadastre um primeiro</a>.</div>
+                        <?php endif ?>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Lote</label>
@@ -180,6 +187,9 @@ var ANIMAIS = <?= json_encode(array_map(fn($a) => [
     'id' => $a['IDAnimal'], 'nome' => $a['Nome'], 'dono' => $a['NomeDono'],
     'especie' => $a['FKEspecie'], 'icone' => $a['IconeEspecie'],
 ], $animais), JSON_UNESCAPED_UNICODE) ?>;
+var VETS = <?= json_encode(array_map(fn($v) => [
+    'id' => $v['IDUsuario'], 'nome' => $v['Nome'],
+], $vets), JSON_UNESCAPED_UNICODE) ?>;
 
 // Filtra o select de vacinas pela espécie do animal escolhido
 var selTipo    = document.getElementById('selTipo');
@@ -210,6 +220,16 @@ var animalPicker = initPicker({
 <?php if ($animalPre): ?>
     filtrarVacinasPorEspecie(<?= json_encode($animalPre['FKEspecie']) ?>);
 <?php endif ?>
+
+initPicker({
+    pickerId: 'vetRespPicker', triggerId: 'vetRespTrigger', dropdownId: 'vetRespDropdown',
+    searchId: 'vetRespSearch', listId: 'vetRespList', hiddenId: 'inpvetRespId', labelId: 'vetRespLabel',
+    items: VETS,
+    chave: function (v) { return v.id; },
+    renderItem: function (v) { return { title: v.nome }; },
+    matches: function (v, q) { return v.nome.toLowerCase().indexOf(q) !== -1; },
+    vazioMsg: 'Nenhum veterinário encontrado.',
+});
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

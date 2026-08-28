@@ -141,7 +141,7 @@ function estaLogado(): bool
     return !empty($_SESSION['usuario_id']);
 }
 
-function exigirLogin(string $nivel = ''): void
+function exigirLogin(string ...$niveis): void
 {
     if (!estaLogado()) {
         global $pdo;
@@ -150,7 +150,7 @@ function exigirLogin(string $nivel = ''): void
     if (!estaLogado()) {
         redirecionarComMensagem(BASE . '/usuario/login.php', 'Faça login para continuar.', 'warning');
     }
-    if ($nivel && ($_SESSION['nivel_acesso'] ?? '') !== $nivel) {
+    if ($niveis && !in_array($_SESSION['nivel_acesso'] ?? '', $niveis, true)) {
         redirecionarComMensagem(BASE . '/index.php', 'Acesso não permitido.', 'danger');
     }
 }

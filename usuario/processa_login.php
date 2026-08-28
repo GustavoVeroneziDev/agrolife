@@ -62,7 +62,7 @@ if (!empty($_POST['lembrar_me'])) {
     criarTokenLembrarMe($pdo, $usuario['IDUsuario']);
 }
 
-if ($usuario['NivelAcesso'] === 'admin') {
+if (in_array($usuario['NivelAcesso'], ['admin', 'veterinario'], true)) {
     header('Location: ' . BASE . '/painel/index.php');
 } else {
     header('Location: ' . BASE . '/usuario/meus_animais.php');
