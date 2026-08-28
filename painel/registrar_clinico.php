@@ -128,14 +128,14 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="picker" id="animalPicker">
                         <div class="picker-trigger" id="animalTrigger" tabindex="0">
                             <span id="animalLabel" class="<?= $animalPre ? 'picker-selected' : 'picker-placeholder' ?>">
-                                <?= $animalPre ? h($animalPre['Nome']) . ' — ' . h($animalPre['NomeDono']) : 'Buscar animal ou dono…' ?>
+                                <?= $animalPre ? h($animalPre['Nome']) . ' — ' . h($animalPre['NomeDono']) : 'Buscar animal ou cliente…' ?>
                             </span>
                             <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
                         </div>
                         <div class="picker-dropdown d-none" id="animalDropdown">
                             <div class="picker-search-wrap">
                                 <i class="bi bi-search picker-search-icon"></i>
-                                <input type="text" class="picker-search" id="animalSearch" placeholder="Nome do animal ou do dono…" autocomplete="off">
+                                <input type="text" class="picker-search" id="animalSearch" placeholder="Nome do animal ou do cliente…" autocomplete="off">
                             </div>
                             <div class="picker-list" id="animalList"></div>
                         </div>

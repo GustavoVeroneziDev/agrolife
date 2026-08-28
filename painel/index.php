@@ -75,7 +75,7 @@ require_once __DIR__ . '/../geral/header.php';
         ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas', $atrasadas, ''],
         ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 30 dias', $vencendo, ''],
         ['bi-clipboard2-pulse',          'var(--accent)',      'var(--accent-light)',   'Animais ativos', $totalAnimais, ''],
-        ['bi-people',                    'var(--cor-info)',    'var(--cor-info-bg)',    'Donos cadastrados', $totalDonos, ''],
+        ['bi-people',                    'var(--cor-info)',    'var(--cor-info-bg)',    'Clientes cadastrados', $totalDonos, ''],
     ];
     foreach ($stats as [$icon, $color, $bg, $label, $valor, $sub]):
     ?>
@@ -142,7 +142,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <thead style="background:var(--bg-hover);">
                                 <tr>
                                     <th class="px-4 py-3">Animal</th>
-                                    <th class="d-none d-md-table-cell">Dono</th>
+                                    <th class="d-none d-md-table-cell">Cliente</th>
                                     <th>Vacina</th>
                                     <th>Data</th>
                                     <th>Situação</th>
@@ -192,7 +192,7 @@ require_once __DIR__ . '/../geral/header.php';
                         <i class="bi bi-clipboard2-plus me-2"></i>Cadastrar animal
                     </a>
                     <a href="<?= BASE ?>/painel/clientes.php?acao=novo" class="btn btn-outline-accent">
-                        <i class="bi bi-person-plus me-2"></i>Cadastrar dono
+                        <i class="bi bi-person-plus me-2"></i>Cadastrar cliente
                     </a>
                 <?php else: ?>
                     <a href="<?= BASE ?>/painel/agenda.php" class="btn btn-outline-accent">

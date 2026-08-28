@@ -7,7 +7,7 @@ exigirLogin('admin', 'funcionario');
 
 $id = trim($_GET['id'] ?? '');
 if (!$id) {
-    redirecionarComMensagem(BASE . '/painel/clientes.php', 'Dono não encontrado.', 'warning');
+    redirecionarComMensagem(BASE . '/painel/clientes.php', 'Cliente não encontrado.', 'warning');
 }
 
 // Cadastro rápido de animal via POST
@@ -67,7 +67,7 @@ try {
     $stmt->execute([':id' => $id]);
     $dono = $stmt->fetch();
     if (!$dono) {
-        redirecionarComMensagem(BASE . '/painel/clientes.php', 'Dono não encontrado.', 'warning');
+        redirecionarComMensagem(BASE . '/painel/clientes.php', 'Cliente não encontrado.', 'warning');
     }
 
     $animaisStmt = $pdo->prepare(
@@ -152,7 +152,7 @@ require_once __DIR__ . '/../geral/header.php';
             <div class="text-center mb-3">
                 <div class="avatar-circle mx-auto"><?= h(mb_strtoupper(mb_substr($dono['Nome'], 0, 1))) ?></div>
                 <h5 class="fw-bold mt-2 mb-0"><?= h($dono['Nome']) ?></h5>
-                <p class="small text-secondary mb-0">Dono desde <?= formatarData($dono['MomentoRegistro']) ?></p>
+                <p class="small text-secondary mb-0">Cliente desde <?= formatarData($dono['MomentoRegistro']) ?></p>
             </div>
             <dl class="mb-3">
                 <dt class="small text-secondary">E-mail</dt>

@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
         $enviou = enviarEmail($email, 'Defina sua senha — ' . APP_NOME, emailHtml('Defina sua senha', $corpo));
 
         $msg = $enviou
-            ? 'Dono cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
-            : 'Dono cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
+            ? 'Cliente cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
+            : 'Cliente cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $novoId, $msg, $enviou ? 'success' : 'warning');
     } catch (PDOException $e) {
         error_log('[CadastroDono] ' . $e->getMessage());
@@ -105,16 +105,16 @@ try {
 $totalPag = max(1, (int) ceil($total / $por));
 
 $souAdmin     = ($_SESSION['nivel_acesso'] ?? '') === 'admin';
-$paginaTitulo = 'Donos';
+$paginaTitulo = 'Clientes';
 $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-    <h4 class="fw-bold mb-0">Donos <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
+    <h4 class="fw-bold mb-0">Clientes <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
     <?php if ($souAdmin): ?>
         <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoDono">
-            <i class="bi bi-person-plus me-1"></i> Novo dono
+            <i class="bi bi-person-plus me-1"></i> Novo cliente
         </button>
     <?php endif ?>
 </div>
@@ -136,7 +136,7 @@ require_once __DIR__ . '/../geral/header.php';
         <?php if (empty($donos)): ?>
             <div class="text-center py-5 text-secondary">
                 <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
-                <p>Nenhum dono encontrado.</p>
+                <p>Nenhum cliente encontrado.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
@@ -207,7 +207,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                 <input type="hidden" name="acao" value="cadastrar">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-semibold">Cadastrar dono</h5>
+                    <h5 class="modal-title fw-semibold">Cadastrar cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">

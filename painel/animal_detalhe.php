@@ -188,7 +188,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
             </div>
             <dl class="mb-3">
-                <dt class="small text-secondary">Dono</dt>
+                <dt class="small text-secondary">Cliente</dt>
                 <dd><a href="<?= BASE ?>/painel/cliente_detalhe.php?id=<?= h($animal['IDDono']) ?>"><?= h($animal['NomeDono']) ?></a></dd>
                 <?php if ($animal['DataNascimento']): ?>
                     <dt class="small text-secondary">Idade</dt>

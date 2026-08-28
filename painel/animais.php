@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     $obs     = trim($_POST['observacoes'] ?? '');
 
     if ($fkDono === '' || $nome === '' || $especie === '' || $raca === '' || $sexo === '') {
-        redirecionarComMensagem(BASE . '/painel/animais.php', 'Dono, nome, espécie, raça e sexo são obrigatórios.', 'warning');
+        redirecionarComMensagem(BASE . '/painel/animais.php', 'Cliente, nome, espécie, raça e sexo são obrigatórios.', 'warning');
     }
     if (!dataNascimentoValida($nasc)) {
         redirecionarComMensagem(BASE . '/painel/animais.php', 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
@@ -147,7 +147,7 @@ require_once __DIR__ . '/../geral/header.php';
     <div class="col-sm-7">
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" name="q" class="form-control" placeholder="Buscar por nome do animal, dono ou raça..."
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nome do animal, cliente ou raça..."
                 value="<?= h($busca) ?>">
         </div>
     </div>
@@ -238,11 +238,11 @@ require_once __DIR__ . '/../geral/header.php';
                         <div class="form-text">JPG, PNG ou WEBP — até 5 MB. No celular, dá pra tirar a foto na hora.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Dono *</label>
+                        <label class="form-label">Cliente *</label>
                         <input type="hidden" name="dono" id="inpDonoId" required>
                         <div class="picker" id="donoPicker">
                             <div class="picker-trigger" id="donoTrigger" tabindex="0">
-                                <span id="donoLabel" class="picker-placeholder">Buscar dono por nome ou e-mail…</span>
+                                <span id="donoLabel" class="picker-placeholder">Buscar cliente por nome ou e-mail…</span>
                                 <span class="picker-caret"><i class="bi bi-chevron-down"></i></span>
                             </div>
                             <div class="picker-dropdown d-none" id="donoDropdown">
@@ -254,7 +254,7 @@ require_once __DIR__ . '/../geral/header.php';
                             </div>
                         </div>
                         <?php if (empty($donos)): ?>
-                            <div class="form-text text-danger">Nenhum dono cadastrado ainda — <a href="<?= BASE ?>/painel/clientes.php?acao=novo">cadastre um primeiro</a>.</div>
+                            <div class="form-text text-danger">Nenhum cliente cadastrado ainda — <a href="<?= BASE ?>/painel/clientes.php?acao=novo">cadastre um primeiro</a>.</div>
                         <?php endif ?>
                     </div>
                     <div class="mb-3">
@@ -321,7 +321,7 @@ initPicker({
     matches: function (d, q) {
         return d.nome.toLowerCase().indexOf(q) !== -1 || d.email.toLowerCase().indexOf(q) !== -1;
     },
-    vazioMsg: 'Nenhum dono encontrado.',
+    vazioMsg: 'Nenhum cliente encontrado.',
 });
 
 initAnimalPickers('na', NA_ESPECIES, NA_RACAS);

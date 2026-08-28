@@ -64,7 +64,7 @@ require_once __DIR__ . '/../geral/header.php';
         <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-2"><i class="bi bi-whatsapp me-2 text-accent"></i>Templates de WhatsApp</h6>
             <p class="small text-secondary">
-                Variáveis disponíveis: <code>{nome_dono}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
+                Variáveis disponíveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
             </p>
             <div class="mb-3">
                 <label class="form-label">Aviso — 7 dias antes do vencimento</label>

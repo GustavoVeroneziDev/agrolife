@@ -32,7 +32,7 @@ require_once __DIR__ . '/../geral/header.php';
             <div class="avatar-circle"><?= h(mb_strtoupper(mb_substr($usuario['Nome'], 0, 1))) ?></div>
             <div>
                 <h5 class="fw-bold mb-0"><?= h($usuario['Nome']) ?></h5>
-                <p class="text-secondary small mb-0"><?= $usuario['NivelAcesso'] !== 'cliente' ? 'Equipe da clínica' : 'Dono de animal' ?></p>
+                <p class="text-secondary small mb-0"><?= $usuario['NivelAcesso'] !== 'cliente' ? 'Equipe da clínica' : 'Cliente' ?></p>
             </div>
         </div>
 
