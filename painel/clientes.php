@@ -48,14 +48,14 @@ $por   = 20;
 $off   = ($pag - 1) * $por;
 
 try {
-    $where  = "WHERE NivelAcesso = 'cliente' AND Ativo = 1";
+    $where  = "WHERE u.NivelAcesso = 'cliente' AND u.Ativo = 1";
     $params = [];
     if ($busca !== '') {
-        $where .= ' AND (Nome LIKE :q OR Email LIKE :q OR Telefone LIKE :q)';
+        $where .= ' AND (u.Nome LIKE :q OR u.Email LIKE :q OR u.Telefone LIKE :q)';
         $params[':q'] = '%' . $busca . '%';
     }
 
-    $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM Usuarios {$where}");
+    $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM Usuarios u {$where}");
     $cntStmt->execute($params);
     $total = (int) $cntStmt->fetchColumn();
 
