@@ -40,6 +40,14 @@
     </div>
 </div>
 
+<!-- Overlay de carregamento global (troca de página / envio de form) -->
+<div id="vsLoading" class="vs-loading-overlay" aria-hidden="true">
+    <div class="vs-spinner">
+        <div></div><div></div><div></div><div></div><div></div><div></div>
+        <div></div><div></div><div></div><div></div><div></div><div></div>
+    </div>
+</div>
+
 <script>
 function abrirSidebar() {
     document.getElementById('sidebar').classList.add('aberta');
@@ -164,7 +172,7 @@ document.addEventListener('submit', function (e) {
     var form = e.target, msg = form.dataset.confirm;
     if (msg && !form.dataset.confirmed) {
         e.preventDefault();
-        vsConfirm(msg, function () { form.dataset.confirmed = '1'; form.submit(); }, form.dataset.confirmLabel);
+        vsConfirm(msg, function () { form.dataset.confirmed = '1'; vsMostrarCarregando(); form.submit(); }, form.dataset.confirmLabel);
     }
 });
 document.addEventListener('click', function (e) {
@@ -173,9 +181,56 @@ document.addEventListener('click', function (e) {
     e.preventDefault();
     vsConfirm(el.dataset.confirm, function () {
         var form = el.closest('form');
-        if (form) { form.dataset.confirmed = '1'; form.submit(); }
-        else if (el.href) { location.href = el.href; }
+        if (form) { form.dataset.confirmed = '1'; vsMostrarCarregando(); form.submit(); }
+        else if (el.href) { vsMostrarCarregando(); location.href = el.href; }
     }, el.dataset.confirmLabel);
+});
+
+// ── Indicador de carregamento global ───────────────────────────
+// Mostra o spinner de tela cheia durante troca de página / envio de
+// form, pra dar aquele "feedback imediato" de app nativo em vez da
+// tela ficar parada enquanto espera o servidor responder.
+var vsLoadingTimeout = null;
+function vsMostrarCarregando() {
+    document.getElementById('vsLoading')?.classList.add('ativo');
+    // Rede de segurança: se a navegação não completar (erro, cancelamento
+    // pelo usuário, link quebrado) o spinner não pode ficar preso na tela.
+    clearTimeout(vsLoadingTimeout);
+    vsLoadingTimeout = setTimeout(vsEsconderCarregando, 8000);
+}
+function vsEsconderCarregando() {
+    document.getElementById('vsLoading')?.classList.remove('ativo');
+    clearTimeout(vsLoadingTimeout);
+}
+
+// Link comum → mostra o spinner e deixa a navegação seguir normal.
+// Ignora: nova aba, download, gatilho de modal/dropdown, links já
+// tratados via data-confirm (esses só mostram depois de confirmados,
+// lá em cima), âncora/mailto/tel, link externo e clique com modificador
+// (ctrl/cmd/shift/alt = abre em nova aba, não deve travar a atual).
+document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var link = e.target.closest('a[href]');
+    if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+    if (link.hasAttribute('data-bs-toggle') || link.hasAttribute('data-confirm')) return;
+    var href = link.getAttribute('href');
+    if (!href || href.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(href)) return;
+    if (link.origin !== location.origin) return;
+    vsMostrarCarregando();
+});
+
+// Form comum (sem data-confirm, que já cuida do próprio caso acima).
+document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (form.dataset.confirm && !form.dataset.confirmed) return;
+    vsMostrarCarregando();
+});
+
+// Página restaurada do bfcache (botão "voltar") já vem com o spinner
+// escondido no HTML, mas garante — sem isso ele pode ficar preso ativo
+// numa navegação de volta.
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted) vsEsconderCarregando();
 });
 
 // Registra o Service Worker (app instalável / cache offline dos assets estáticos)

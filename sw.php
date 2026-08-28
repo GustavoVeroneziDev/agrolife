@@ -16,6 +16,10 @@ const STATIC_ASSETS = [
     '<?= $b ?>/assets/css/estrutura.css?v=<?= APP_VERSAO ?>',
     '<?= $b ?>/assets/img/logo.png',
     '<?= $b ?>/assets/img/icone.ico',
+    '<?= $b ?>/assets/img/icon-192.png',
+    '<?= $b ?>/assets/img/icon-512.png',
+    '<?= $b ?>/assets/img/icon-512-maskable.png',
+    '<?= $b ?>/assets/img/apple-touch-icon.png',
 ];
 
 // Pré-cache dos assets críticos na instalação

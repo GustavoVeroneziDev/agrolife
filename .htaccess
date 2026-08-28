@@ -38,3 +38,15 @@ Options -Indexes
     ExpiresByType text/css              "access plus 6 months"
     ExpiresByType application/javascript "access plus 6 months"
 </IfModule>
+
+# mod_expires casa pelo Content-Type da resposta, não pela extensão do
+# arquivo — sw.php responde como application/javascript e acabava
+# herdando o cache de 6 meses acima, duplicando/conflitando com o
+# Cache-Control "no-cache" que o próprio PHP já define (o service
+# worker precisa ser sempre revalidado, senão um deploy novo demora
+# a chegar pros usuários já instalados).
+<FilesMatch "^(sw|manifest)\.php$">
+    <IfModule mod_expires.c>
+        ExpiresActive Off
+    </IfModule>
+</FilesMatch>

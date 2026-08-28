@@ -16,21 +16,25 @@ echo json_encode([
     'theme_color'      => '#0d9488',
     'lang'             => 'pt-BR',
     'icons'            => [
-        // 'any maskable' combinados numa entrada é inválido — entradas separadas
+        // 'any maskable' combinados numa entrada é inválido — entradas separadas.
+        // Cada arquivo tem as dimensões reais que o "sizes" declara (logo.png
+        // original é 499x500 — usá-lo direto aqui fazia o tamanho declarado
+        // não bater com o arquivo de verdade, o que barra a instalação em
+        // vários navegadores).
         [
-            'src'     => $b . '/assets/img/logo.png',
+            'src'     => $b . '/assets/img/icon-192.png',
             'sizes'   => '192x192',
             'type'    => 'image/png',
             'purpose' => 'any',
         ],
         [
-            'src'     => $b . '/assets/img/logo.png',
+            'src'     => $b . '/assets/img/icon-512.png',
             'sizes'   => '512x512',
             'type'    => 'image/png',
             'purpose' => 'any',
         ],
         [
-            'src'     => $b . '/assets/img/logo.png',
+            'src'     => $b . '/assets/img/icon-512-maskable.png',
             'sizes'   => '512x512',
             'type'    => 'image/png',
             'purpose' => 'maskable',
