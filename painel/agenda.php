@@ -177,6 +177,11 @@ if ($vista === 'semana' && !empty($_GET['dia']) && preg_match('/^\d{4}-\d{2}-\d{
 }
 
 try {
+    $procedimentos = $pdo->query(
+        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos FROM TiposProcedimento
+         WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
+    )->fetchAll();
+
     $animais = $pdo->query(
         "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
          FROM Animais a
@@ -293,7 +298,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log('[Agenda] ' . $e->getMessage());
-    $animais = $vets = $agendamentos = $porDia = $mesGrade = $mesJson = [];
+    $animais = $vets = $agendamentos = $porDia = $mesGrade = $mesJson = $procedimentos = [];
     $animalPre = null;
     // Garante que a vista semanal sempre tem um período pra renderizar,
     // mesmo se a query tiver falhado antes de calculá-lo.
@@ -517,27 +522,34 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Tipo *</label>
-                            <select name="tipo" class="form-select" required>
+                            <select name="tipo" id="selTipoAgendamento" class="form-select" required>
                                 <?php foreach ($tiposAgenda as $valor => $label): ?>
                                     <option value="<?= h($valor) ?>" <?= $valor === 'consulta' ? 'selected' : '' ?>><?= h($label) ?></option>
                                 <?php endforeach ?>
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Duração</label>
-                            <select name="duracao" class="form-select">
-                                <option value="15">15 min</option>
-                                <option value="30" selected>30 min</option>
-                                <option value="45">45 min</option>
-                                <option value="60">1 hora</option>
-                                <option value="90">1h30</option>
-                                <option value="120">2 horas</option>
+                            <label class="form-label">Procedimento</label>
+                            <select id="selProcedimento" class="form-select">
+                                <option value="">— Personalizado —</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Título *</label>
-                        <input type="text" name="titulo" class="form-control" placeholder="Ex: Consulta de rotina, Castração…" required maxlength="150">
+                        <input type="text" name="titulo" id="inpTituloAgendamento" class="form-control" placeholder="Ex: Consulta de rotina, Castração…" required maxlength="150">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Duração</label>
+                        <select name="duracao" id="selDuracaoAgendamento" class="form-select">
+                            <option value="15">15 min</option>
+                            <option value="30" selected>30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">1 hora</option>
+                            <option value="90">1h30</option>
+                            <option value="120">2 horas</option>
+                        </select>
+                        <div class="form-text">Escolher um procedimento acima já preenche isso — pode ajustar se precisar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
@@ -614,6 +626,44 @@ var ANIMAIS = <?= json_encode(array_map(fn($a) => [
 var VETS = <?= json_encode(array_map(fn($v) => [
     'id' => $v['IDUsuario'], 'nome' => $v['Nome'],
 ], $vets), JSON_UNESCAPED_UNICODE) ?>;
+var PROCEDIMENTOS = <?= json_encode(array_map(fn($p) => [
+    'id' => $p['IDTipo'], 'categoria' => $p['Categoria'], 'nome' => $p['Nome'], 'duracao' => (int) $p['DuracaoPadraoMinutos'],
+], $procedimentos), JSON_UNESCAPED_UNICODE) ?>;
+
+// Tipo -> filtra os procedimentos disponíveis; escolher um procedimento
+// preenche duração e título automaticamente (mas continuam editáveis).
+var selTipoAgendamento = document.getElementById('selTipoAgendamento');
+var selProcedimento    = document.getElementById('selProcedimento');
+var selDuracaoAgendamento = document.getElementById('selDuracaoAgendamento');
+var inpTituloAgendamento  = document.getElementById('inpTituloAgendamento');
+
+function popularProcedimentos() {
+    var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === selTipoAgendamento.value; });
+    selProcedimento.innerHTML = '<option value="">— Personalizado —</option>' + itens.map(function (p) {
+        return '<option value="' + p.id + '">' + escHtmlPicker(p.nome) + ' (' + p.duracao + ' min)</option>';
+    }).join('');
+}
+selTipoAgendamento.addEventListener('change', popularProcedimentos);
+popularProcedimentos();
+
+selProcedimento.addEventListener('change', function () {
+    var item = PROCEDIMENTOS.find(function (p) { return p.id === selProcedimento.value; });
+    if (!item) return;
+    // Duração do procedimento pode não bater com nenhuma das opções fixas
+    // (ex: 20min) — cria a opção na hora se precisar, em vez de falhar
+    // silenciosamente ao tentar selecionar um valor que não existe.
+    var existe = Array.prototype.some.call(selDuracaoAgendamento.options, function (o) {
+        return Number(o.value) === item.duracao;
+    });
+    if (!existe) {
+        var op = document.createElement('option');
+        op.value = item.duracao;
+        op.textContent = item.duracao + ' min';
+        selDuracaoAgendamento.appendChild(op);
+    }
+    selDuracaoAgendamento.value = item.duracao;
+    inpTituloAgendamento.value = item.nome;
+});
 
 initPicker({
     pickerId: 'animalPicker', triggerId: 'animalTrigger', dropdownId: 'animalDropdown',
