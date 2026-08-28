@@ -151,6 +151,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $filtroStatus = trim($_GET['status'] ?? '');
 $animalPreId  = trim($_GET['animal'] ?? '');
+$vista        = ($_GET['vista'] ?? 'dias') === 'mes' ? 'mes' : 'dias';
+$diaFiltro    = trim($_GET['dia'] ?? '');
+if ($diaFiltro !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $diaFiltro)) {
+    $diaFiltro = '';
+}
+$mesFiltro = trim($_GET['mes'] ?? '');
+if (!preg_match('/^\d{4}-\d{2}$/', $mesFiltro)) {
+    $mesFiltro = date('Y-m');
+}
+
+$statusValidos = ['pendente' => 1, 'confirmado' => 1, 'concluido' => 1, 'cancelado' => 1, 'faltou' => 1];
 
 try {
     $animais = $pdo->query(
@@ -165,34 +176,69 @@ try {
         "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
-    $where  = "WHERE ag.DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
-    $params = [];
-    if ($filtroStatus !== '' && isset(['pendente'=>1,'confirmado'=>1,'concluido'=>1,'cancelado'=>1,'faltou'=>1][$filtroStatus])) {
-        $where .= ' AND ag.Status = :status';
-        $params[':status'] = $filtroStatus;
-    } else {
-        $where .= " AND ag.Status != 'cancelado'";
-    }
-
-    $stmt = $pdo->prepare(
-        "SELECT ag.*, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
-                u.Nome AS NomeDono, v.Nome AS NomeVeterinario
-         FROM Agendamentos ag
-         JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
-         JOIN Especies e ON e.IDEspecie = a.FKEspecie
-         JOIN Usuarios u ON u.IDUsuario = a.FKDono
-         LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
-         {$where}
-         ORDER BY ag.DataHoraInicio ASC"
-    );
-    $stmt->execute($params);
-    $agendamentos = $stmt->fetchAll();
-
-    // Agrupa por dia pra organizar a lista visualmente
     $porDia = [];
-    foreach ($agendamentos as $ag) {
-        $dia = substr($ag['DataHoraInicio'], 0, 10);
-        $porDia[$dia][] = $ag;
+    $mesGrade = [];
+    if ($vista === 'dias') {
+        $where  = $diaFiltro !== ''
+            ? 'WHERE DATE(ag.DataHoraInicio) = :dia'
+            : "WHERE ag.DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+        $params = $diaFiltro !== '' ? [':dia' => $diaFiltro] : [];
+        if (isset($statusValidos[$filtroStatus])) {
+            $where .= ' AND ag.Status = :status';
+            $params[':status'] = $filtroStatus;
+        } elseif ($diaFiltro === '') {
+            $where .= " AND ag.Status != 'cancelado'";
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT ag.*, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
+                    u.Nome AS NomeDono, v.Nome AS NomeVeterinario
+             FROM Agendamentos ag
+             JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+             JOIN Especies e ON e.IDEspecie = a.FKEspecie
+             JOIN Usuarios u ON u.IDUsuario = a.FKDono
+             LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
+             {$where}
+             ORDER BY ag.DataHoraInicio ASC"
+        );
+        $stmt->execute($params);
+        $agendamentos = $stmt->fetchAll();
+
+        // Agrupa por dia pra organizar a lista visualmente
+        foreach ($agendamentos as $ag) {
+            $dia = substr($ag['DataHoraInicio'], 0, 10);
+            $porDia[$dia][] = $ag;
+        }
+    } else {
+        // Vista mensal: grade de calendário com contagem por dia
+        $inicioMes = $mesFiltro . '-01';
+        $fimMes    = date('Y-m-d', strtotime('+1 month', strtotime($inicioMes)));
+
+        $stmt = $pdo->prepare(
+            "SELECT DATE(DataHoraInicio) AS Dia, COUNT(*) AS Total,
+                    SUM(Status = 'cancelado') AS Cancelados
+             FROM Agendamentos
+             WHERE DataHoraInicio >= :inicio AND DataHoraInicio < :fim
+             GROUP BY DATE(DataHoraInicio)"
+        );
+        $stmt->execute([':inicio' => $inicioMes, ':fim' => $fimMes]);
+        $contagemPorDia = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $contagemPorDia[$row['Dia']] = $row;
+        }
+
+        $primeiroDiaSemana = (int) date('w', strtotime($inicioMes)); // 0 = domingo
+        $diasNoMes         = (int) date('t', strtotime($inicioMes));
+
+        $celulas = array_fill(0, $primeiroDiaSemana, null);
+        for ($d = 1; $d <= $diasNoMes; $d++) {
+            $dataStr    = sprintf('%s-%02d', $mesFiltro, $d);
+            $celulas[]  = ['data' => $dataStr, 'dia' => $d, 'info' => $contagemPorDia[$dataStr] ?? null];
+        }
+        while (count($celulas) % 7 !== 0) {
+            $celulas[] = null;
+        }
+        $mesGrade = array_chunk($celulas, 7);
     }
 
     $animalPre = null;
@@ -207,7 +253,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log('[Agenda] ' . $e->getMessage());
-    $animais = $vets = $agendamentos = $porDia = [];
+    $animais = $vets = $agendamentos = $porDia = $mesGrade = [];
     $animalPre = null;
 }
 
@@ -216,24 +262,73 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <h4 class="fw-bold mb-0">Agenda</h4>
-    <div class="d-flex gap-2">
-        <select class="form-select form-select-sm" style="width:auto;" onchange="location.href='?status='+this.value">
-            <option value="">Próximos (sem cancelados)</option>
-            <option value="pendente" <?= $filtroStatus === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
-            <option value="confirmado" <?= $filtroStatus === 'confirmado' ? 'selected' : '' ?>>Confirmados</option>
-            <option value="concluido" <?= $filtroStatus === 'concluido' ? 'selected' : '' ?>>Concluídos</option>
-            <option value="cancelado" <?= $filtroStatus === 'cancelado' ? 'selected' : '' ?>>Cancelados</option>
-            <option value="faltou" <?= $filtroStatus === 'faltou' ? 'selected' : '' ?>>Faltas</option>
-        </select>
+    <div class="d-flex gap-2 flex-wrap">
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="?vista=dias" class="btn <?= $vista === 'dias' ? 'btn-accent' : 'btn-outline-accent' ?>">Dias</a>
+            <a href="?vista=mes&mes=<?= h($mesFiltro) ?>" class="btn <?= $vista === 'mes' ? 'btn-accent' : 'btn-outline-accent' ?>">Mês</a>
+        </div>
+        <?php if ($vista === 'dias'): ?>
+            <select class="form-select form-select-sm" style="width:auto;" onchange="location.href='?vista=dias&status='+this.value">
+                <option value="">Próximos (sem cancelados)</option>
+                <option value="pendente" <?= $filtroStatus === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
+                <option value="confirmado" <?= $filtroStatus === 'confirmado' ? 'selected' : '' ?>>Confirmados</option>
+                <option value="concluido" <?= $filtroStatus === 'concluido' ? 'selected' : '' ?>>Concluídos</option>
+                <option value="cancelado" <?= $filtroStatus === 'cancelado' ? 'selected' : '' ?>>Cancelados</option>
+                <option value="faltou" <?= $filtroStatus === 'faltou' ? 'selected' : '' ?>>Faltas</option>
+            </select>
+        <?php endif ?>
         <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAgendamento">
             <i class="bi bi-calendar-plus me-1"></i> Novo agendamento
         </button>
     </div>
 </div>
 
-<?php if (empty($agendamentos)): ?>
+<?php if ($vista === 'dias' && $diaFiltro !== ''): ?>
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="?vista=dias&dia=<?= date('Y-m-d', strtotime($diaFiltro . ' -1 day')) ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+        <span class="fw-semibold"><?= h(formatarData($diaFiltro)) ?></span>
+        <a href="?vista=dias&dia=<?= date('Y-m-d', strtotime($diaFiltro . ' +1 day')) ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+        <a href="?vista=dias" class="btn btn-sm btn-outline-secondary ms-2">Voltar pros próximos</a>
+    </div>
+<?php endif ?>
+
+<?php if ($vista === 'mes'): ?>
+    <?php
+        $mesAnterior = date('Y-m', strtotime($mesFiltro . '-01 -1 month'));
+        $mesProximo  = date('Y-m', strtotime($mesFiltro . '-01 +1 month'));
+        $nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        // monta o nome do mês manualmente em vez de strftime() (deprecated, some do PHP)
+        $mesesPt = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
+        $nomeMes = $mesesPt[(int) date('n', strtotime($mesFiltro . '-01'))] . ' de ' . date('Y', strtotime($mesFiltro . '-01'));
+    ?>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <a href="?vista=mes&mes=<?= $mesAnterior ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+        <span class="fw-semibold"><?= h($nomeMes) ?></span>
+        <a href="?vista=mes&mes=<?= $mesProximo ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+    </div>
+    <div class="card p-2 mb-4">
+        <div class="calendario-grade">
+            <?php foreach ($nomesDias as $nd): ?>
+                <div class="calendario-cabecalho"><?= $nd ?></div>
+            <?php endforeach ?>
+            <?php foreach ($mesGrade as $semana): foreach ($semana as $cel): ?>
+                <?php if ($cel === null): ?>
+                    <div class="calendario-dia calendario-dia-vazio"></div>
+                <?php else: ?>
+                    <a href="?vista=dias&dia=<?= $cel['data'] ?>"
+                       class="calendario-dia text-decoration-none <?= $cel['data'] === date('Y-m-d') ? 'calendario-dia-hoje' : '' ?>">
+                        <span class="calendario-dia-numero"><?= $cel['dia'] ?></span>
+                        <?php if ($cel['info'] && (int) $cel['info']['Total'] > (int) $cel['info']['Cancelados']): ?>
+                            <span class="calendario-dia-badge"><?= (int) $cel['info']['Total'] - (int) $cel['info']['Cancelados'] ?></span>
+                        <?php endif ?>
+                    </a>
+                <?php endif ?>
+            <?php endforeach; endforeach ?>
+        </div>
+    </div>
+<?php elseif (empty($agendamentos)): ?>
     <div class="card text-center py-5 text-secondary">
         <i class="bi bi-calendar3 fs-1 d-block mb-2 opacity-25"></i>
         <p class="mb-0">Nenhum agendamento encontrado.</p>
@@ -458,7 +553,9 @@ document.querySelectorAll('.btn-concluir').forEach(function (btn) {
 });
 
 document.querySelectorAll('.btn-acao-agendamento').forEach(function (btn) {
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         function executar() {
             fetch(BASE + '/painel/api_agendamento.php', {
                 method: 'POST',

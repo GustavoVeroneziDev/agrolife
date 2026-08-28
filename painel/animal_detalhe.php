@@ -400,6 +400,7 @@ initPicker({
 document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
         e.preventDefault();
+        e.stopPropagation();
         vsConfirm(btn.dataset.confirm, function () {
             fetch(BASE + '/painel/api_vacina.php', {
                 method: 'POST',
@@ -423,6 +424,7 @@ document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {
 document.querySelectorAll('.btn-excluir-clinico').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
         e.preventDefault();
+        e.stopPropagation();
         vsConfirm(btn.dataset.confirm, function () {
             fetch(BASE + '/painel/api_clinico.php', {
                 method: 'POST',
