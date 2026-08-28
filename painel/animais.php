@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     $raca    = trim($_POST['raca']       ?? '');
     $nasc    = trim($_POST['nascimento'] ?? '');
     $sexo    = trim($_POST['sexo']       ?? '');
+    $cor     = trim($_POST['cor']        ?? '');
     $peso    = trim($_POST['peso']       ?? '');
     $obs     = trim($_POST['observacoes'] ?? '');
 
@@ -35,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     try {
         $novoId = gerarUuid();
         $pdo->prepare(
-            'INSERT INTO Animais (IDAnimal, FKDono, FKEspecie, Nome, Raca, DataNascimento, Sexo, PesoKg, Observacoes, FotoUrl)
-             VALUES (:id, :dono, :esp, :nome, :raca, :nasc, :sexo, :peso, :obs, :foto)'
+            'INSERT INTO Animais (IDAnimal, FKDono, FKEspecie, Nome, Raca, DataNascimento, Sexo, Pelagem, PesoKg, Observacoes, FotoUrl)
+             VALUES (:id, :dono, :esp, :nome, :raca, :nasc, :sexo, :cor, :peso, :obs, :foto)'
         )->execute([
             ':id'   => $novoId,
             ':dono' => $fkDono,
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
             ':raca' => $raca,
             ':nasc' => $nasc ?: null,
             ':sexo' => $sexo,
+            ':cor'  => $cor ?: null,
             ':peso' => $peso !== '' ? $peso : null,
             ':obs'  => $obs ?: null,
             ':foto' => $foto,
@@ -274,6 +276,10 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="mb-3">
                         <label class="form-label">Raça *</label>
                         <?= campoPicker('naRaca', 'raca', 'Selecione a espécie primeiro', 'Buscar raça…', obrigatorio: true) ?>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cor</label>
+                        <input type="text" name="cor" class="form-control" placeholder="Ex: Caramelo, Preto e branco…">
                     </div>
                     <div class="row g-2">
                         <div class="col-6">

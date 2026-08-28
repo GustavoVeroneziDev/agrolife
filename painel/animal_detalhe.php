@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $raca  = trim($_POST['raca'] ?? '');
         $nasc  = trim($_POST['nascimento'] ?? '');
         $sexo  = trim($_POST['sexo'] ?? '');
+        $cor   = trim($_POST['cor'] ?? '');
         $peso  = trim($_POST['peso'] ?? '');
         $chip  = trim($_POST['microchip'] ?? '');
         $obs   = trim($_POST['observacoes'] ?? '');
@@ -39,12 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            $sql = 'UPDATE Animais SET Nome=:nome, Raca=:raca, DataNascimento=:nasc, Sexo=:sexo,
+            $sql = 'UPDATE Animais SET Nome=:nome, Raca=:raca, DataNascimento=:nasc, Sexo=:sexo, Pelagem=:cor,
                         PesoKg=:peso, Microchip=:chip, Observacoes=:obs' . ($foto ? ', FotoUrl=:foto' : '') . '
                  WHERE IDAnimal = :id';
             $params = [
                 ':nome' => $nome, ':raca' => $raca, ':nasc' => $nasc ?: null,
-                ':sexo' => $sexo, ':peso' => $peso !== '' ? $peso : null,
+                ':sexo' => $sexo, ':cor' => $cor ?: null, ':peso' => $peso !== '' ? $peso : null,
                 ':chip' => $chip ?: null, ':obs' => $obs ?: null, ':id' => $id,
             ];
             if ($foto) {
@@ -187,27 +188,31 @@ require_once __DIR__ . '/../geral/header.php';
                     </button>
                 <?php endif ?>
             </div>
-            <dl class="mb-3">
-                <dt class="small text-secondary">Cliente</dt>
+            <dl class="dl-info mb-3">
+                <dt>Cliente</dt>
                 <dd><a href="<?= BASE ?>/painel/cliente_detalhe.php?id=<?= h($animal['IDDono']) ?>"><?= h($animal['NomeDono']) ?></a></dd>
                 <?php if ($animal['DataNascimento']): ?>
-                    <dt class="small text-secondary">Idade</dt>
+                    <dt>Idade</dt>
                     <dd><?= h(formatarIdade($animal['DataNascimento'])) ?> (<?= formatarData($animal['DataNascimento']) ?>)</dd>
                 <?php endif ?>
                 <?php if ($animal['Sexo']): ?>
-                    <dt class="small text-secondary">Sexo</dt>
+                    <dt>Sexo</dt>
                     <dd><?= formatarSexo($animal['Sexo']) ?></dd>
                 <?php endif ?>
+                <?php if ($animal['Pelagem']): ?>
+                    <dt>Cor</dt>
+                    <dd><?= h($animal['Pelagem']) ?></dd>
+                <?php endif ?>
                 <?php if ($animal['PesoKg']): ?>
-                    <dt class="small text-secondary">Peso</dt>
+                    <dt>Peso</dt>
                     <dd><?= h(number_format((float) $animal['PesoKg'], 3, ',', '.')) ?> kg</dd>
                 <?php endif ?>
                 <?php if ($animal['Microchip']): ?>
-                    <dt class="small text-secondary">Microchip</dt>
+                    <dt>Microchip</dt>
                     <dd><?= h($animal['Microchip']) ?></dd>
                 <?php endif ?>
                 <?php if ($animal['Observacoes']): ?>
-                    <dt class="small text-secondary">Observações</dt>
+                    <dt>Observações</dt>
                     <dd><?= nl2br(h($animal['Observacoes'])) ?></dd>
                 <?php endif ?>
             </dl>
@@ -391,6 +396,10 @@ require_once __DIR__ . '/../geral/header.php';
                             ?>
                             <?= campoPicker('eaSexo', 'sexo', '—', '', $animal['Sexo'] ?? '', $textoSexoAtual, obrigatorio: true, comBusca: false, iconeInicial: $iconeSexoAtual) ?>
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cor</label>
+                        <input type="text" name="cor" class="form-control" placeholder="Ex: Caramelo, Preto e branco…" value="<?= h($animal['Pelagem']) ?>">
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">

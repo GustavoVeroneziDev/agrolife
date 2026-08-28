@@ -233,6 +233,22 @@ button, a, [role="button"] { touch-action: manipulation; }
 .recente-item { padding: .35rem 0; border-radius: 6px; color: var(--text-main); }
 .recente-item:hover { background: var(--bg-hover); color: var(--text-main); }
 
+.tr-link { cursor: pointer; }
+
+/* ── Lista de informações (dl/dt/dd) ─────────────────────────────
+   dt/dd ficam soltos por padrão (mesmo peso visual, pouco espaço
+   entre pares) e acabam se misturando. Aqui cada dt vem com uma
+   folga maior ANTES (separa do par anterior) e a dd cola nela logo
+   abaixo, então os pares ficam visualmente agrupados. */
+.dl-info { margin: 0; }
+.dl-info dt {
+  font-size: .7rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-muted);
+  margin-top: 1rem;
+}
+.dl-info dt:first-child { margin-top: 0; }
+.dl-info dd { font-size: .95rem; font-weight: 600; color: var(--text-main); margin: .2rem 0 0; }
+
 /* ── Avatar circular (iniciais) ───────────────────────────────── */
 .avatar-circle {
   width: 56px; height: 56px; border-radius: 50%;

@@ -20,11 +20,11 @@ try {
     $vencendo = (int) $pdo->query(
         "SELECT COUNT(*) FROM RegistrosVacinas rv
          JOIN Animais a ON a.IDAnimal = rv.FKAnimal
-         WHERE rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         WHERE rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
            AND a.Ativo = 1"
     )->fetchColumn();
 
-    // Filtro dos cards clicáveis "Vacinas atrasadas" / "Vencendo em 30 dias"
+    // Filtro dos cards clicáveis "Vacinas atrasadas" / "Vencendo em 7 dias"
     // — só aceita os dois valores conhecidos, qualquer outra coisa cai no
     // padrão (sem filtro, mostra tudo que tem próxima data marcada).
     $filtroVac = in_array($_GET['vac'] ?? '', ['atrasadas', 'vencendo'], true) ? $_GET['vac'] : '';
@@ -32,7 +32,7 @@ try {
     if ($filtroVac === 'atrasadas') {
         $ondeVac .= " AND rv.ProximaData < CURDATE()";
     } elseif ($filtroVac === 'vencendo') {
-        $ondeVac .= " AND rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
+        $ondeVac .= " AND rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
     }
     $proximas = $pdo->query(
         "SELECT rv.IDRegistro, rv.ProximaData, a.IDAnimal, a.Nome AS NomeAnimal,
@@ -58,7 +58,7 @@ try {
 
     $stmtHoje = $pdo->prepare(
         "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
-                a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
+                a.IDAnimal, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
          FROM Agendamentos ag
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
@@ -72,7 +72,7 @@ try {
 
     $stmtProximos = $pdo->prepare(
         "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
-                a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
+                a.IDAnimal, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
          FROM Agendamentos ag
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
@@ -115,7 +115,7 @@ require_once __DIR__ . '/../geral/header.php';
     <?php
     $stats = [
         ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,    BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas'],
-        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 30 dias', $vencendo,     BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo'],
+        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias', $vencendo,     BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo'],
         ['bi-clipboard2-pulse',          'var(--accent)',      'var(--accent-light)',   'Animais ativos',       $totalAnimais, BASE . '/painel/animais.php',  false],
         ['bi-people',                    'var(--cor-info)',    'var(--cor-info-bg)',    'Clientes cadastrados', $totalDonos,   BASE . '/painel/clientes.php', false],
     ];
@@ -159,7 +159,7 @@ require_once __DIR__ . '/../geral/header.php';
                     </thead>
                     <tbody>
                         <?php foreach ($agendamentosHoje as $ag): ?>
-                            <tr>
+                            <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($ag['IDAnimal']) ?>'">
                                 <td class="px-4 small fw-medium"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
                                 <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
                                 <td class="small"><?= h($ag['Titulo']) ?></td>
@@ -192,7 +192,7 @@ require_once __DIR__ . '/../geral/header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($proximosAgendamentos as $ag): ?>
-                        <tr>
+                        <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($ag['IDAnimal']) ?>'">
                             <td class="px-4 small fw-medium"><?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
                             <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
                             <td class="small"><?= h($ag['Titulo']) ?></td>
@@ -238,17 +238,15 @@ require_once __DIR__ . '/../geral/header.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($proximas as $p): ?>
-                                    <tr>
-                                        <td class="px-4 fw-medium">
-                                            <a href="<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($p['IDAnimal']) ?>"><?= h($p['NomeAnimal']) ?></a>
-                                        </td>
+                                    <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($p['IDAnimal']) ?>'">
+                                        <td class="px-4 fw-medium"><?= h($p['NomeAnimal']) ?></td>
                                         <td class="d-none d-md-table-cell"><?= h($p['NomeDono']) ?></td>
                                         <td class="small"><?= h($p['NomeVacina']) ?></td>
                                         <td class="small"><?= formatarData($p['ProximaData']) ?></td>
                                         <td><?= labelSituacaoVacina($p['ProximaData']) ?></td>
                                         <td>
                                             <?php if ($p['Telefone']): ?>
-                                                <a href="<?= h(waLink($p['Telefone'])) ?>" target="_blank" class="btn btn-sm btn-outline-success" title="WhatsApp">
+                                                <a href="<?= h(waLink($p['Telefone'])) ?>" target="_blank" class="btn btn-sm btn-outline-success" title="WhatsApp" onclick="event.stopPropagation()">
                                                     <i class="bi bi-whatsapp"></i>
                                                 </a>
                                             <?php endif ?>
