@@ -182,6 +182,23 @@ function exigirLogin(string ...$niveis): void
         if (isset($pdo)) tentarLoginLembrado($pdo);
     }
     if (!estaLogado()) {
+        // Guarda pra onde a pessoa ia, pra cair direto lá depois de logar em
+        // vez de sempre num dashboard genérico (ex: link de WhatsApp/e-mail
+        // pra um animal específico, sessão expirou no meio do caminho).
+        // REQUEST_URI vem sempre do que o navegador pediu nesse mesmo
+        // domínio — não dá pra injetar um destino externo por aqui — mas
+        // ainda barra "//" (URL protocol-relative) por garantia extra, e só
+        // aceita path dentro do próprio BASE.
+        $destino = $_SERVER['REQUEST_URI'] ?? '';
+        $prefixo = BASE . '/';
+        if (
+            $destino !== ''
+            && !str_starts_with($destino, '//')
+            && str_starts_with($destino, $prefixo)
+            && !str_starts_with($destino, $prefixo . 'usuario/login')
+        ) {
+            $_SESSION['login_next'] = $destino;
+        }
         redirecionarComMensagem(BASE . '/usuario/login.php', 'Faça login para continuar.', 'warning');
     }
     if ($niveis && !in_array($_SESSION['nivel_acesso'] ?? '', $niveis, true)) {

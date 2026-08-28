@@ -18,7 +18,7 @@ $tiposClinico = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
-        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php', 'Token inválido.', 'danger');
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $animalPreId, 'Token inválido.', 'danger');
     }
 
     $fkAnimal = trim($_POST['animal'] ?? '');
@@ -87,15 +87,16 @@ try {
         "SELECT IDUsuario, Nome FROM Usuarios WHERE NivelAcesso = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
+    // $animais já carrega todo mundo ativo (Nome/NomeDono inclusos) — acha o
+    // pré-selecionado ali em vez de rodar a mesma consulta de novo.
     $animalPre = null;
     if ($animalPreId) {
-        $stmt = $pdo->prepare(
-            'SELECT a.IDAnimal, a.Nome, u.Nome AS NomeDono
-             FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono
-             WHERE a.IDAnimal = :id AND a.Ativo = 1 LIMIT 1'
-        );
-        $stmt->execute([':id' => $animalPreId]);
-        $animalPre = $stmt->fetch();
+        foreach ($animais as $a) {
+            if ($a['IDAnimal'] === $animalPreId) {
+                $animalPre = $a;
+                break;
+            }
+        }
     }
 } catch (PDOException $e) {
     error_log('[RegistrarClinicoForm] ' . $e->getMessage());

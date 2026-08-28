@@ -350,6 +350,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 ['href' => BASE . '/painel/animais.php',      'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
                 ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Clientes'],
                 ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
+                ['href' => BASE . '/painel/tipos_procedimento.php', 'icon' => 'bi-list-check', 'label' => 'Tipos de Procedimento'],
             ];
             // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários
             if ($nivelAcesso === 'admin') {
@@ -374,17 +375,30 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 </div>
                 <a href="<?= BASE ?>/usuario/logout.php"><i class="bi bi-box-arrow-right me-1"></i> Sair</a>
                 <?php
-                    // Nota: cada exec() usa no máximo um "%" — no Windows, escapeshellarg()
-                    // neutraliza "%" (risco de expansão de variável do cmd.exe), e uma string
-                    // com dois "%" formando um par (ex: %h|||%cd) é lida como uma única
-                    // variável "%h|||%" e quebra o comando.
+                    // Produção: hash/data do commit já vêm gravados em config/versao.php
+                    // no momento do deploy (ver .github/workflows/deploy.yml) — não faz
+                    // sentido rodar `git` de novo a cada request só pra mostrar isso (dois
+                    // exec() por página, e o deploy já exclui a pasta .git mesmo, então em
+                    // produção isso sempre falhava silenciosamente e caía no fallback —
+                    // ou, pior, lia uma .git antiga esquecida de uma cópia manual).
+                    // Local: sem versao.php preenchido, só aqui vale rodar `git` de
+                    // verdade pra mostrar o commit atual de quem tá desenvolvendo.
                     $gitVer = null;
-                    $repoDir = escapeshellarg(__DIR__ . '/..');
-                    $hashOut = $dateOut = [];
-                    @exec("git -C {$repoDir} rev-parse --short HEAD 2>&1", $hashOut, $retHash);
-                    @exec("git -C {$repoDir} log -1 --format=%cI 2>&1", $dateOut, $retData);
-                    if ($retHash === 0 && $retData === 0 && !empty($hashOut[0]) && !empty($dateOut[0])) {
-                        $gitVer = trim($hashOut[0]) . ' · ' . date('d/m/y H:i', strtotime(trim($dateOut[0])));
+                    if (APP_BUILD_DATE !== '' && preg_match('/\(([0-9a-f]{6,40})\)\s*$/', APP_BUILD_DATE, $m)) {
+                        $dataSemHash = trim((string) preg_replace('/\s*\([0-9a-f]{6,40}\)\s*$/', '', APP_BUILD_DATE));
+                        $gitVer = $m[1] . ' · ' . $dataSemHash;
+                    } elseif ($isLocal ?? false) {
+                        // Nota: cada exec() usa no máximo um "%" — no Windows, escapeshellarg()
+                        // neutraliza "%" (risco de expansão de variável do cmd.exe), e uma string
+                        // com dois "%" formando um par (ex: %h|||%cd) é lida como uma única
+                        // variável "%h|||%" e quebra o comando.
+                        $repoDir = escapeshellarg(__DIR__ . '/..');
+                        $hashOut = $dateOut = [];
+                        @exec("git -C {$repoDir} rev-parse --short HEAD 2>&1", $hashOut, $retHash);
+                        @exec("git -C {$repoDir} log -1 --format=%cI 2>&1", $dateOut, $retData);
+                        if ($retHash === 0 && $retData === 0 && !empty($hashOut[0]) && !empty($dateOut[0])) {
+                            $gitVer = trim($hashOut[0]) . ' · ' . date('d/m/y H:i', strtotime(trim($dateOut[0])));
+                        }
                     }
                 ?>
                 <div class="sidebar-version" title="Confirme aqui se o deploy já chegou">

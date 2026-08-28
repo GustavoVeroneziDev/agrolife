@@ -47,19 +47,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duracao  = (int) ($_POST['duracao'] ?? 30);
         $obs      = trim($_POST['observacoes'] ?? '');
 
+        // Volta reabrindo o mesmo modal, com o mesmo animal pré-selecionado
+        // se veio de um — sem isso, um erro (conflito de horário, campo
+        // faltando) jogava de volta pra agenda em branco e a pessoa tinha
+        // que reabrir o modal e escolher o animal nde novo do zero.
+        $voltarNovoAg = BASE . '/painel/agenda.php?acao=novo' . ($fkAnimal !== '' ? '&animal=' . urlencode($fkAnimal) : '');
+
         if ($fkAnimal === '' || $titulo === '' || $data === '' || $hora === '' || !isset($tiposAgenda[$tipo])) {
-            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Animal, tipo, título, data e hora são obrigatórios.', 'warning');
+            redirecionarComMensagem($voltarNovoAg, 'Animal, tipo, título, data e hora são obrigatórios.', 'warning');
         }
 
         $inicio = $data . ' ' . $hora . ':00';
         $ts     = strtotime($inicio);
         if (!$ts) {
-            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Data/hora inválida.', 'warning');
+            redirecionarComMensagem($voltarNovoAg, 'Data/hora inválida.', 'warning');
         }
         $fim = date('Y-m-d H:i:s', $ts + $duracao * 60);
 
         if ($fkVet !== '' && agendamentoConflita($pdo, $fkVet, $inicio, $fim)) {
-            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
+            redirecionarComMensagem($voltarNovoAg, 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
         }
 
         try {
@@ -79,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento criado com sucesso!', 'success');
         } catch (PDOException $e) {
             error_log('[NovoAgendamento] ' . $e->getMessage());
-            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao criar agendamento.', 'danger');
+            redirecionarComMensagem($voltarNovoAg, 'Erro ao criar agendamento.', 'danger');
         }
     }
 
@@ -294,15 +300,16 @@ try {
         $mesGrade = array_chunk($celulas, 7);
     }
 
+    // $animais já carrega todo mundo ativo (Nome/NomeDono inclusos) — acha o
+    // pré-selecionado ali em vez de rodar a mesma consulta de novo.
     $animalPre = null;
     if ($animalPreId) {
-        $stmt = $pdo->prepare(
-            'SELECT a.IDAnimal, a.Nome, u.Nome AS NomeDono
-             FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono
-             WHERE a.IDAnimal = :id AND a.Ativo = 1 LIMIT 1'
-        );
-        $stmt->execute([':id' => $animalPreId]);
-        $animalPre = $stmt->fetch();
+        foreach ($animais as $a) {
+            if ($a['IDAnimal'] === $animalPreId) {
+                $animalPre = $a;
+                break;
+            }
+        }
     }
 } catch (PDOException $e) {
     error_log('[Agenda] ' . $e->getMessage());

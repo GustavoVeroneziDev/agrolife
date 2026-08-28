@@ -25,8 +25,12 @@ if ($tentativas >= 5 && (time() - $ultimaTentativa) < 300) {
 $email = trim($_POST['email'] ?? '');
 $senha = $_POST['senha'] ?? '';
 
+// login.php já sabe reler ?email= pra não fazer a pessoa redigitar o
+// e-mail de novo depois de um erro — só falta usar isso aqui.
+$voltarLogin = BASE . '/usuario/login.php?email=' . urlencode($email);
+
 if ($email === '' || $senha === '') {
-    redirecionarComMensagem(BASE . '/usuario/login.php', 'Preencha e-mail e senha.', 'warning');
+    redirecionarComMensagem($voltarLogin, 'Preencha e-mail e senha.', 'warning');
 }
 
 try {
@@ -37,17 +41,17 @@ try {
     $usuario = $stmt->fetch();
 } catch (PDOException $e) {
     error_log('[Login] ' . $e->getMessage());
-    redirecionarComMensagem(BASE . '/usuario/login.php', 'Erro interno. Tente novamente.', 'danger');
+    redirecionarComMensagem($voltarLogin, 'Erro interno. Tente novamente.', 'danger');
 }
 
 if (!$usuario || !password_verify($senha, $usuario['Senha'])) {
     $_SESSION['login_tentativas'] = $tentativas + 1;
     $_SESSION['login_ultima']     = time();
-    redirecionarComMensagem(BASE . '/usuario/login.php', 'E-mail ou senha incorretos.', 'danger');
+    redirecionarComMensagem($voltarLogin, 'E-mail ou senha incorretos.', 'danger');
 }
 
 if (!$usuario['Ativo']) {
-    redirecionarComMensagem(BASE . '/usuario/login.php', 'Conta desativada. Entre em contato com a clínica.', 'warning');
+    redirecionarComMensagem($voltarLogin, 'Conta desativada. Entre em contato com a clínica.', 'warning');
 }
 
 // Login bem-sucedido
@@ -62,7 +66,15 @@ if (!empty($_POST['lembrar_me'])) {
     criarTokenLembrarMe($pdo, $usuario['IDUsuario']);
 }
 
-if (in_array($usuario['NivelAcesso'], ['admin', 'veterinario'], true)) {
+// Se a sessão expirou no meio de uma página específica (ex: link de
+// WhatsApp/e-mail pra um animal), volta direto pra lá em vez do dashboard
+// genérico — exigirLogin() grava isso antes de mandar pro login.
+$next = $_SESSION['login_next'] ?? null;
+unset($_SESSION['login_next']);
+
+if ($next) {
+    header('Location: ' . $next);
+} elseif (in_array($usuario['NivelAcesso'], ['admin', 'veterinario'], true)) {
     header('Location: ' . BASE . '/painel/index.php');
 } else {
     header('Location: ' . BASE . '/usuario/meus_animais.php');

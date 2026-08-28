@@ -15,44 +15,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
     $tel   = trim($_POST['tel']   ?? '');
     $senha = bin2hex(random_bytes(8)); // senha aleatória — o dono pode redefinir depois
 
-    if ($nome && $email) {
-        try {
-            $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :e LIMIT 1');
-            $chk->execute([':e' => $email]);
-            if ($chk->fetch()) {
-                redirecionarComMensagem(BASE . '/painel/clientes.php', 'E-mail já cadastrado.', 'warning');
-            }
-            $novoId = gerarUuid();
-            $stmt = $pdo->prepare(
-                'INSERT INTO Usuarios (IDUsuario, Nome, Email, Telefone, Senha, NivelAcesso)
-                 VALUES (:id,:nome,:email,:tel,:senha,\'cliente\')'
-            );
-            $stmt->execute([
-                ':id'    => $novoId,
-                ':nome'  => $nome,
-                ':email' => $email,
-                ':tel'   => $tel !== '' ? sanitizarTelefone($tel) : null,
-                ':senha' => password_hash($senha, PASSWORD_DEFAULT),
-            ]);
+    if ($nome === '' || $email === '') {
+        redirecionarComMensagem(BASE . '/painel/clientes.php', 'Nome e e-mail são obrigatórios.', 'warning');
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        redirecionarComMensagem(BASE . '/painel/clientes.php', 'E-mail inválido.', 'warning');
+    }
 
-            $token = criarTokenResetSenha($pdo, $novoId);
-            $link  = urlAbsoluta('/usuario/redefinir_senha.php?id=' . $token['id'] . '&t=' . $token['token']);
-            $corpo = '<p>Olá, ' . h($nome) . '!</p>'
-                   . '<p>Uma conta foi criada para você em ' . h(APP_NOME) . '. Clique no botão abaixo para definir sua senha de acesso:</p>'
-                   . '<p style="text-align:center;margin:24px 0;">'
-                   . '<a href="' . h($link) . '" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Definir senha</a>'
-                   . '</p>'
-                   . '<p style="font-size:13px;color:#6b7c78;">Esse link expira em 24 horas.</p>';
-            $enviou = enviarEmail($email, 'Defina sua senha — ' . APP_NOME, emailHtml('Defina sua senha', $corpo));
-
-            $msg = $enviou
-                ? 'Dono cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
-                : 'Dono cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
-            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $novoId, $msg, $enviou ? 'success' : 'warning');
-        } catch (PDOException $e) {
-            error_log('[CadastroDono] ' . $e->getMessage());
-            redirecionarComMensagem(BASE . '/painel/clientes.php', 'Erro ao cadastrar.', 'danger');
+    try {
+        $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :e LIMIT 1');
+        $chk->execute([':e' => $email]);
+        if ($chk->fetch()) {
+            redirecionarComMensagem(BASE . '/painel/clientes.php', 'E-mail já cadastrado.', 'warning');
         }
+        $novoId = gerarUuid();
+        $stmt = $pdo->prepare(
+            'INSERT INTO Usuarios (IDUsuario, Nome, Email, Telefone, Senha, NivelAcesso)
+             VALUES (:id,:nome,:email,:tel,:senha,\'cliente\')'
+        );
+        $stmt->execute([
+            ':id'    => $novoId,
+            ':nome'  => $nome,
+            ':email' => $email,
+            ':tel'   => $tel !== '' ? sanitizarTelefone($tel) : null,
+            ':senha' => password_hash($senha, PASSWORD_DEFAULT),
+        ]);
+
+        $token = criarTokenResetSenha($pdo, $novoId);
+        $link  = urlAbsoluta('/usuario/redefinir_senha.php?id=' . $token['id'] . '&t=' . $token['token']);
+        $corpo = '<p>Olá, ' . h($nome) . '!</p>'
+               . '<p>Uma conta foi criada para você em ' . h(APP_NOME) . '. Clique no botão abaixo para definir sua senha de acesso:</p>'
+               . '<p style="text-align:center;margin:24px 0;">'
+               . '<a href="' . h($link) . '" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Definir senha</a>'
+               . '</p>'
+               . '<p style="font-size:13px;color:#6b7c78;">Esse link expira em 24 horas.</p>';
+        $enviou = enviarEmail($email, 'Defina sua senha — ' . APP_NOME, emailHtml('Defina sua senha', $corpo));
+
+        $msg = $enviou
+            ? 'Dono cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
+            : 'Dono cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $novoId, $msg, $enviou ? 'success' : 'warning');
+    } catch (PDOException $e) {
+        error_log('[CadastroDono] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/clientes.php', 'Erro ao cadastrar.', 'danger');
     }
 }
 

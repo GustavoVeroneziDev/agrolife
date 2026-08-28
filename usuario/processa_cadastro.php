@@ -20,32 +20,36 @@ $telefone = trim($_POST['telefone'] ?? '');
 $senha    = $_POST['senha']         ?? '';
 $senhaCf  = $_POST['senha_conf']    ?? '';
 
+// cadastro.php já sabe reler ?nome=/?email= pra não fazer a pessoa
+// redigitar tudo de novo depois de um erro — só falta usar isso aqui.
+$voltarCadastro = BASE . '/usuario/cadastro.php?nome=' . urlencode($nome) . '&email=' . urlencode($email);
+
 if ($nome === '' || $email === '' || $telefone === '' || $senha === '') {
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'Preencha todos os campos obrigatórios.', 'warning');
+    redirecionarComMensagem($voltarCadastro, 'Preencha todos os campos obrigatórios.', 'warning');
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'E-mail inválido.', 'warning');
+    redirecionarComMensagem($voltarCadastro, 'E-mail inválido.', 'warning');
 }
 
 if (strlen($senha) < 4) {
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'A senha deve ter pelo menos 4 caracteres.', 'warning');
+    redirecionarComMensagem($voltarCadastro, 'A senha deve ter pelo menos 4 caracteres.', 'warning');
 }
 
 if ($senha !== $senhaCf) {
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'As senhas não coincidem.', 'warning');
+    redirecionarComMensagem($voltarCadastro, 'As senhas não coincidem.', 'warning');
 }
 
 $telefoneFmt = sanitizarTelefone($telefone);
 if ($telefoneFmt === null) {
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'Número de WhatsApp inválido. Use o formato (11) 99999-9999.', 'warning');
+    redirecionarComMensagem($voltarCadastro, 'Número de WhatsApp inválido. Use o formato (11) 99999-9999.', 'warning');
 }
 
 try {
     $check = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :email LIMIT 1');
     $check->execute([':email' => $email]);
     if ($check->fetch()) {
-        redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'E-mail já cadastrado.', 'warning');
+        redirecionarComMensagem($voltarCadastro, 'E-mail já cadastrado.', 'warning');
     }
 
     $id   = gerarUuid();
@@ -64,7 +68,7 @@ try {
     ]);
 } catch (PDOException $e) {
     error_log('[Cadastro] ' . $e->getMessage());
-    redirecionarComMensagem(BASE . '/usuario/cadastro.php', 'Erro ao criar conta. Tente novamente.', 'danger');
+    redirecionarComMensagem($voltarCadastro, 'Erro ao criar conta. Tente novamente.', 'danger');
 }
 
 session_regenerate_id(true);
