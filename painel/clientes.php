@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin');
+exigirLogin('admin', 'veterinario');
 
 // Cadastro rápido via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastrar') {

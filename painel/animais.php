@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../config/conexao.php';
-exigirLogin('admin');
+exigirLogin('admin', 'veterinario');
 
 // Cadastro de animal via POST (usado tanto pelo CTA de estado vazio quanto pelo botão do topo)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_animal') {
@@ -281,7 +281,7 @@ require_once __DIR__ . '/../geral/header.php';
 <script>
 var DONOS = <?= json_encode(array_map(fn($d) => [
     'id' => $d['IDUsuario'], 'nome' => $d['Nome'], 'email' => $d['Email'],
-    'equipe' => $d['NivelAcesso'] === 'admin',
+    'equipe' => $d['NivelAcesso'] !== 'cliente',
 ], $donos), JSON_UNESCAPED_UNICODE) ?>;
 var NA_ESPECIES = <?= json_encode(array_map(fn($e) => [
     'id' => $e['IDEspecie'], 'nome' => $e['Nome'], 'icone' => $e['Icone'],
