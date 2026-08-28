@@ -176,8 +176,8 @@ require_once __DIR__ . '/../geral/header.php';
 
                 <div class="mb-4">
                     <label class="form-label">Imagens <span class="text-secondary">(opcional)</span></label>
-                    <input type="file" name="imagens[]" class="form-control" accept="image/png,image/jpeg,image/webp" multiple>
-                    <div class="form-text">JPG, PNG ou WEBP — até 5 MB cada.</div>
+                    <input type="file" name="imagens[]" class="form-control" accept="image/png,image/jpeg,image/webp" capture="environment" multiple>
+                    <div class="form-text">JPG, PNG ou WEBP — até 5 MB cada. No celular, dá pra tirar a foto na hora.</div>
                 </div>
 
                 <div class="d-grid">

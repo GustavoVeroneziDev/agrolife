@@ -308,8 +308,8 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Foto</label>
-                        <input type="file" name="foto" class="form-control" accept="image/png,image/jpeg,image/webp">
-                        <div class="form-text">JPG, PNG ou WEBP — até 5 MB. Deixe em branco pra manter a foto atual.</div>
+                        <input type="file" name="foto" class="form-control" accept="image/png,image/jpeg,image/webp" capture="environment">
+                        <div class="form-text">JPG, PNG ou WEBP — até 5 MB. No celular, dá pra tirar a foto na hora. Deixe em branco pra manter a foto atual.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Nome do animal *</label>

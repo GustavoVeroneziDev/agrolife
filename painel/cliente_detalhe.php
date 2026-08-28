@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     $nasc     = trim($_POST['nascimento'] ?? '');
     $sexo     = trim($_POST['sexo']      ?? '');
     $peso     = trim($_POST['peso']      ?? '');
+    $obs      = trim($_POST['observacoes'] ?? '');
 
     if ($nome === '' || $especie === '' || $raca === '' || $sexo === '') {
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Nome, espécie, raça e sexo são obrigatórios.', 'warning');
@@ -29,11 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
     }
 
+    $foto = !empty($_FILES['foto']['tmp_name']) ? salvarImagemEnviada($_FILES['foto'], 'animais') : null;
+    if (!empty($_FILES['foto']['tmp_name']) && $foto === null) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Foto inválida — envie um JPG, PNG ou WEBP de até 5 MB.', 'warning');
+    }
+
     try {
         $novoId = gerarUuid();
         $pdo->prepare(
-            'INSERT INTO Animais (IDAnimal, FKDono, FKEspecie, Nome, Raca, DataNascimento, Sexo, PesoKg)
-             VALUES (:id, :dono, :esp, :nome, :raca, :nasc, :sexo, :peso)'
+            'INSERT INTO Animais (IDAnimal, FKDono, FKEspecie, Nome, Raca, DataNascimento, Sexo, PesoKg, Observacoes, FotoUrl)
+             VALUES (:id, :dono, :esp, :nome, :raca, :nasc, :sexo, :peso, :obs, :foto)'
         )->execute([
             ':id'   => $novoId,
             ':dono' => $id,
@@ -43,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
             ':nasc' => $nasc ?: null,
             ':sexo' => $sexo,
             ':peso' => $peso !== '' ? $peso : null,
+            ':obs'  => $obs ?: null,
+            ':foto' => $foto,
         ]);
         redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $novoId, 'Animal cadastrado com sucesso!', 'success');
     } catch (PDOException $e) {
@@ -181,7 +189,7 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="modal fade" id="modalNovoAnimal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                 <input type="hidden" name="acao" value="novo_animal">
                 <div class="modal-header">
@@ -189,6 +197,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Foto</label>
+                        <input type="file" name="foto" class="form-control" accept="image/png,image/jpeg,image/webp" capture="environment">
+                        <div class="form-text">JPG, PNG ou WEBP — até 5 MB. No celular, dá pra tirar a foto na hora.</div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Nome do animal *</label>
                         <input type="text" name="nome" class="form-control" required>
@@ -217,6 +230,10 @@ require_once __DIR__ . '/../geral/header.php';
                             <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,000" inputmode="numeric">
                             <input type="hidden" name="peso" id="naPesoReal">
                         </div>
+                    </div>
+                    <div class="mb-1 mt-3">
+                        <label class="form-label">Observações</label>
+                        <textarea name="observacoes" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
