@@ -110,7 +110,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   color: var(--text-secondary);
   font-size: .92rem;
   transition: background var(--transition-fast), color var(--transition-fast);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius-btn) var(--radius-btn) 0;
   margin-right: .75rem;
   min-height: 44px;
 }
@@ -166,10 +166,12 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ── Cards ────────────────────────────────────────────────────── */
 .card {
+  --bs-card-border-radius: var(--radius-card);
   background: var(--bg-card);
   border: 1px solid var(--card-border-color);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+  overflow: hidden; /* corta quina reta de thead/header com fundo colado na borda */
 }
 .card-header { background: transparent; border-bottom: 1px solid var(--card-border-color); font-weight: 600; }
 .card-footer { border-top: 1px solid var(--card-border-color); }
@@ -286,7 +288,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   background: var(--bg-card);
   border: 1px solid var(--accent);
   border-top: none;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 var(--radius-btn) var(--radius-btn);
   z-index: 300;
   box-shadow: 0 8px 28px var(--shadow-color-forte);
   max-height: 260px;
