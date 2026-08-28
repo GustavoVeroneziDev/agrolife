@@ -227,12 +227,24 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     // especies: [{id, nome, icone}] · racas: [{especie, nome}]
     // especieInicialId: em tela de edição, a espécie já selecionada — filtra
     // a raça de cara sem precisar reabrir o picker de espécie.
+    //
+    // Encadeamento (Espécie -> Sexo -> Raça, na ordem visual do formulário —
+    // Espécie e Sexo ficam lado a lado na mesma linha, Raça vem embaixo):
+    // escolher um já abre o próximo campo vazio sozinho, sem precisar clicar
+    // pra abrir de novo. Sexo não depende da espécie (lista sempre igual),
+    // mas encadeia do mesmo jeito por ser o próximo campo obrigatório vazio.
+    // Cada abertura só acontece se o campo alvo ainda estiver vazio — assim
+    // não reabre um valor que já tava certo (ex: só corrigindo a raça numa
+    // edição, sem mexer no sexo que já tava preenchido).
     function initAnimalPickers(base, especies, racas, especieInicialId) {
         var SEXOS = [
             { id: 'macho', label: 'Macho', icon: 'bi-gender-male' },
             { id: 'femea', label: 'Fêmea', icon: 'bi-gender-female' },
             { id: 'indeterminado', label: 'Indeterminado', icon: '' },
         ];
+
+        var racaHidden = document.getElementById('inp' + base + 'RacaId');
+        var sexoHidden = document.getElementById('inp' + base + 'SexoId');
 
         var racaPk = initPicker({
             pickerId: base + 'RacaPicker', triggerId: base + 'RacaTrigger', dropdownId: base + 'RacaDropdown',
@@ -244,6 +256,23 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             vazioMsg: 'Nenhuma raça encontrada.',
         });
         if (racaPk && !especieInicialId) racaPk.desabilitar('Selecione a espécie primeiro');
+
+        var sexoPk = initPicker({
+            pickerId: base + 'SexoPicker', triggerId: base + 'SexoTrigger', dropdownId: base + 'SexoDropdown',
+            searchId: base + 'SexoSearch', listId: base + 'SexoList', hiddenId: 'inp' + base + 'SexoId', labelId: base + 'SexoLabel',
+            items: SEXOS,
+            chave: function (s) { return s.id; },
+            renderItem: function (s) { return { title: s.label, icon: s.icon }; },
+            matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
+            vazioMsg: 'Nada encontrado.',
+            onSelect: function () {
+                // abrir() já ignora sozinho se a raça ainda tiver desabilitada
+                // (espécie não escolhida ainda) — não precisa checar aqui.
+                if (racaHidden && !racaHidden.value) {
+                    setTimeout(function () { racaPk.abrir(); }, 50);
+                }
+            },
+        });
 
         var especiePk = initPicker({
             pickerId: base + 'EspeciePicker', triggerId: base + 'EspecieTrigger', dropdownId: base + 'EspecieDropdown',
@@ -258,17 +287,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 var filtradas = racas.filter(function (r) { return r.especie === e.id; });
                 racaPk.habilitar();
                 racaPk.setItems(filtradas, 'Selecione a raça…');
+                if (sexoHidden && !sexoHidden.value) {
+                    setTimeout(function () { sexoPk.abrir(); }, 50);
+                }
             },
-        });
-
-        var sexoPk = initPicker({
-            pickerId: base + 'SexoPicker', triggerId: base + 'SexoTrigger', dropdownId: base + 'SexoDropdown',
-            searchId: base + 'SexoSearch', listId: base + 'SexoList', hiddenId: 'inp' + base + 'SexoId', labelId: base + 'SexoLabel',
-            items: SEXOS,
-            chave: function (s) { return s.id; },
-            renderItem: function (s) { return { title: s.label, icon: s.icon }; },
-            matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
-            vazioMsg: 'Nada encontrado.',
         });
 
         return { especiePk: especiePk, racaPk: racaPk, sexoPk: sexoPk };

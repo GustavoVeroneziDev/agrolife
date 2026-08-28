@@ -218,7 +218,16 @@ var animalPicker = initPicker({
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },
     vazioMsg: 'Nenhum animal encontrado.',
-    onSelect: function (a) { rvTipoPk.setItems(vacinasParaEspecie(a.especie), 'Selecione a vacina'); },
+    onSelect: function (a) {
+        var itens = vacinasParaEspecie(a.especie);
+        rvTipoPk.setItems(itens, 'Selecione a vacina');
+        // Abre a vacina sozinha pra fluir direto — mesmo padrão do Tipo/
+        // Procedimento na agenda. setTimeout pelo mesmo motivo: o "click"
+        // nativo que ainda vai disparar fecharia o dropdown na hora.
+        if (itens.length) {
+            setTimeout(function () { rvTipoPk.abrir(); }, 50);
+        }
+    },
 });
 
 <?php if ($animalPre): ?>
