@@ -137,7 +137,7 @@ require_once __DIR__ . '/../geral/header.php';
 ?>
 
 <div class="d-flex align-items-center gap-2 mb-4">
-    <a href="<?= BASE ?>/painel/cliente_detalhe.php?id=<?= h($animal['IDDono']) ?>" class="btn btn-sm btn-outline-secondary">
+    <a href="<?= BASE ?>/painel/cliente_detalhe.php?id=<?= h($animal['IDDono']) ?>" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
     <h4 class="fw-bold mb-0"><?= especieIconeHtml($animal['IconeEspecie'], '1.4rem') ?> <?= h($animal['Nome']) ?></h4>

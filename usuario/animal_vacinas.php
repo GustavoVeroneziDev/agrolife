@@ -45,7 +45,7 @@ require_once __DIR__ . '/../geral/header.php';
 ?>
 
 <div class="d-flex align-items-center gap-2 mb-4">
-    <a href="<?= BASE ?>/usuario/meus_animais.php" class="btn btn-sm btn-outline-secondary">
+    <a href="<?= BASE ?>/usuario/meus_animais.php" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
     <h4 class="fw-bold mb-0"><?= h($animal['Nome']) ?></h4>

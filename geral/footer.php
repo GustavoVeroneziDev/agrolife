@@ -63,6 +63,16 @@ function vsToast(msg, tipo) {
     bootstrap.Toast.getOrCreateInstance(el, { delay: 2000 }).show();
 }
 
+// ── Botão "voltar" que usa o histórico de verdade em vez de sempre
+// mandar pra uma página fixa — só intercepta se a página anterior for
+// deste mesmo app (senão, o href normal do link continua valendo).
+function voltarInteligente(e) {
+    if (document.referrer && document.referrer.indexOf(location.origin + BASE) === 0) {
+        e.preventDefault();
+        history.back();
+    }
+}
+
 // ── Modal de confirmação global ───────────────────────────────
 function vsConfirm(msg, onOk, label) {
     document.getElementById('modalConfirmMsg').textContent = msg;
