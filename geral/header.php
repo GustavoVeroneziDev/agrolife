@@ -55,16 +55,6 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <script>
     var BASE = '<?= BASE ?>';
 
-    // DEBUG TEMPORÁRIO — investigando um dropdown que abre e fecha sozinho
-    // no encadeamento. Ativa só com ?debug_picker=1 na URL, não afeta
-    // ninguém sem o parâmetro. Remover depois de achar a causa.
-    var PICKER_DEBUG = /[?&]debug_picker=1\b/.test(location.search);
-    function pickerLog(id) {
-        if (!PICKER_DEBUG) return;
-        var args = Array.prototype.slice.call(arguments, 1);
-        console.log.apply(console, ['[picker:' + id + ']'].concat(args));
-    }
-
     // Compartilhado entre TODOS os pickers da página (não é local de cada
     // instância) — marca a última vez que qualquer um deles processou uma
     // seleção. Existe por causa de um comportamento do navegador: ao
@@ -118,7 +108,6 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
 
         var abertoEm = 0;
         function abrir() {
-            pickerLog(opts.pickerId, 'abrir() chamado', new Error().stack);
             aberto = true;
             abertoEm = performance.now();
             trigger.classList.add('open');
@@ -131,7 +120,6 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             document.addEventListener('click', clickFora, true);
         }
         function fechar() {
-            pickerLog(opts.pickerId, 'fechar() chamado', new Error().stack);
             aberto = false;
             trigger.classList.remove('open');
             dropdown.classList.add('d-none');
@@ -143,21 +131,11 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             // clique pode ser QUALQUER ancestral (o navegador redireciona
             // pra onde estiver visível), então não dá pra filtrar pelo
             // alvo — só pela proximidade no tempo com a última seleção.
-            var desdeSelecao = performance.now() - ultimaSelecaoPickerEm;
-            if (desdeSelecao < 200) {
-                pickerLog(opts.pickerId, 'clickFora IGNORADO (seleção recente, ' + desdeSelecao.toFixed(1) + 'ms atrás)', 'target=', e.target);
-                return;
-            }
-            if (e.timeStamp < abertoEm) {
-                pickerLog(opts.pickerId, 'clickFora IGNORADO (timeStamp velho)', 'e.timeStamp=' + e.timeStamp, 'abertoEm=' + abertoEm, 'target=', e.target);
-                return;
-            }
-            var fora = !picker.contains(e.target);
-            pickerLog(opts.pickerId, 'clickFora avaliado', 'fora=' + fora, 'target=', e.target, 'isTrusted=' + e.isTrusted);
-            if (fora) fechar();
+            if (performance.now() - ultimaSelecaoPickerEm < 200) return;
+            if (e.timeStamp < abertoEm) return;
+            if (!picker.contains(e.target)) fechar();
         }
         function toggle() {
-            pickerLog(opts.pickerId, 'toggle() chamado, aberto atualmente=' + aberto);
             if (trigger.classList.contains('disabled')) return;
             aberto ? fechar() : abrir();
         }
@@ -256,15 +234,11 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         return {
             selecionar: selecionar,
             limpar: limpar,
-            abrir: function () {
-                pickerLog(opts.pickerId, 'abrir() externo chamado, disabled=' + trigger.classList.contains('disabled'));
-                if (!trigger.classList.contains('disabled')) abrir();
-            },
+            abrir: function () { if (!trigger.classList.contains('disabled')) abrir(); },
             getSelecionado: function () { return selecionado; },
             // Troca a lista de itens (ex: raças mudam conforme a espécie escolhida).
             // Limpa a seleção atual — o item selecionado pode não existir na lista nova.
             setItems: function (novosItems, novoPlaceholder) {
-                pickerLog(opts.pickerId, 'setItems() chamado, ' + novosItems.length + ' itens');
                 opts.items = novosItems;
                 if (novoPlaceholder !== undefined) opts.placeholder = novoPlaceholder;
                 limpar();
