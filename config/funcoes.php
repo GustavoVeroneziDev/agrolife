@@ -258,6 +258,59 @@ function _limparCookieLembrarMe(): void
     unset($_COOKIE['vs_lembrar']);
 }
 
+function urlAbsoluta(string $caminho): string
+{
+    $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443);
+    $scheme = $https ? 'https://' : 'http://';
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . $host . BASE . $caminho;
+}
+
+// Gera um link de definição/redefinição de senha (mesmo mecanismo pros dois
+// casos: "esqueci minha senha" e "primeira senha" de conta criada pelo admin).
+function criarTokenResetSenha(PDO $pdo, string $idUsuario, int $horas = 24): array
+{
+    try {
+        $pdo->prepare('DELETE FROM TokensResetSenha WHERE FKUsuario = :id')
+            ->execute([':id' => $idUsuario]);
+    } catch (PDOException) {}
+
+    $idToken    = gerarUuid();
+    $tokenPlain = bin2hex(random_bytes(32));
+    $tokenHash  = hash('sha256', $tokenPlain);
+    $expira     = date('Y-m-d H:i:s', strtotime("+{$horas} hours"));
+
+    $pdo->prepare(
+        'INSERT INTO TokensResetSenha (IDToken, FKUsuario, TokenHash, Expira)
+         VALUES (:id, :fku, :hash, :expira)'
+    )->execute([':id' => $idToken, ':fku' => $idUsuario, ':hash' => $tokenHash, ':expira' => $expira]);
+
+    return ['id' => $idToken, 'token' => $tokenPlain];
+}
+
+// Retorna o IDUsuario dono do token se ele for válido e não tiver expirado, senão null.
+// Não consome o token — quem chama decide quando invalidar (só depois da senha trocada de verdade).
+function validarTokenResetSenha(PDO $pdo, string $idToken, string $tokenPlain): ?string
+{
+    if ($idToken === '' || $tokenPlain === '') return null;
+
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT FKUsuario, TokenHash FROM TokensResetSenha WHERE IDToken = :id AND Expira > NOW() LIMIT 1'
+        );
+        $stmt->execute([':id' => $idToken]);
+        $row = $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log('[ResetSenha] ' . $e->getMessage());
+        return null;
+    }
+
+    if (!$row || !hash_equals($row['TokenHash'], hash('sha256', $tokenPlain))) {
+        return null;
+    }
+    return $row['FKUsuario'];
+}
+
 function h(mixed $str): string
 {
     return htmlspecialchars((string) $str, ENT_QUOTES, 'UTF-8');

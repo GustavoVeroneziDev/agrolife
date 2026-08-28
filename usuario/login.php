@@ -46,11 +46,14 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                 </div>
 
-                <div class="form-check mt-3 mb-1">
-                    <input class="form-check-input" type="checkbox" name="lembrar_me" id="lembrarMe" value="1">
-                    <label class="form-check-label small text-secondary" for="lembrarMe">
-                        Lembrar-me por 30 dias
-                    </label>
+                <div class="d-flex align-items-center justify-content-between mt-3 mb-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="lembrar_me" id="lembrarMe" value="1">
+                        <label class="form-check-label small text-secondary" for="lembrarMe">
+                            Lembrar-me por 30 dias
+                        </label>
+                    </div>
+                    <a href="<?= BASE ?>/usuario/esqueci_senha.php" class="small">Esqueci minha senha</a>
                 </div>
 
                 <div class="d-grid mt-3">
