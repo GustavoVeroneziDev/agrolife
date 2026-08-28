@@ -450,7 +450,7 @@ require_once __DIR__ . '/../geral/header.php';
                                     <div class="d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
                                         <?= labelStatusAgendamento($ag['Status']) ?>
-                                        <span class="fw-medium"><?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
+                                        <span class="fw-medium"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
                                         <span class="text-secondary small">— <?= h($ag['NomeDono']) ?></span>
                                     </div>
                                     <span class="text-secondary small d-block">
@@ -620,7 +620,7 @@ initPicker({
     searchId: 'animalSearch', listId: 'animalList', hiddenId: 'inpAnimalId', labelId: 'animalLabel',
     items: ANIMAIS,
     chave: function (a) { return a.id; },
-    renderItem: function (a) { return { title: (a.icone ? a.icone + ' ' : '') + a.nome, sub: a.dono }; },
+    renderItem: function (a) { return { title: a.nome, icon: a.icone, sub: a.dono }; },
     matches: function (a, q) {
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },

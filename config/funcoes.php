@@ -477,6 +477,19 @@ function formatarSexo(?string $sexo): string
     };
 }
 
+// Ícone de espécie: Especies.Icone guarda um nome de arquivo (assets/img/especies/),
+// recolorido via CSS mask pra acompanhar a cor de destaque do tema. $arquivo vindo
+// vazio ou de um registro antigo não migrado (emoji) cai pro ícone genérico da pata.
+function especieIconeHtml(?string $arquivo, string $tamanho = '1.2em'): string
+{
+    if (!$arquivo || !preg_match('/^[a-z0-9_-]+\.(png|svg)$/i', $arquivo)) {
+        $arquivo = 'paw.png';
+    }
+    $tam = h($tamanho);
+    $url = BASE . '/assets/img/especies/' . rawurlencode($arquivo);
+    return '<span class="especie-icone" style="width:' . $tam . ';height:' . $tam . ';--especie-icone-url:url(\'' . $url . '\');"></span>';
+}
+
 /**
  * Situação de vacinação a partir da ProximaData de um registro.
  * @return array{0:string,1:string,2:string} [label, cor-bootstrap, ícone]

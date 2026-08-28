@@ -35,8 +35,8 @@ UPDATE Especies SET Ordem = 7 WHERE Nome = 'Réptil';
 UPDATE Especies SET Ordem = 9 WHERE Nome = 'Outro';
 
 INSERT INTO Especies (IDEspecie, Nome, Icone, Ordem) VALUES
-(UUID(), 'Cavalo', '🐴', 3),
-(UUID(), 'Vaca',   '🐄', 4)
+(UUID(), 'Cavalo', 'horse.png', 3),
+(UUID(), 'Vaca',   'cow.png',   4)
 ON DUPLICATE KEY UPDATE Icone = VALUES(Icone), Ordem = VALUES(Ordem);
 
 -- ------------------------------------------------------------

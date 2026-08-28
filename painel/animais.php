@@ -152,7 +152,7 @@ require_once __DIR__ . '/../geral/header.php';
             <option value="">Todas as espécies</option>
             <?php foreach ($especies as $e): ?>
                 <option value="<?= h($e['IDEspecie']) ?>" <?= $especieF === $e['IDEspecie'] ? 'selected' : '' ?>>
-                    <?= h($e['Icone']) ?> <?= h($e['Nome']) ?>
+                    <?= h($e['Nome']) ?>
                 </option>
             <?php endforeach ?>
         </select>
@@ -184,7 +184,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <a href="<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($a['IDAnimal']) ?>" class="text-decoration-none">
                     <div class="card p-3 h-100">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span style="font-size:1.6rem;"><?= h($a['IconeEspecie']) ?></span>
+                            <?= especieIconeHtml($a['IconeEspecie'], '1.6rem') ?>
                             <div class="flex-grow-1 min-w-0">
                                 <div class="fw-bold text-truncate" style="color:var(--text-main);"><?= h($a['Nome']) ?></div>
                                 <div class="small text-secondary text-truncate"><?= h($a['NomeDono']) ?></div>

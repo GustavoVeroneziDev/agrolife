@@ -160,7 +160,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <tbody>
                                 <?php foreach ($animais as $a): ?>
                                     <tr>
-                                        <td class="px-4 fw-medium"><?= h($a['IconeEspecie']) ?> <?= h($a['Nome']) ?></td>
+                                        <td class="px-4 fw-medium"><?= especieIconeHtml($a['IconeEspecie']) ?> <?= h($a['Nome']) ?></td>
                                         <td class="d-none d-md-table-cell small"><?= h($a['NomeEspecie']) ?><?= $a['Raca'] ? ' · ' . h($a['Raca']) : '' ?></td>
                                         <td>
                                             <?php if ($a['ProximaVacina']): ?>

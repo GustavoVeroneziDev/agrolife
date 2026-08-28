@@ -54,7 +54,7 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card p-4 text-center">
-            <div style="font-size:3.5rem;line-height:1;"><?= h($animal['IconeEspecie'] ?: '🐾') ?></div>
+            <div><?= especieIconeHtml($animal['IconeEspecie'], '3.5rem') ?></div>
             <h5 class="fw-bold mt-2 mb-0"><?= h($animal['Nome']) ?></h5>
             <p class="text-secondary small mb-3"><?= h($animal['NomeEspecie']) ?><?= $animal['Raca'] ? ' · ' . h($animal['Raca']) : '' ?></p>
 

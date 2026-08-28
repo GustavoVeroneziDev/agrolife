@@ -112,7 +112,7 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php if ($t['Descricao']): ?><div class="small text-secondary"><?= h($t['Descricao']) ?></div><?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell small">
-                                    <?= $t['NomeEspecie'] ? h($t['IconeEspecie']) . ' ' . h($t['NomeEspecie']) : 'Todas' ?>
+                                    <?= $t['NomeEspecie'] ? especieIconeHtml($t['IconeEspecie']) . ' ' . h($t['NomeEspecie']) : 'Todas' ?>
                                 </td>
                                 <td class="small"><?= $t['IntervaloMeses'] ? $t['IntervaloMeses'] . ' meses' : 'Dose única' ?></td>
                                 <td class="text-end">
@@ -166,7 +166,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <select name="especie" id="fEspecie" class="form-select">
                                 <option value="">Todas as espécies</option>
                                 <?php foreach ($especies as $e): ?>
-                                    <option value="<?= h($e['IDEspecie']) ?>"><?= h($e['Icone']) ?> <?= h($e['Nome']) ?></option>
+                                    <option value="<?= h($e['IDEspecie']) ?>"><?= h($e['Nome']) ?></option>
                                 <?php endforeach ?>
                             </select>
                         </div>

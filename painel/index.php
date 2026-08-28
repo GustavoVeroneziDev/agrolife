@@ -110,7 +110,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <?php foreach ($proximosAgendamentos as $ag): ?>
                         <tr>
                             <td class="px-4 small fw-medium"><?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
-                            <td class="small"><?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
+                            <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
                             <td class="small"><?= h($ag['Titulo']) ?></td>
                         </tr>
                     <?php endforeach ?>

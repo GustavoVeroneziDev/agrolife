@@ -59,6 +59,15 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     function escHtmlPicker(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    // r.icon vem sempre de dado confiável (classe do bootstrap-icons, ou nome de
+    // arquivo fixo em assets/img/especies/) — nunca texto de usuário.
+    function iconeHtmlPicker(icon) {
+        if (!icon) return '';
+        if (/\.(png|svg)$/i.test(icon)) {
+            return '<span class="especie-icone me-1" style="width:1.1em;height:1.1em;--especie-icone-url:url(\'' + BASE + '/assets/img/especies/' + icon + '\')"></span>';
+        }
+        return '<i class="bi ' + icon + ' me-1"></i>';
+    }
     function initPicker(opts) {
         var aberto = false;
         var selecionado = null;
@@ -110,7 +119,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             }
             lista.forEach(function (it) {
                 var r = opts.renderItem(it);
-                var icone = r.icon ? '<i class="bi ' + r.icon + ' me-1"></i>' : '';
+                var icone = iconeHtmlPicker(r.icon);
                 var div = document.createElement('div');
                 div.className = 'picker-item' + (selecionado && opts.chave(selecionado) === opts.chave(it) ? ' picker-active' : '');
                 div.innerHTML = '<div class="picker-item-titulo">' + icone + escHtmlPicker(r.title) + '</div>'
@@ -124,7 +133,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             hidden.value = opts.chave(it);
             limparErroObrigatorio();
             var r = opts.renderItem(it);
-            var icone = r.icon ? '<i class="bi ' + r.icon + ' me-1"></i>' : '';
+            var icone = iconeHtmlPicker(r.icon);
             // r.title/r.sub podem vir de dado do usuário (nome de dono, animal…) —
             // sempre escapa antes de jogar em innerHTML, só o ícone é HTML confiável
             // (vem sempre de uma classe fixa escrita no próprio renderItem()).
@@ -240,7 +249,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             searchId: base + 'EspecieSearch', listId: base + 'EspecieList', hiddenId: 'inp' + base + 'EspecieId', labelId: base + 'EspecieLabel',
             items: especies,
             chave: function (e) { return e.id; },
-            renderItem: function (e) { return { title: e.icone + ' ' + e.nome }; },
+            renderItem: function (e) { return { title: e.nome, icon: e.icone }; },
             matches: function (e, q) { return e.nome.toLowerCase().indexOf(q) !== -1; },
             vazioMsg: 'Nenhuma espécie encontrada.',
             onSelect: function (e) {

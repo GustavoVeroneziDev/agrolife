@@ -204,7 +204,7 @@ initPicker({
     searchId: 'animalSearch', listId: 'animalList', hiddenId: 'inpAnimalId', labelId: 'animalLabel',
     items: ANIMAIS,
     chave: function (a) { return a.id; },
-    renderItem: function (a) { return { title: (a.icone ? a.icone + ' ' : '') + a.nome, sub: a.dono }; },
+    renderItem: function (a) { return { title: a.nome, icon: a.icone, sub: a.dono }; },
     matches: function (a, q) {
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },

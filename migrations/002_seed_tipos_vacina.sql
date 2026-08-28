@@ -5,12 +5,12 @@
 SET NAMES utf8mb4;
 
 INSERT INTO Especies (IDEspecie, Nome, Icone) VALUES
-(UUID(), 'Cão',     '🐕'),
-(UUID(), 'Gato',    '🐈'),
-(UUID(), 'Ave',     '🐦'),
-(UUID(), 'Réptil',  '🦎'),
-(UUID(), 'Roedor',  '🐹'),
-(UUID(), 'Outro',   '🐾')
+(UUID(), 'Cão',     'dog.png'),
+(UUID(), 'Gato',    'cat.png'),
+(UUID(), 'Ave',     'bird.png'),
+(UUID(), 'Réptil',  'lizard.png'),
+(UUID(), 'Roedor',  'rodent.png'),
+(UUID(), 'Outro',   'paw.png')
 ON DUPLICATE KEY UPDATE Icone = VALUES(Icone);
 
 INSERT INTO TiposVacina (IDTipo, Nome, Descricao, IntervaloMeses, FKEspecie) VALUES

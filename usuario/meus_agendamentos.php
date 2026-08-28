@@ -48,7 +48,7 @@ function renderCardAgendamento(array $ag, array $tiposAgenda): void
                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
                         <?= labelStatusAgendamento($ag['Status']) ?>
                     </div>
-                    <div class="fw-medium mt-1"><?= h($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?> — <?= h($ag['Titulo']) ?></div>
+                    <div class="fw-medium mt-1"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?> — <?= h($ag['Titulo']) ?></div>
                     <?php if ($ag['NomeVeterinario']): ?>
                         <div class="small text-secondary">Com <?= h($ag['NomeVeterinario']) ?></div>
                     <?php endif ?>

@@ -44,8 +44,8 @@ require_once __DIR__ . '/../geral/header.php';
                 <a href="<?= BASE ?>/usuario/animal_vacinas.php?id=<?= h($a['IDAnimal']) ?>" class="text-decoration-none">
                     <div class="card p-4 h-100">
                         <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="avatar-circle" style="background:var(--accent-light);color:var(--accent);font-size:1.8rem;">
-                                <?= h($a['IconeEspecie'] ?: '🐾') ?>
+                            <div class="avatar-circle" style="background:var(--accent-light);">
+                                <?= especieIconeHtml($a['IconeEspecie'], '1.8rem') ?>
                             </div>
                             <div class="flex-grow-1 min-w-0">
                                 <div class="fw-bold text-truncate" style="color:var(--text-main);"><?= h($a['Nome']) ?></div>
