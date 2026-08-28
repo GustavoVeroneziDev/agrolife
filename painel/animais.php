@@ -322,4 +322,8 @@ initPicker({
 initAnimalPickers('na', NA_ESPECIES, NA_RACAS);
 </script>
 
+<?php if (($_GET['acao'] ?? '') === 'novo'): ?>
+<script>new bootstrap.Modal(document.getElementById('modalNovoAnimal')).show();</script>
+<?php endif ?>
+
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

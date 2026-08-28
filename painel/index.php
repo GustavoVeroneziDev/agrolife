@@ -129,10 +129,13 @@ require_once __DIR__ . '/../geral/header.php';
                 <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-accent">
                     <i class="bi bi-shield-plus me-2"></i>Registrar vacina
                 </a>
+                <a href="<?= BASE ?>/painel/animais.php?acao=novo" class="btn btn-outline-accent">
+                    <i class="bi bi-clipboard2-plus me-2"></i>Cadastrar animal
+                </a>
                 <a href="<?= BASE ?>/painel/clientes.php?acao=novo" class="btn btn-outline-accent">
                     <i class="bi bi-person-plus me-2"></i>Cadastrar dono
                 </a>
-                <a href="<?= BASE ?>/painel/animais.php" class="btn btn-outline-secondary">
+                <a href="<?= BASE ?>/painel/animais.php" class="btn btn-outline-secondary d-md-none">
                     <i class="bi bi-clipboard2-pulse me-2"></i>Ver todos os animais
                 </a>
             </div>
