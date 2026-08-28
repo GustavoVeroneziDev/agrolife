@@ -177,6 +177,14 @@ button, a, [role="button"] { touch-action: manipulation; }
 .card-footer { border-top: 1px solid var(--card-border-color); }
 
 /* ── Botões ───────────────────────────────────────────────────── */
+/* Centralização vale pra qualquer variante de botão (secondary, danger,
+   outline-*...), não só accent — min-height sem isso deixa o conteúdo
+   (ícone sozinho, principalmente) fora do centro vertical. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .btn-accent {
   background: var(--accent);
   color: var(--accent-text);
@@ -184,9 +192,6 @@ button, a, [role="button"] { touch-action: manipulation; }
   border-radius: var(--radius-btn);
   font-weight: 500;
   min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 .btn-accent:hover, .btn-accent:focus { background: var(--accent-hover); color: var(--accent-text); }
 .btn-outline-accent {
@@ -195,9 +200,6 @@ button, a, [role="button"] { touch-action: manipulation; }
   border-radius: var(--radius-btn);
   font-weight: 500;
   min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 .btn-outline-accent:hover, .btn-outline-accent:focus { background: var(--accent); color: var(--accent-text); }
 .btn-sm { min-height: 36px; }
