@@ -10,6 +10,40 @@ function gerarUuid(): string
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+// Valida, move e renomeia um upload de imagem (item de $_FILES) pra dentro de
+// uploads/{$subpasta}/. Retorna o caminho web (a partir da raiz do app, sem
+// BASE) ou null se não veio arquivo válido — quem chama decide se isso é erro.
+function salvarImagemEnviada(array $arquivo, string $subpasta): ?string
+{
+    if (empty($arquivo['tmp_name']) || ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    if (!is_uploaded_file($arquivo['tmp_name'])) {
+        return null;
+    }
+    if ($arquivo['size'] > 5 * 1024 * 1024) {
+        return null;
+    }
+
+    $permitidos = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    $tipo = mime_content_type($arquivo['tmp_name']);
+    if (!isset($permitidos[$tipo])) {
+        return null;
+    }
+
+    $pastaFisica = __DIR__ . '/../uploads/' . $subpasta;
+    if (!is_dir($pastaFisica) && !mkdir($pastaFisica, 0755, true) && !is_dir($pastaFisica)) {
+        return null;
+    }
+
+    $nomeArquivo = gerarUuid() . '.' . $permitidos[$tipo];
+    if (!move_uploaded_file($arquivo['tmp_name'], $pastaFisica . '/' . $nomeArquivo)) {
+        return null;
+    }
+
+    return '/uploads/' . $subpasta . '/' . $nomeArquivo;
+}
+
 function sanitizarTelefone(string $tel): ?string
 {
     $tel = preg_replace('/\D/', '', $tel);

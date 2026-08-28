@@ -32,16 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
         }
 
+        $foto = !empty($_FILES['foto']['tmp_name']) ? salvarImagemEnviada($_FILES['foto'], 'animais') : null;
+        if (!empty($_FILES['foto']['tmp_name']) && $foto === null) {
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Foto inválida — envie um JPG, PNG ou WEBP de até 5 MB.', 'warning');
+        }
+
         try {
-            $pdo->prepare(
-                'UPDATE Animais SET Nome=:nome, Raca=:raca, DataNascimento=:nasc, Sexo=:sexo,
-                        PesoKg=:peso, Microchip=:chip, Observacoes=:obs
-                 WHERE IDAnimal = :id'
-            )->execute([
+            $sql = 'UPDATE Animais SET Nome=:nome, Raca=:raca, DataNascimento=:nasc, Sexo=:sexo,
+                        PesoKg=:peso, Microchip=:chip, Observacoes=:obs' . ($foto ? ', FotoUrl=:foto' : '') . '
+                 WHERE IDAnimal = :id';
+            $params = [
                 ':nome' => $nome, ':raca' => $raca, ':nasc' => $nasc ?: null,
                 ':sexo' => $sexo, ':peso' => $peso !== '' ? $peso : null,
                 ':chip' => $chip ?: null, ':obs' => $obs ?: null, ':id' => $id,
-            ]);
+            ];
+            if ($foto) {
+                $params[':foto'] = $foto;
+            }
+            $pdo->prepare($sql)->execute($params);
             redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Animal atualizado com sucesso!', 'success');
         } catch (PDOException $e) {
             error_log('[EditarAnimal] ' . $e->getMessage());
@@ -89,14 +97,39 @@ try {
     $historico->execute([':id' => $id]);
     $historico = $historico->fetchAll();
 
+    $clinico = $pdo->prepare(
+        'SELECT rc.*, u.Nome AS NomeVeterinario
+         FROM RegistrosClinicos rc
+         LEFT JOIN Usuarios u ON u.IDUsuario = rc.FKVeterinario
+         WHERE rc.FKAnimal = :id
+         ORDER BY rc.DataRegistro DESC, rc.MomentoRegistro DESC'
+    );
+    $clinico->execute([':id' => $id]);
+    $clinico = $clinico->fetchAll();
+
+    if ($clinico) {
+        $anexosStmt = $pdo->prepare('SELECT IDAnexo, CaminhoArquivo FROM AnexosClinicos WHERE FKRegistro = :id ORDER BY MomentoUpload ASC');
+        foreach ($clinico as &$reg) {
+            $anexosStmt->execute([':id' => $reg['IDRegistro']]);
+            $reg['Anexos'] = $anexosStmt->fetchAll();
+        }
+        unset($reg);
+    }
+
     $racas = $pdo->prepare('SELECT Nome FROM Racas WHERE FKEspecie = :esp ORDER BY Ordem ASC');
     $racas->execute([':esp' => $animal['FKEspecie']]);
     $racas = $racas->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     error_log('[AnimalDetalhe] ' . $e->getMessage());
     $historico = [];
+    $clinico   = [];
     $racas     = [];
 }
+
+$tiposClinicoLabel = [
+    'cirurgia' => 'Cirurgia', 'consulta' => 'Consulta', 'exame' => 'Exame',
+    'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
+];
 
 $paginaTitulo = h($animal['Nome']);
 $areaAtual    = 'painel';
@@ -113,6 +146,10 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card p-4">
+            <?php if ($animal['FotoUrl']): ?>
+                <img src="<?= BASE ?><?= h($animal['FotoUrl']) ?>" alt="Foto de <?= h($animal['Nome']) ?>"
+                     class="w-100 mb-3" style="aspect-ratio:1;object-fit:cover;border-radius:var(--radius-btn);">
+            <?php endif ?>
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h5 class="fw-bold mb-0"><?= h($animal['Nome']) ?></h5>
@@ -148,6 +185,9 @@ require_once __DIR__ . '/../geral/header.php';
             </dl>
             <a href="<?= BASE ?>/painel/registrar_vacina.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
                 <i class="bi bi-shield-plus me-1"></i> Registrar vacina
+            </a>
+            <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
+                <i class="bi bi-journal-medical me-1"></i> Registrar clínico
             </a>
             <form method="POST" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita.">
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
@@ -204,13 +244,61 @@ require_once __DIR__ . '/../geral/header.php';
                 <?php endif ?>
             </div>
         </div>
+
+        <div class="card mt-4">
+            <div class="card-header px-4 py-3">
+                <i class="bi bi-journal-medical me-2 text-accent"></i>Histórico clínico
+            </div>
+            <div class="card-body">
+                <?php if (empty($clinico)): ?>
+                    <div class="text-center py-4 text-secondary">
+                        <i class="bi bi-journal-medical fs-1 d-block mb-2 opacity-25"></i>
+                        <p class="mb-0">Nenhum registro clínico.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="d-flex flex-column gap-3">
+                        <?php foreach ($clinico as $reg): ?>
+                            <div class="border rounded-3 p-3" style="border-color:var(--card-border-color) !important;" data-id-clinico="<?= h($reg['IDRegistro']) ?>">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                    <div>
+                                        <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposClinicoLabel[$reg['Tipo']] ?? $reg['Tipo']) ?></span>
+                                        <span class="fw-medium ms-1"><?= h($reg['Titulo']) ?></span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger btn-excluir-clinico"
+                                        data-id="<?= h($reg['IDRegistro']) ?>"
+                                        data-confirm="Excluir este registro clínico?">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                <p class="small text-secondary mb-2">
+                                    <?= formatarData($reg['DataRegistro']) ?><?= $reg['NomeVeterinario'] ? ' · ' . h($reg['NomeVeterinario']) : '' ?>
+                                </p>
+                                <?php if ($reg['Anotacoes']): ?>
+                                    <p class="small mb-2"><?= nl2br(h($reg['Anotacoes'])) ?></p>
+                                <?php endif ?>
+                                <?php if (!empty($reg['Anexos'])): ?>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <?php foreach ($reg['Anexos'] as $anexo): ?>
+                                            <a href="<?= BASE ?><?= h($anexo['CaminhoArquivo']) ?>" target="_blank" rel="noopener">
+                                                <img src="<?= BASE ?><?= h($anexo['CaminhoArquivo']) ?>" alt="Anexo"
+                                                     style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius-btn);border:1px solid var(--card-border-color);">
+                                            </a>
+                                        <?php endforeach ?>
+                                    </div>
+                                <?php endif ?>
+                            </div>
+                        <?php endforeach ?>
+                    </div>
+                <?php endif ?>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="modal fade" id="modalEditarAnimal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                 <input type="hidden" name="acao" value="editar">
                 <div class="modal-header">
@@ -218,6 +306,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Foto</label>
+                        <input type="file" name="foto" class="form-control" accept="image/png,image/jpeg,image/webp">
+                        <div class="form-text">JPG, PNG ou WEBP — até 5 MB. Deixe em branco pra manter a foto atual.</div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Nome do animal *</label>
                         <input type="text" name="nome" class="form-control" required value="<?= h($animal['Nome']) ?>">
@@ -314,6 +407,29 @@ document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {
             .then(function (d) {
                 if (d.ok) {
                     document.querySelector('tr[data-id="' + btn.dataset.id + '"]')?.remove();
+                    vsToast('Registro excluído.', 'success');
+                } else {
+                    vsToast(d.msg || 'Erro ao excluir.', 'danger');
+                }
+            })
+            .catch(function () { vsToast('Falha na conexão.', 'danger'); });
+        });
+    });
+});
+
+document.querySelectorAll('.btn-excluir-clinico').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        vsConfirm(btn.dataset.confirm, function () {
+            fetch(BASE + '/painel/api_clinico.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'excluir', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.ok) {
+                    document.querySelector('[data-id-clinico="' + btn.dataset.id + '"]')?.remove();
                     vsToast('Registro excluído.', 'success');
                 } else {
                     vsToast(d.msg || 'Erro ao excluir.', 'danger');
