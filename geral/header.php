@@ -275,7 +275,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             $menuItens = [
                 ['href' => BASE . '/painel/index.php',        'icon' => 'bi-house-door',    'label' => 'Dashboard'],
                 ['href' => BASE . '/painel/animais.php',      'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
-                ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Donos'],
+                ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Clientes'],
                 ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
             ];
             // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários
