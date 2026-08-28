@@ -81,6 +81,38 @@ try {
     $animaisStmt->execute([':id' => $id]);
     $animais = $animaisStmt->fetchAll();
 
+    // Agendamentos ativos dos animais desse dono — pra quem atende o telefone
+    // ver na hora se ele tem algo hoje ou chegando, sem precisar abrir a
+    // agenda e procurar (mesmo padrão de usuario/meus_animais.php).
+    $tiposAgenda = [
+        'cirurgia' => 'Cirurgia', 'consulta' => 'Consulta', 'exame' => 'Exame',
+        'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
+    ];
+    $agStmt = $pdo->prepare(
+        "SELECT ag.*, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie, v.Nome AS NomeVeterinario
+         FROM Agendamentos ag
+         JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+         JOIN Especies e ON e.IDEspecie = a.FKEspecie
+         LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
+         WHERE a.FKDono = :id AND ag.Status IN ('pendente', 'confirmado')
+         ORDER BY ag.DataHoraInicio ASC"
+    );
+    $agStmt->execute([':id' => $id]);
+    $agendamentosAtivos = $agStmt->fetchAll();
+
+    $hojeStr = date('Y-m-d');
+    $agora   = date('Y-m-d H:i:s');
+    $agendamentosHoje = array_values(array_filter(
+        $agendamentosAtivos,
+        fn($ag) => substr($ag['DataHoraInicio'], 0, 10) === $hojeStr
+    ));
+    $proximoPorAnimal = [];
+    foreach ($agendamentosAtivos as $ag) {
+        if ($ag['DataHoraInicio'] >= $agora && !isset($proximoPorAnimal[$ag['FKAnimal']])) {
+            $proximoPorAnimal[$ag['FKAnimal']] = $ag;
+        }
+    }
+
     $especies = $pdo->query('SELECT * FROM Especies ORDER BY Ordem ASC')->fetchAll();
     $racas    = $pdo->query('SELECT IDRaca, FKEspecie, Nome FROM Racas ORDER BY Ordem ASC')->fetchAll();
 } catch (PDOException $e) {
@@ -88,6 +120,9 @@ try {
     $animais  = [];
     $especies = [];
     $racas    = [];
+    $tiposAgenda = [];
+    $agendamentosHoje = [];
+    $proximoPorAnimal = [];
 }
 
 $paginaTitulo = h($dono['Nome']);
@@ -101,6 +136,13 @@ require_once __DIR__ . '/../geral/header.php';
     </a>
     <h4 class="fw-bold mb-0"><?= h($dono['Nome']) ?></h4>
 </div>
+
+<?php if (!empty($agendamentosHoje)): ?>
+    <h6 class="fw-semibold text-secondary mb-2"><i class="bi bi-calendar-event me-1"></i>Hoje</h6>
+    <div class="mb-4">
+        <?php foreach ($agendamentosHoje as $ag) renderCardAgendamento($ag, $tiposAgenda) ?>
+    </div>
+<?php endif ?>
 
 <div class="row g-4">
     <div class="col-md-4">
@@ -153,15 +195,25 @@ require_once __DIR__ . '/../geral/header.php';
                                 <tr>
                                     <th class="px-4 py-3">Animal</th>
                                     <th class="d-none d-md-table-cell">Espécie</th>
+                                    <th>Próximo agendamento</th>
                                     <th>Próxima vacina</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($animais as $a): ?>
+                                <?php foreach ($animais as $a): $prox = $proximoPorAnimal[$a['IDAnimal']] ?? null; ?>
                                     <tr>
                                         <td class="px-4 fw-medium"><?= especieIconeHtml($a['IconeEspecie']) ?> <?= h($a['Nome']) ?></td>
                                         <td class="d-none d-md-table-cell small"><?= h($a['NomeEspecie']) ?><?= $a['Raca'] ? ' · ' . h($a['Raca']) : '' ?></td>
+                                        <td class="small">
+                                            <?php if ($prox): ?>
+                                                <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$prox['Tipo']] ?? $prox['Tipo']) ?></span>
+                                                <?= substr($prox['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($prox['DataHoraInicio']) ?>
+                                                às <?= date('H:i', strtotime($prox['DataHoraInicio'])) ?>
+                                            <?php else: ?>
+                                                <span class="text-secondary">—</span>
+                                            <?php endif ?>
+                                        </td>
                                         <td>
                                             <?php if ($a['ProximaVacina']): ?>
                                                 <?= labelSituacaoVacina($a['ProximaVacina']) ?>

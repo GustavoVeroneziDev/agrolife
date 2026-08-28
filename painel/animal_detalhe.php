@@ -108,10 +108,21 @@ try {
     $clinico = $clinico->fetchAll();
 
     if ($clinico) {
-        $anexosStmt = $pdo->prepare('SELECT IDAnexo, CaminhoArquivo FROM AnexosClinicos WHERE FKRegistro = :id ORDER BY MomentoUpload ASC');
+        // Um IN() só pra todos os registros em vez de uma consulta por
+        // registro — um animal com histórico longo não vira N+1 consultas.
+        $idsRegistros = array_column($clinico, 'IDRegistro');
+        $placeholders = implode(',', array_fill(0, count($idsRegistros), '?'));
+        $anexosStmt = $pdo->prepare(
+            "SELECT IDAnexo, CaminhoArquivo, FKRegistro FROM AnexosClinicos
+             WHERE FKRegistro IN ({$placeholders}) ORDER BY MomentoUpload ASC"
+        );
+        $anexosStmt->execute($idsRegistros);
+        $anexosPorRegistro = [];
+        foreach ($anexosStmt->fetchAll() as $anexo) {
+            $anexosPorRegistro[$anexo['FKRegistro']][] = $anexo;
+        }
         foreach ($clinico as &$reg) {
-            $anexosStmt->execute([':id' => $reg['IDRegistro']]);
-            $reg['Anexos'] = $anexosStmt->fetchAll();
+            $reg['Anexos'] = $anexosPorRegistro[$reg['IDRegistro']] ?? [];
         }
         unset($reg);
     }
@@ -119,11 +130,24 @@ try {
     $racas = $pdo->prepare('SELECT Nome FROM Racas WHERE FKEspecie = :esp ORDER BY Ordem ASC');
     $racas->execute([':esp' => $animal['FKEspecie']]);
     $racas = $racas->fetchAll(PDO::FETCH_COLUMN);
+
+    // Agendamentos ativos desse animal — visível antes do botão "Agendar"
+    // pra ninguém marcar em cima de um horário que já existe.
+    $agAtivosStmt = $pdo->prepare(
+        "SELECT ag.*, v.Nome AS NomeVeterinario
+         FROM Agendamentos ag
+         LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
+         WHERE ag.FKAnimal = :id AND ag.Status IN ('pendente', 'confirmado')
+         ORDER BY ag.DataHoraInicio ASC"
+    );
+    $agAtivosStmt->execute([':id' => $id]);
+    $agendamentosAtivos = $agAtivosStmt->fetchAll();
 } catch (PDOException $e) {
     error_log('[AnimalDetalhe] ' . $e->getMessage());
     $historico = [];
     $clinico   = [];
     $racas     = [];
+    $agendamentosAtivos = [];
 }
 
 $tiposClinicoLabel = [
@@ -183,6 +207,23 @@ require_once __DIR__ . '/../geral/header.php';
                     <dd><?= nl2br(h($animal['Observacoes'])) ?></dd>
                 <?php endif ?>
             </dl>
+            <?php if (!empty($agendamentosAtivos)): ?>
+                <div class="mb-3 p-2 rounded-xl" style="background:var(--accent-light);">
+                    <div class="small fw-semibold mb-1" style="color:var(--accent);">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        <?= count($agendamentosAtivos) === 1 ? 'Já tem um agendamento' : count($agendamentosAtivos) . ' agendamentos ativos' ?>
+                    </div>
+                    <?php foreach ($agendamentosAtivos as $ag): ?>
+                        <div class="small mb-1">
+                            <span class="badge" style="background:var(--bg-card);color:var(--accent);"><?= h($tiposClinicoLabel[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                            <?= substr($ag['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($ag['DataHoraInicio']) ?>
+                            às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
+                            <?= labelStatusAgendamento($ag['Status']) ?>
+                            <?php if ($ag['NomeVeterinario']): ?><span class="text-secondary">· <?= h($ag['NomeVeterinario']) ?></span><?php endif ?>
+                        </div>
+                    <?php endforeach ?>
+                </div>
+            <?php endif ?>
             <a href="<?= BASE ?>/painel/agenda.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-accent w-100 mb-2">
                 <i class="bi bi-calendar-plus me-1"></i> Agendar
             </a>
