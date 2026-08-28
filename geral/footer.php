@@ -167,6 +167,14 @@ document.addEventListener('click', function (e) {
         else if (el.href) { location.href = el.href; }
     }, el.dataset.confirmLabel);
 });
+
+// Registra o Service Worker (app instalável / cache offline dos assets estáticos)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register('<?= BASE ?>/sw.php', { scope: '<?= BASE ?>/' })
+            .catch(function (e) { console.warn('SW:', e); });
+    });
+}
 </script>
 </body>
 </html>

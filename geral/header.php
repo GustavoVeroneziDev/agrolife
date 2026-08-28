@@ -34,6 +34,13 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#0d9488">
 
+    <link rel="icon" href="<?= BASE ?>/assets/img/icone.ico">
+    <link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/logo.png">
+    <link rel="manifest" href="<?= BASE ?>/manifest.php">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?= h(APP_NOME) ?>">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -266,7 +273,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none" style="color:inherit;">
-                    <i class="bi bi-heart-pulse-fill" style="font-size:1.4rem;color:var(--accent);"></i>
+                    <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="28" height="28">
                     <span><?= APP_NOME ?></span>
                 </a>
             </div>
@@ -330,7 +337,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                     <i class="bi bi-list fs-5"></i>
                 </button>
                 <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none">
-                    <i class="bi bi-heart-pulse-fill" style="font-size:1.3rem;color:var(--accent);"></i>
+                    <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="26" height="26">
                     <span class="fw-bold" style="color:var(--text-main);"><?= APP_NOME ?></span>
                 </a>
             </div>
@@ -341,7 +348,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             <nav class="navbar topnav sticky-top">
                 <div class="container-lg">
                     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= BASE ?>/index.php">
-                        <i class="bi bi-heart-pulse-fill"></i> <?= APP_NOME ?>
+                        <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="26" height="26"> <?= APP_NOME ?>
                     </a>
 
                     <?php if (estaLogado()): ?>
