@@ -172,10 +172,15 @@ require_once __DIR__ . '/geral/header.php';
                 <span class="home-eyebrow" style="color:var(--accent-text);opacity:.85;">Fale com a gente</span>
                 <h2>Vamos cuidar do seu animal juntos</h2>
                 <ul class="home-contato-lista mt-3">
-                    <li><i class="bi bi-geo-alt"></i>Sebastianópolis do Sul — SP</li>
-                    <li><i class="bi bi-telephone"></i>(00) 00000-0000</li>
+                    <li><i class="bi bi-geo-alt"></i>R. Elías Chibeb, 580 - Centro, Sebastianópolis do Sul - SP</li>
+                    <li>
+                        <i class="bi bi-whatsapp"></i>
+                        <a href="<?= h(waLink('17997806050')) ?>" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
+                            (17) 99780-6050
+                        </a>
+                    </li>
                     <li><i class="bi bi-envelope"></i>contato@agrolife.com</li>
-                    <li><i class="bi bi-clock"></i>Segunda a sábado — horário a definir</li>
+                    <li><i class="bi bi-clock"></i>Segunda a sexta: 7h30 às 18h · Sábado: 7h30 às 12h</li>
                     <li>
                         <i class="bi bi-instagram"></i>
                         <a href="https://www.instagram.com/agrolife_sebas" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
