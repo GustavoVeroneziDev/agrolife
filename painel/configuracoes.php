@@ -8,6 +8,7 @@ exigirLogin('admin');
 $campos = [
     'nome_clinica', 'telefone_clinica', 'endereco_clinica',
     'msg_vacina_semana', 'msg_vacina_dia',
+    'whatsapp_modo_teste', 'whatsapp_numero_teste',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -73,6 +74,26 @@ require_once __DIR__ . '/../geral/header.php';
             <div class="mb-0">
                 <label class="form-label">Aviso — no dia do vencimento</label>
                 <textarea name="msg_vacina_dia" class="form-control" rows="4"><?= h($valores['msg_vacina_dia']) ?></textarea>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h6 class="fw-semibold mb-2"><i class="bi bi-bug me-2 text-accent"></i>Modo de teste do WhatsApp</h6>
+            <p class="small text-secondary">
+                Enquanto ligado, <strong>toda</strong> mensagem de WhatsApp do sistema (agendamento criado,
+                cancelamento, lembrete de vacina...) é redirecionada pra este número, não importa
+                pra quem o sistema mandaria de verdade. Use pra validar os avisos sem risco de
+                mensagem cair em cliente de verdade.
+            </p>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="whatsapp_modo_teste"
+                       id="whatsappModoTeste" value="1" <?= $valores['whatsapp_modo_teste'] === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="whatsappModoTeste">Modo de teste ligado</label>
+            </div>
+            <div class="mb-0">
+                <label class="form-label">Número de teste</label>
+                <input type="tel" name="whatsapp_numero_teste" class="form-control" data-mask="tel"
+                       value="<?= h(formatarTelefoneExibicao($valores['whatsapp_numero_teste'])) ?>">
             </div>
         </div>
     </div>

@@ -85,6 +85,23 @@ function enviarWhatsApp(string $numero, string $mensagem): bool
         return false;
     }
 
+    // Modo de teste (ligado/desligado em Configurações): redireciona TODO
+    // envio pro número de teste, não importa quem o código ia mandar — dá
+    // pra validar o fluxo inteiro (agendamento, cancelamento, cron de
+    // vacina...) em produção sem risco de mensagem cair em cliente de
+    // verdade enquanto ainda em teste. Ponto único de controle — nenhum
+    // dos call sites (agenda.php, api_agendamento.php, cron/...) precisa
+    // saber que esse modo existe.
+    global $pdo;
+    if (isset($pdo) && getConfig($pdo, 'whatsapp_modo_teste', '') === '1') {
+        $numeroTeste = getConfig($pdo, 'whatsapp_numero_teste', '');
+        if ($numeroTeste === '') {
+            error_log('[WhatsApp] Modo de teste ligado mas sem número de teste configurado — envio cancelado.');
+            return false;
+        }
+        $numero = waNumero($numeroTeste);
+    }
+
     $url     = rtrim(EVOLUTION_URL, '/') . '/message/sendText/' . EVOLUTION_INSTANCE;
     $payload = json_encode(['number' => $numero, 'text' => $mensagem], JSON_UNESCAPED_UNICODE);
 
