@@ -83,6 +83,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':fim'    => $fim,
                 ':obs'    => $obs ?: null,
             ]);
+
+            // Avisa o dono do animal pelo WhatsApp — sem isso, ele só ficava
+            // sabendo do agendamento se entrasse no site por conta própria.
+            $donoStmt = $pdo->prepare(
+                'SELECT u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+            );
+            $donoStmt->execute([':id' => $fkAnimal]);
+            $dono = $donoStmt->fetch();
+            if ($dono && $dono['Telefone']) {
+                $msg = "Olá! Agendamos um horário para {$dono['NomeAnimal']}: " . $tiposAgenda[$tipo] . ' — '
+                     . $titulo . ' em ' . formatarData($inicio) . ' às ' . $hora . '. Qualquer dúvida, é só chamar por aqui.';
+                enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+            }
+
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento criado com sucesso!', 'success');
         } catch (PDOException $e) {
             error_log('[NovoAgendamento] ' . $e->getMessage());

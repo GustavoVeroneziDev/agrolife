@@ -556,13 +556,21 @@ function labelStatusAgendamento(string $status): string
 }
 
 /**
- * Card de um agendamento — usado em usuario/meus_agendamentos.php e
- * usuario/meus_animais.php (compartilhado pra ficar sempre igual nos dois
- * lugares). Espera $ag com colunas de Agendamentos + NomeAnimal,
- * IconeEspecie, NomeVeterinario (LEFT JOIN).
+ * Card de um agendamento — usado em usuario/meus_agendamentos.php,
+ * usuario/meus_animais.php e painel/cliente_detalhe.php (compartilhado pra
+ * ficar sempre igual nos três lugares). Espera $ag com colunas de
+ * Agendamentos + NomeAnimal, IconeEspecie, NomeVeterinario (LEFT JOIN).
+ *
+ * $permitirCancelar só deve vir true na tela do próprio cliente
+ * (meus_agendamentos.php) — aí sim, se o agendamento ainda estiver
+ * pendente/confirmado e no futuro, mostra um botão "Cancelar" que posta
+ * pra usuario/processa_agendamento.php.
  */
-function renderCardAgendamento(array $ag, array $tiposAgenda): void
+function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCancelar = false): void
 {
+    $podeCancelar = $permitirCancelar
+        && in_array($ag['Status'], ['pendente', 'confirmado'], true)
+        && $ag['DataHoraInicio'] > date('Y-m-d H:i:s');
     ?>
     <div class="card p-3 mb-2">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -582,6 +590,14 @@ function renderCardAgendamento(array $ag, array $tiposAgenda): void
                     <?php endif ?>
                 </div>
             </div>
+            <?php if ($podeCancelar): ?>
+                <form method="POST" action="<?= BASE ?>/usuario/processa_agendamento.php" data-confirm="Cancelar esse agendamento?">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="acao" value="cancelar">
+                    <input type="hidden" name="id" value="<?= h($ag['IDAgendamento']) ?>">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                </form>
+            <?php endif ?>
         </div>
         <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
             <div class="small mt-2 pt-2 border-top" style="border-color:var(--card-border-color) !important;">

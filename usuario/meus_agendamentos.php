@@ -19,7 +19,7 @@ try {
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
          LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
-         WHERE a.FKDono = :id AND ag.Status != 'cancelado'
+         WHERE a.FKDono = :id
          ORDER BY ag.DataHoraInicio ASC"
     );
     $stmt->execute([':id' => $uid]);
@@ -51,7 +51,7 @@ require_once __DIR__ . '/../geral/header.php';
     <?php if (empty($proximos)): ?>
         <p class="text-secondary small mb-4">Nenhum agendamento futuro.</p>
     <?php else: ?>
-        <div class="mb-4"><?php foreach ($proximos as $ag) renderCardAgendamento($ag, $tiposAgenda) ?></div>
+        <div class="mb-4"><?php foreach ($proximos as $ag) renderCardAgendamento($ag, $tiposAgenda, permitirCancelar: true) ?></div>
     <?php endif ?>
 
     <?php if (!empty($anteriores)): ?>

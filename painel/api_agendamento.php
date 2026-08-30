@@ -41,21 +41,41 @@ if (!$id || !isset($transicoes[$acao])) {
 }
 
 try {
-    $stmt = $pdo->prepare('SELECT Status FROM Agendamentos WHERE IDAgendamento = :id LIMIT 1');
+    $stmt = $pdo->prepare(
+        "SELECT ag.Status, ag.Tipo, ag.Titulo, ag.DataHoraInicio, a.Nome AS NomeAnimal, u.Telefone
+         FROM Agendamentos ag
+         JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+         JOIN Usuarios u ON u.IDUsuario = a.FKDono
+         WHERE ag.IDAgendamento = :id LIMIT 1"
+    );
     $stmt->execute([':id' => $id]);
-    $statusAtual = $stmt->fetchColumn();
+    $ag = $stmt->fetch();
 
-    if ($statusAtual === false) {
+    if (!$ag) {
         echo json_encode(['ok' => false, 'msg' => 'Agendamento não encontrado.']);
         exit;
     }
-    if (!in_array($statusAtual, $transicoes[$acao]['de'], true)) {
+    if (!in_array($ag['Status'], $transicoes[$acao]['de'], true)) {
         echo json_encode(['ok' => false, 'msg' => 'Esse agendamento não está num estado que permite essa ação.']);
         exit;
     }
 
     $pdo->prepare('UPDATE Agendamentos SET Status = :status WHERE IDAgendamento = :id')
         ->execute([':status' => $transicoes[$acao]['para'], ':id' => $id]);
+
+    // Avisa o cliente quando a clínica cancela — as outras transições
+    // (confirmar, marcar_falta, reabrir) ficam sem notificação automática
+    // por ora, são ajustes mais internos.
+    if ($acao === 'cancelar' && $ag['Telefone']) {
+        $tiposAgenda = [
+            'cirurgia' => 'Cirurgia', 'consulta' => 'Consulta', 'exame' => 'Exame',
+            'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
+        ];
+        $msg = "O agendamento de {$ag['NomeAnimal']} (" . ($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) . ' — ' . $ag['Titulo']
+             . ' em ' . formatarData($ag['DataHoraInicio']) . ' às ' . date('H:i', strtotime($ag['DataHoraInicio']))
+             . ') foi cancelado. Qualquer dúvida, é só chamar por aqui.';
+        enviarWhatsApp(waNumero($ag['Telefone']), $msg);
+    }
 
     echo json_encode(['ok' => true]);
 } catch (PDOException $e) {

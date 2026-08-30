@@ -28,17 +28,19 @@ try {
     $stmt->execute([':id' => $uid]);
     $animais = $stmt->fetchAll();
 
-    // Agendamentos ativos (pendente/confirmado) de todos os animais do
-    // cliente — alimenta tanto o aviso de "hoje" quanto o próximo
-    // atendimento mostrado em cada card, pra não deixar isso escondido só
-    // na tela de Meus Agendamentos.
+    // Agendamentos de todos os animais do cliente (menos cancelados) —
+    // alimenta tanto o aviso de "hoje" quanto o próximo atendimento
+    // mostrado em cada card, pra não deixar isso escondido só na tela de
+    // Meus Agendamentos. Inclui concluído/faltou também — sem isso, um
+    // agendamento que passou e virou "Faltou" simplesmente sumia do card
+    // do animal como se nunca tivesse existido.
     $agStmt = $pdo->prepare(
         "SELECT ag.*, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie, v.Nome AS NomeVeterinario
          FROM Agendamentos ag
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
          LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
-         WHERE a.FKDono = :id AND ag.Status IN ('pendente', 'confirmado')
+         WHERE a.FKDono = :id AND ag.Status != 'cancelado'
          ORDER BY ag.DataHoraInicio ASC"
     );
     $agStmt->execute([':id' => $uid]);
@@ -54,10 +56,22 @@ try {
 
     // Próximo agendamento (ainda não iniciado) de cada animal — a lista já
     // vem ordenada por data, então o primeiro que aparece pra cada
-    // FKAnimal já é o mais próximo.
+    // FKAnimal já é o mais próximo. Se não tiver nenhum futuro, cai pro
+    // mais recente já resolvido (concluído/faltou), pra sempre mostrar
+    // alguma coisa em vez do card ficar vazio depois que o atendimento passa.
+    $ultimoResolvidoPorAnimal = [];
     foreach ($agendamentosAtivos as $ag) {
-        if ($ag['DataHoraInicio'] >= $agora && !isset($proximoPorAnimal[$ag['FKAnimal']])) {
-            $proximoPorAnimal[$ag['FKAnimal']] = $ag;
+        if ($ag['DataHoraInicio'] >= $agora) {
+            if (!isset($proximoPorAnimal[$ag['FKAnimal']])) {
+                $proximoPorAnimal[$ag['FKAnimal']] = $ag;
+            }
+        } else {
+            $ultimoResolvidoPorAnimal[$ag['FKAnimal']] = $ag;
+        }
+    }
+    foreach ($ultimoResolvidoPorAnimal as $idAnimal => $ag) {
+        if (!isset($proximoPorAnimal[$idAnimal])) {
+            $proximoPorAnimal[$idAnimal] = $ag;
         }
     }
 } catch (PDOException $e) {
