@@ -95,6 +95,11 @@ function vsConfirm(msg, onOk, label) {
     var novo = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(novo, okBtn);
     novo.addEventListener('click', function () {
+        // O clique deixa o foco no próprio botão — se ele ainda estiver
+        // focado quando o Bootstrap marcar o modal como aria-hidden (só
+        // acontece depois da transição de fechar), o navegador bloqueia
+        // e loga aviso no console; tira o foco antes pra não competir.
+        novo.blur();
         bootstrap.Modal.getInstance(document.getElementById('modalConfirm'))?.hide();
         onOk();
     });

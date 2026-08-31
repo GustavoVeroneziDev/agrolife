@@ -84,10 +84,10 @@ try {
                 (SELECT MAX(rv2.DataAplicacao) FROM RegistrosVacinas rv2
                   WHERE rv2.FKAnimal = a.IDAnimal) AS UltimaVacinaAplicada,
                 (SELECT ag.DataHoraInicio FROM Agendamentos ag
-                  WHERE ag.FKAnimal = a.IDAnimal AND ag.DataHoraInicio < NOW()
+                  WHERE ag.FKAnimal = a.IDAnimal AND ag.Status IN (\'concluido\', \'faltou\', \'cancelado\')
                   ORDER BY ag.DataHoraInicio DESC LIMIT 1) AS UltimoAtendimentoData,
                 (SELECT ag.Tipo FROM Agendamentos ag
-                  WHERE ag.FKAnimal = a.IDAnimal AND ag.DataHoraInicio < NOW()
+                  WHERE ag.FKAnimal = a.IDAnimal AND ag.Status IN (\'concluido\', \'faltou\', \'cancelado\')
                   ORDER BY ag.DataHoraInicio DESC LIMIT 1) AS UltimoAtendimentoTipo
          FROM Animais a
          JOIN Especies e ON e.IDEspecie = a.FKEspecie

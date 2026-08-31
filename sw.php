@@ -47,6 +47,15 @@ self.addEventListener('fetch', e => {
     // Navegações (páginas PHP dinâmicas) → sempre do servidor
     if (req.mode === 'navigate') return;
 
+    // POST/PUT/DELETE (toda ação real: confirmar, cancelar, marcar falta,
+    // excluir vacina/clínico...) → nunca interceptar. Isso aqui é fetch()
+    // puro pra API, não precisa de cache nenhum, e um catch() devolvendo
+    // um 503 com corpo vazio (rede instável por um instante) virava um
+    // JSON inválido pro código da página tentar interpretar como
+    // resposta de verdade — a ação parecia simplesmente não acontecer.
+    // Deixa passar direto e o catch() de cada chamada já cuida do erro.
+    if (req.method !== 'GET') return;
+
     // Assets estáticos (CSS, JS, imagens, fontes) → cache-first
     const isStatic = /\.(css|js|png|ico|jpg|jpeg|gif|svg|webp|woff2?|ttf|eot)(\?.*)?$/.test(url.pathname);
 
