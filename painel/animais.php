@@ -68,8 +68,14 @@ try {
     $where  = 'WHERE a.Ativo = 1';
     $params = [];
     if ($busca !== '') {
-        $where .= ' AND (a.Nome LIKE :q OR u.Nome LIKE :q OR a.Raca LIKE :q)';
-        $params[':q'] = '%' . $busca . '%';
+        // Prepare nativo (EMULATE_PREPARES=false) não aceita o mesmo
+        // placeholder nomeado repetido — precisa de um por ocorrência,
+        // mesmo repetindo o valor.
+        $where .= ' AND (a.Nome LIKE :q1 OR u.Nome LIKE :q2 OR a.Raca LIKE :q3)';
+        $curinga = '%' . $busca . '%';
+        $params[':q1'] = $curinga;
+        $params[':q2'] = $curinga;
+        $params[':q3'] = $curinga;
     }
     if ($especieF !== '') {
         $where .= ' AND a.FKEspecie = :esp';
@@ -88,7 +94,9 @@ try {
     $stmt = $pdo->prepare(
         "SELECT a.*, e.Nome AS NomeEspecie, e.Icone AS IconeEspecie, u.Nome AS NomeDono,
                 (SELECT MIN(rv.ProximaData) FROM RegistrosVacinas rv
-                  WHERE rv.FKAnimal = a.IDAnimal AND rv.ProximaData IS NOT NULL) AS ProximaVacina
+                  WHERE rv.FKAnimal = a.IDAnimal AND rv.ProximaData IS NOT NULL) AS ProximaVacina,
+                (SELECT MAX(rc.DataRegistro) FROM RegistrosClinicos rc
+                  WHERE rc.FKAnimal = a.IDAnimal) AS UltimoClinico
          FROM Animais a
          JOIN Especies e  ON e.IDEspecie = a.FKEspecie
          JOIN Usuarios u  ON u.IDUsuario = a.FKDono
@@ -200,11 +208,22 @@ require_once __DIR__ . '/../geral/header.php';
                                 <div class="small text-secondary text-truncate"><?= h($a['NomeDono']) ?></div>
                             </div>
                         </div>
-                        <?php if ($a['ProximaVacina']): ?>
-                            <?= labelSituacaoVacina($a['ProximaVacina']) ?>
-                        <?php else: ?>
-                            <span class="badge bg-secondary">Sem registro</span>
-                        <?php endif ?>
+                        <div class="d-flex flex-wrap gap-1">
+                            <?php if ($a['ProximaVacina']): [$labelVac, $corVac] = situacaoVacina($a['ProximaVacina']); ?>
+                                <span class="badge bg-<?= $corVac ?>">
+                                    <i class="bi bi-shield-plus me-1"></i><?= h($labelVac) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary"><i class="bi bi-shield-plus me-1"></i>Sem vacina</span>
+                            <?php endif ?>
+                            <?php if ($a['UltimoClinico']): ?>
+                                <span class="badge" style="background:var(--accent-light);color:var(--accent);">
+                                    <i class="bi bi-journal-medical me-1"></i><?= formatarData($a['UltimoClinico']) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary"><i class="bi bi-journal-medical me-1"></i>Sem clínico</span>
+                            <?php endif ?>
+                        </div>
                     </div>
                 </a>
             </div>

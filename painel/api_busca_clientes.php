@@ -27,11 +27,14 @@ try {
         "SELECT IDUsuario AS id, Nome AS nome, Email AS email, Telefone AS telefone
          FROM Usuarios
          WHERE NivelAcesso = 'cliente'
-           AND (Nome LIKE :q OR Email LIKE :q OR Telefone LIKE :q)
+           AND (Nome LIKE :q1 OR Email LIKE :q2 OR Telefone LIKE :q3)
          ORDER BY Nome ASC
          LIMIT 15"
     );
-    $stmt->execute([':q' => '%' . $q . '%']);
+    // Prepare nativo (EMULATE_PREPARES=false) não aceita o mesmo placeholder
+    // nomeado repetido — precisa de um por ocorrência, mesmo repetindo o valor.
+    $curinga = '%' . $q . '%';
+    $stmt->execute([':q1' => $curinga, ':q2' => $curinga, ':q3' => $curinga]);
     $resultados = $stmt->fetchAll();
 } catch (PDOException) {
     $resultados = [];

@@ -71,8 +71,14 @@ try {
     $where  = "WHERE u.NivelAcesso = 'cliente' AND u.Ativo = 1";
     $params = [];
     if ($busca !== '') {
-        $where .= ' AND (u.Nome LIKE :q OR u.Email LIKE :q OR u.Telefone LIKE :q)';
-        $params[':q'] = '%' . $busca . '%';
+        // Prepare nativo (EMULATE_PREPARES=false) não aceita o mesmo
+        // placeholder nomeado repetido — precisa de um por ocorrência,
+        // mesmo repetindo o valor.
+        $where .= ' AND (u.Nome LIKE :q1 OR u.Email LIKE :q2 OR u.Telefone LIKE :q3)';
+        $curinga = '%' . $busca . '%';
+        $params[':q1'] = $curinga;
+        $params[':q2'] = $curinga;
+        $params[':q3'] = $curinga;
     }
 
     $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM Usuarios u {$where}");
