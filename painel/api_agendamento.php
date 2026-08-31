@@ -34,6 +34,15 @@ $transicoes = [
     'marcar_falta' => ['de' => ['confirmado'],                       'para' => 'faltou'],
     'reabrir'      => ['de' => ['concluido', 'cancelado', 'faltou'], 'para' => 'confirmado'],
 ];
+// Nome do evento no histórico de movimentações — "reabrir" também vira
+// Status "confirmado", mas o evento precisa ficar distinto de um
+// "confirmar" de verdade.
+$eventoTipos = [
+    'confirmar'    => 'confirmado',
+    'cancelar'     => 'cancelado',
+    'marcar_falta' => 'faltou',
+    'reabrir'      => 'reaberto',
+];
 
 if (!$id || !isset($transicoes[$acao])) {
     echo json_encode(['ok' => false, 'msg' => 'Ação inválida.']);
@@ -62,6 +71,7 @@ try {
 
     $pdo->prepare('UPDATE Agendamentos SET Status = :status WHERE IDAgendamento = :id')
         ->execute([':status' => $transicoes[$acao]['para'], ':id' => $id]);
+    registrarEventoAgendamento($pdo, $id, $eventoTipos[$acao]);
 
     // Avisa o cliente quando a clínica cancela — as outras transições
     // (confirmar, marcar_falta, reabrir) ficam sem notificação automática

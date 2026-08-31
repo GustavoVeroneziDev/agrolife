@@ -63,11 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
+            $novoAgId = gerarUuid();
             $pdo->prepare(
                 'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes)
                  VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs)'
             )->execute([
-                ':id'     => gerarUuid(),
+                ':id'     => $novoAgId,
                 ':animal' => $fkAnimal,
                 ':vet'    => $fkVet ?: null,
                 ':tipo'   => $tipo,
@@ -76,6 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':fim'    => $fim,
                 ':obs'    => $obs ?: null,
             ]);
+
+            registrarEventoAgendamento($pdo, $novoAgId, 'criado');
 
             // Avisa o dono do animal pelo WhatsApp — sem isso, ele só ficava
             // sabendo do agendamento se entrasse no site por conta própria.
@@ -153,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "UPDATE Agendamentos SET Status = 'concluido', ObservacoesPos = :obs, FKRegistroClinico = :rc WHERE IDAgendamento = :id"
             )->execute([':obs' => $obsPos ?: null, ':rc' => $fkRegistroClinico, ':id' => $id]);
+            registrarEventoAgendamento($pdo, $id, 'concluido');
 
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento concluído com sucesso!', 'success');
         } catch (PDOException $e) {
@@ -205,6 +209,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "UPDATE Agendamentos SET DataHoraInicio = :inicio, DataHoraFim = :fim, Status = 'pendente' WHERE IDAgendamento = :id"
             )->execute([':inicio' => $novoInicio, ':fim' => $novoFim, ':id' => $id]);
+            registrarEventoAgendamento($pdo, $id, 'remarcado',
+                'De ' . formatarDataHora($ag['DataHoraInicio']) . ' para ' . formatarDataHora($novoInicio));
 
             if ($ag['Telefone']) {
                 $msg = montarMensagemRemarcacao($ag['NomeCliente'], $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $novoInicio);

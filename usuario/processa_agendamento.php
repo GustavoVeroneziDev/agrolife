@@ -50,6 +50,7 @@ try {
 
     $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :id")
         ->execute([':id' => $id]);
+    registrarEventoAgendamento($pdo, $id, 'cancelado', 'Cancelado pelo cliente');
 
     // Avisa a clínica pelo WhatsApp cadastrado nas configurações — se não
     // tiver número configurado, enviarWhatsApp() só falha em silêncio.

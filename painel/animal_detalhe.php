@@ -145,23 +145,28 @@ try {
     $agAtivosStmt->execute([':id' => $id]);
     $agendamentosAtivos = $agAtivosStmt->fetchAll();
 
-    // Faltou/cancelado nunca viram registro clínico (só "Concluir" cria um,
-    // e só se marcado) — sem isso, uma falta simplesmente sumia da tela do
-    // animal quando deixava de estar "ativa", como se nunca tivesse existido.
-    $agResolvidosStmt = $pdo->prepare(
-        "SELECT ag.*, v.Nome AS NomeVeterinario
-         FROM Agendamentos ag
-         LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
-         WHERE ag.FKAnimal = :id AND ag.Status IN ('concluido', 'faltou', 'cancelado')
-         ORDER BY ag.DataHoraInicio DESC"
+    // Linha do tempo de tudo que já aconteceu com os agendamentos desse
+    // animal — criado, confirmado, remarcado (com de/pra), faltou,
+    // cancelado, concluído, reaberto. Faltou/cancelado nunca viram registro
+    // clínico (só "Concluir" cria um, e só se marcado), e remarcar
+    // sobrescreve a data antiga sem deixar rastro — sem essa tabela, os
+    // dois somem da tela do animal como se nunca tivessem existido.
+    $movStmt = $pdo->prepare(
+        "SELECT ev.*, ag.Titulo, u.Nome AS NomeUsuario
+         FROM EventosAgendamento ev
+         JOIN Agendamentos ag ON ag.IDAgendamento = ev.FKAgendamento
+         LEFT JOIN Usuarios u ON u.IDUsuario = ev.FKUsuario
+         WHERE ag.FKAnimal = :id
+         ORDER BY ev.MomentoEvento DESC"
     );
-    $agResolvidosStmt->execute([':id' => $id]);
-    $agendamentosResolvidos = $agResolvidosStmt->fetchAll();
+    $movStmt->execute([':id' => $id]);
+    $movimentacoes = $movStmt->fetchAll();
 } catch (PDOException $e) {
     error_log('[AnimalDetalhe] ' . $e->getMessage());
     $historico = [];
     $clinico   = [];
     $racas     = [];
+    $movimentacoes          = [];
     $agendamentosAtivos     = [];
     $agendamentosResolvidos = [];
 }
@@ -373,33 +378,30 @@ require_once __DIR__ . '/../geral/header.php';
 
         <div class="card mt-4">
             <div class="card-header px-4 py-3">
-                <i class="bi bi-calendar-x me-2 text-accent"></i>Histórico de agendamentos
+                <i class="bi bi-clock-history me-2 text-accent"></i>Histórico de movimentações
             </div>
             <div class="card-body">
-                <?php if (empty($agendamentosResolvidos)): ?>
+                <?php if (empty($movimentacoes)): ?>
                     <div class="text-center py-4 text-secondary">
-                        <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
-                        <p class="mb-0">Nenhum agendamento concluído, faltado ou cancelado ainda.</p>
+                        <i class="bi bi-clock-history fs-1 d-block mb-2 opacity-25"></i>
+                        <p class="mb-0">Nenhuma movimentação de agendamento ainda.</p>
                     </div>
                 <?php else: ?>
                     <div class="d-flex flex-column gap-2">
-                        <?php foreach ($agendamentosResolvidos as $ag): ?>
+                        <?php foreach ($movimentacoes as $ev): ?>
                             <div class="border rounded-3 p-3" style="border-color:var(--card-border-color) !important;">
                                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                                     <div>
-                                        <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposClinicoLabel[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
-                                        <?= labelStatusAgendamento($ag['Status']) ?>
-                                        <span class="fw-medium ms-1"><?= h($ag['Titulo']) ?></span>
+                                        <?= labelEventoAgendamento($ev['Tipo']) ?>
+                                        <span class="fw-medium ms-1"><?= h($ev['Titulo']) ?></span>
                                     </div>
                                 </div>
                                 <p class="small text-secondary mb-0">
-                                    <?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
-                                    <?= $ag['NomeVeterinario'] ? ' · ' . h($ag['NomeVeterinario']) : '' ?>
+                                    <?= formatarDataHora($ev['MomentoEvento']) ?>
+                                    <?= $ev['NomeUsuario'] ? ' · ' . h($ev['NomeUsuario']) : '' ?>
                                 </p>
-                                <?php if ($ag['Status'] === 'concluido' && $ag['FKRegistroClinico']): ?>
-                                    <p class="small text-secondary mb-0 mt-1"><i class="bi bi-journal-medical me-1"></i>Registro clínico criado — ver acima</p>
-                                <?php elseif ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
-                                    <p class="small mb-0 mt-1"><?= nl2br(h($ag['ObservacoesPos'])) ?></p>
+                                <?php if ($ev['Detalhes']): ?>
+                                    <p class="small mb-0 mt-1"><?= h($ev['Detalhes']) ?></p>
                                 <?php endif ?>
                             </div>
                         <?php endforeach ?>

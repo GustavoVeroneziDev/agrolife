@@ -196,6 +196,28 @@ function montarMensagemRemarcacao(string $nomeCliente, string $nomeAnimal, strin
         . '. Qualquer dúvida, é só chamar por aqui.';
 }
 
+// Registra uma linha no "Histórico de movimentações" do agendamento — sem
+// isso, ações como remarcar sobrescrevem a data antiga sem deixar rastro
+// nenhum de quando ou pra onde foi trocado. FKUsuario fica null quando não
+// tem sessão ativa (ex: chamado de dentro de um cron).
+function registrarEventoAgendamento(PDO $pdo, string $fkAgendamento, string $tipo, ?string $detalhes = null): void
+{
+    try {
+        $pdo->prepare(
+            'INSERT INTO EventosAgendamento (IDEvento, FKAgendamento, FKUsuario, Tipo, Detalhes)
+             VALUES (:id, :ag, :usuario, :tipo, :detalhes)'
+        )->execute([
+            ':id'       => gerarUuid(),
+            ':ag'       => $fkAgendamento,
+            ':usuario'  => $_SESSION['usuario_id'] ?? null,
+            ':tipo'     => $tipo,
+            ':detalhes' => $detalhes,
+        ]);
+    } catch (PDOException $e) {
+        error_log('[EventoAgendamento] ' . $e->getMessage());
+    }
+}
+
 function redirecionarComMensagem(string $url, string $msg, string $tipo): never
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -612,6 +634,28 @@ function labelStatusAgendamento(string $status): string
         default      => [$status, 'secondary'],
     };
     return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
+}
+
+// Rótulo pra cada linha do "Histórico de movimentações" (EventosAgendamento)
+// — verbo no particípio, cor por gravidade. Diferente de
+// labelStatusAgendamento(): esse aqui descreve o EVENTO que aconteceu, não
+// o status atual (ex: "Reaberto" é seu próprio evento, mesmo o status atual
+// virando "confirmado").
+function labelEventoAgendamento(string $tipo): string
+{
+    [$label, $icone, $cor] = match ($tipo) {
+        'criado'     => ['Agendado', 'bi-calendar-plus', 'secondary'],
+        'confirmado' => ['Confirmado', 'bi-check-circle', 'info'],
+        'remarcado'  => ['Remarcado', 'bi-calendar2-week', 'accent'],
+        'faltou'     => ['Faltou', 'bi-exclamation-triangle', 'warning'],
+        'cancelado'  => ['Cancelado', 'bi-x-circle', 'danger'],
+        'concluido'  => ['Concluído', 'bi-check2-circle', 'success'],
+        'reaberto'   => ['Reaberto', 'bi-arrow-counterclockwise', 'secondary'],
+        default      => [$tipo, 'bi-dot', 'secondary'],
+    };
+    $classe = $cor === 'accent' ? '' : ' bg-' . $cor;
+    $estilo = $cor === 'accent' ? ' style="background:var(--accent-light);color:var(--accent);"' : '';
+    return '<span class="badge' . $classe . '"' . $estilo . '><i class="bi ' . $icone . ' me-1"></i>' . h($label) . '</span>';
 }
 
 /**
