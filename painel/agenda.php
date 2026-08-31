@@ -756,7 +756,7 @@ document.addEventListener('click', function (e) {
     if (btnConcluir) {
         document.getElementById('concluirId').value = btnConcluir.dataset.id;
         document.getElementById('concluirTitulo').textContent = btnConcluir.dataset.titulo;
-        new bootstrap.Modal(document.getElementById('modalConcluir')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConcluir')).show();
         return;
     }
 
@@ -765,6 +765,7 @@ document.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         function executar() {
+            btnAcao.disabled = true;
             fetch(BASE + '/painel/api_agendamento.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -773,12 +774,19 @@ document.addEventListener('click', function (e) {
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 if (d.ok) {
-                    location.reload();
+                    // Se a ação veio de dentro do painel de dia (vista mensal),
+                    // guarda qual dia tava aberto — sem isso o reload volta pro
+                    // calendário fechado e parece que a ação não fez nada.
+                    if (btnAcao.closest('#painelDiaMes') && diaMesAbertoData) {
+                        try { sessionStorage.setItem('vsDiaMesAberto', diaMesAbertoData); } catch (e) {}
+                    }
+                    vsRecarregarPreservandoScroll();
                 } else {
+                    btnAcao.disabled = false;
                     vsToast(d.msg || 'Erro ao atualizar.', 'danger');
                 }
             })
-            .catch(function () { vsToast('Falha na conexão.', 'danger'); });
+            .catch(function () { btnAcao.disabled = false; vsToast('Falha na conexão.', 'danger'); });
         }
         if (btnAcao.dataset.confirm) {
             vsConfirm(btnAcao.dataset.confirm, executar);
@@ -800,7 +808,10 @@ var STATUS_COR = {
     cancelado: 'danger', faltou: 'warning',
 };
 
+var diaMesAbertoData = null;
+
 function mostrarDiaMes(data, diaNum) {
+    diaMesAbertoData = data;
     var itens = MES_DADOS[data] || [];
     document.getElementById('painelDiaMesTitulo').textContent =
         'Dia ' + diaNum + ' — ' + itens.length + ' agendamento' + (itens.length === 1 ? '' : 's');
@@ -852,6 +863,19 @@ function mostrarDiaMes(data, diaNum) {
     painel.style.display = '';
     painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// Reabre o painel do dia depois de recarregar, se uma ação (Faltou,
+// Cancelar...) tiver sido feita de dentro dele — sem isso o reload fecha
+// o painel e some com o contexto, parecendo que a ação não fez nada.
+(function () {
+    var diaSalvo;
+    try { diaSalvo = sessionStorage.getItem('vsDiaMesAberto'); } catch (e) { diaSalvo = null; }
+    if (diaSalvo) {
+        try { sessionStorage.removeItem('vsDiaMesAberto'); } catch (e) {}
+        var diaNum = parseInt(diaSalvo.slice(-2), 10);
+        if (diaNum) mostrarDiaMes(diaSalvo, diaNum);
+    }
+})();
 </script>
 
 <?php if ($souAdmin && (($_GET['acao'] ?? '') === 'novo' || $animalPre)): ?>

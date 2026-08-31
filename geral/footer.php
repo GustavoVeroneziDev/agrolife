@@ -188,12 +188,25 @@ document.querySelectorAll('[data-validar="nascimento"]').forEach(vsValidarNascim
 // existir antes do footer.php ser incluído (páginas chamam initPicker no
 // próprio <script>, que roda antes deste aqui).
 
+// Desabilita os botões de enviar do form assim que ele é mandado — sem
+// isso, se a resposta demorar (upload de imagem, rede lenta) mais que o
+// tempo que a pessoa espera olhando a tela, ela clica de novo achando
+// que não funcionou, e o servidor processa a mesma ação duas vezes (ex:
+// "Concluir" agendamento virando 2 registros clínicos). O spinner de
+// carregamento já ajuda visualmente, mas essa é a trava de verdade —
+// não depende de nenhum timing.
+function vsDesabilitarSubmit(form) {
+    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+        btn.disabled = true;
+    });
+}
+
 // ── data-confirm em forms e botões ────────────────────────────
 document.addEventListener('submit', function (e) {
     var form = e.target, msg = form.dataset.confirm;
     if (msg && !form.dataset.confirmed) {
         e.preventDefault();
-        vsConfirm(msg, function () { form.dataset.confirmed = '1'; vsMostrarCarregando(); form.submit(); }, form.dataset.confirmLabel);
+        vsConfirm(msg, function () { form.dataset.confirmed = '1'; vsDesabilitarSubmit(form); vsMostrarCarregando(); form.submit(); }, form.dataset.confirmLabel);
     }
 });
 document.addEventListener('click', function (e) {
@@ -202,7 +215,7 @@ document.addEventListener('click', function (e) {
     e.preventDefault();
     vsConfirm(el.dataset.confirm, function () {
         var form = el.closest('form');
-        if (form) { form.dataset.confirmed = '1'; vsMostrarCarregando(); form.submit(); }
+        if (form) { form.dataset.confirmed = '1'; vsDesabilitarSubmit(form); vsMostrarCarregando(); form.submit(); }
         else if (el.href) { vsMostrarCarregando(); location.href = el.href; }
     }, el.dataset.confirmLabel);
 });
@@ -244,6 +257,7 @@ document.addEventListener('click', function (e) {
 document.addEventListener('submit', function (e) {
     var form = e.target;
     if (form.dataset.confirm && !form.dataset.confirmed) return;
+    vsDesabilitarSubmit(form);
     vsMostrarCarregando();
 });
 
@@ -253,6 +267,24 @@ document.addEventListener('submit', function (e) {
 window.addEventListener('pageshow', function (e) {
     if (e.persisted) vsEsconderCarregando();
 });
+
+// ── Recarregar preservando posição de rolagem ───────────────────
+// location.reload() sozinho volta pro topo da página — numa lista longa
+// (agenda da semana, várias vacinas...) a mudança que acabou de acontecer
+// fica fora da tela e parece que a ação não fez nada. Guarda a posição
+// antes de recarregar e volta pra ela assim que a página carrega de novo.
+function vsRecarregarPreservandoScroll() {
+    try { sessionStorage.setItem('vsScrollY', String(window.scrollY)); } catch (e) {}
+    location.reload();
+}
+(function () {
+    var y;
+    try { y = sessionStorage.getItem('vsScrollY'); } catch (e) { y = null; }
+    if (y !== null) {
+        try { sessionStorage.removeItem('vsScrollY'); } catch (e) {}
+        window.scrollTo(0, parseInt(y, 10) || 0);
+    }
+})();
 
 // Registra o Service Worker (app instalável / cache offline dos assets estáticos)
 if ('serviceWorker' in navigator) {
