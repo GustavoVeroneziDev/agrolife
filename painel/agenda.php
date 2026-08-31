@@ -160,6 +160,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao concluir agendamento.', 'danger');
         }
     }
+
+    if ($acao === 'remarcar') {
+        $id   = trim($_POST['id'] ?? '');
+        $data = trim($_POST['data'] ?? '');
+        $hora = trim($_POST['hora'] ?? '');
+
+        if ($id === '' || $data === '' || $hora === '') {
+            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Data e hora são obrigatórias pra remarcar.', 'warning');
+        }
+
+        $novoInicio = $data . ' ' . $hora . ':00';
+        $ts = strtotime($novoInicio);
+        if (!$ts) {
+            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Data/hora inválida.', 'warning');
+        }
+
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT ag.*, a.Nome AS NomeAnimal, u.Nome AS NomeCliente, u.Telefone
+                 FROM Agendamentos ag
+                 JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+                 JOIN Usuarios u ON u.IDUsuario = a.FKDono
+                 WHERE ag.IDAgendamento = :id LIMIT 1'
+            );
+            $stmt->execute([':id' => $id]);
+            $ag = $stmt->fetch();
+            if (!$ag) {
+                redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento não encontrado.', 'warning');
+            }
+
+            // Preserva a duração original — só muda quando vai acontecer, não
+            // quanto tempo dura.
+            $duracaoSegundos = strtotime($ag['DataHoraFim']) - strtotime($ag['DataHoraInicio']);
+            $novoFim = date('Y-m-d H:i:s', $ts + $duracaoSegundos);
+
+            if ($ag['FKVeterinario'] && agendamentoConflita($pdo, $ag['FKVeterinario'], $novoInicio, $novoFim, $id)) {
+                redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
+            }
+
+            // Remarcar volta pro estado inicial de um agendamento novo —
+            // precisa ser confirmado de novo, mesmo que já tivesse sido
+            // confirmado antes de faltar/cancelar/remarcar.
+            $pdo->prepare(
+                "UPDATE Agendamentos SET DataHoraInicio = :inicio, DataHoraFim = :fim, Status = 'pendente' WHERE IDAgendamento = :id"
+            )->execute([':inicio' => $novoInicio, ':fim' => $novoFim, ':id' => $id]);
+
+            if ($ag['Telefone']) {
+                $msg = montarMensagemRemarcacao($ag['NomeCliente'], $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $novoInicio);
+                enviarWhatsApp(waNumero($ag['Telefone']), $msg);
+            }
+
+            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento remarcado com sucesso!', 'success');
+        } catch (PDOException $e) {
+            error_log('[RemarcarAgendamento] ' . $e->getMessage());
+            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao remarcar agendamento.', 'danger');
+        }
+    }
 }
 
 // Vista salva em cookie — igual padrão da referência (Belos Cílios): lembra a
@@ -488,9 +545,14 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php endif ?>
                                 </div>
                                 <div class="d-flex gap-1 flex-wrap flex-shrink-0">
+                                    <?php
+                                        $remarcarData = substr($ag['DataHoraInicio'], 0, 10);
+                                        $remarcarHora = substr($ag['DataHoraInicio'], 11, 5);
+                                    ?>
                                     <?php if ($souAdmin): ?>
                                         <?php if ($ag['Status'] === 'pendente'): ?>
                                             <button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="<?= h($ag['IDAgendamento']) ?>">Confirmar</button>
+                                            <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>
                                             <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
                                         <?php elseif ($ag['Status'] === 'confirmado'): ?>
                                             <button class="btn btn-sm btn-accent btn-concluir"
@@ -498,8 +560,10 @@ require_once __DIR__ . '/../geral/header.php';
                                                 Concluir
                                             </button>
                                             <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
+                                            <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>
                                             <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
                                         <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
+                                            <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>
                                             <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
                                         <?php endif ?>
                                     <?php endif ?>
@@ -623,6 +687,39 @@ require_once __DIR__ . '/../geral/header.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-accent"><i class="bi bi-check2 me-1"></i> Concluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRemarcar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                <input type="hidden" name="acao" value="remarcar">
+                <input type="hidden" name="id" id="remarcarId">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold">Remarcar: <span id="remarcarTitulo"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary">Escolhe a nova data e hora — o agendamento volta pra pendente, precisando ser confirmado de novo. O cliente recebe um aviso no WhatsApp com o novo horário.</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Nova data *</label>
+                            <input type="date" name="data" id="remarcarData" class="form-control" required min="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Nova hora *</label>
+                            <input type="time" name="hora" id="remarcarHora" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent"><i class="bi bi-calendar2-week me-1"></i> Remarcar</button>
                 </div>
             </form>
         </div>
@@ -760,6 +857,16 @@ document.addEventListener('click', function (e) {
         return;
     }
 
+    var btnRemarcar = e.target.closest('.btn-remarcar');
+    if (btnRemarcar) {
+        document.getElementById('remarcarId').value = btnRemarcar.dataset.id;
+        document.getElementById('remarcarTitulo').textContent = btnRemarcar.dataset.titulo;
+        document.getElementById('remarcarData').value = btnRemarcar.dataset.data;
+        document.getElementById('remarcarHora').value = btnRemarcar.dataset.hora;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalRemarcar')).show();
+        return;
+    }
+
     var btnAcao = e.target.closest('.btn-acao-agendamento');
     if (btnAcao) {
         e.preventDefault();
@@ -840,17 +947,21 @@ function mostrarDiaMes(data, diaNum) {
     } else {
         html = '<ul class="list-group list-group-flush">' + itens.map(function (ag) {
             var acoes = '';
+            var btnRemarcar = '<button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="' + ag.id + '" data-titulo="' + escHtmlPicker(ag.titulo) + '" data-data="' + data + '" data-hora="' + ag.hora + '">Remarcar</button>';
             if (!SOU_ADMIN) {
                 // funcionario só visualiza — nenhuma ação de escrita aqui
             } else if (ag.status === 'pendente') {
                 acoes = '<button class="btn btn-sm btn-outline-info btn-acao-agendamento" data-acao="confirmar" data-id="' + ag.id + '">Confirmar</button>'
+                      + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
             } else if (ag.status === 'confirmado') {
                 acoes = '<button class="btn btn-sm btn-accent btn-concluir" data-id="' + ag.id + '" data-titulo="' + escHtmlPicker(ag.titulo) + '">Concluir</button>'
                       + '<button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="' + ag.id + '" data-confirm="Marcar falta nesse agendamento?">Faltou</button>'
+                      + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
             } else {
-                acoes = '<button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="' + ag.id + '" data-confirm="Reabrir esse agendamento?">Reabrir</button>';
+                acoes = btnRemarcar
+                      + '<button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="' + ag.id + '" data-confirm="Reabrir esse agendamento?">Reabrir</button>';
             }
             return '<li class="list-group-item px-3 py-2">'
                  + '<div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">'

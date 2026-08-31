@@ -144,12 +144,26 @@ try {
     );
     $agAtivosStmt->execute([':id' => $id]);
     $agendamentosAtivos = $agAtivosStmt->fetchAll();
+
+    // Faltou/cancelado nunca viram registro clínico (só "Concluir" cria um,
+    // e só se marcado) — sem isso, uma falta simplesmente sumia da tela do
+    // animal quando deixava de estar "ativa", como se nunca tivesse existido.
+    $agResolvidosStmt = $pdo->prepare(
+        "SELECT ag.*, v.Nome AS NomeVeterinario
+         FROM Agendamentos ag
+         LEFT JOIN Usuarios v ON v.IDUsuario = ag.FKVeterinario
+         WHERE ag.FKAnimal = :id AND ag.Status IN ('concluido', 'faltou', 'cancelado')
+         ORDER BY ag.DataHoraInicio DESC"
+    );
+    $agResolvidosStmt->execute([':id' => $id]);
+    $agendamentosResolvidos = $agResolvidosStmt->fetchAll();
 } catch (PDOException $e) {
     error_log('[AnimalDetalhe] ' . $e->getMessage());
     $historico = [];
     $clinico   = [];
     $racas     = [];
-    $agendamentosAtivos = [];
+    $agendamentosAtivos     = [];
+    $agendamentosResolvidos = [];
 }
 
 $tiposClinicoLabel = [
@@ -349,6 +363,41 @@ require_once __DIR__ . '/../geral/header.php';
                                             </a>
                                         <?php endforeach ?>
                                     </div>
+                                <?php endif ?>
+                            </div>
+                        <?php endforeach ?>
+                    </div>
+                <?php endif ?>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header px-4 py-3">
+                <i class="bi bi-calendar-x me-2 text-accent"></i>Histórico de agendamentos
+            </div>
+            <div class="card-body">
+                <?php if (empty($agendamentosResolvidos)): ?>
+                    <div class="text-center py-4 text-secondary">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
+                        <p class="mb-0">Nenhum agendamento concluído, faltado ou cancelado ainda.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="d-flex flex-column gap-2">
+                        <?php foreach ($agendamentosResolvidos as $ag): ?>
+                            <div class="border rounded-3 p-3" style="border-color:var(--card-border-color) !important;">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                    <div>
+                                        <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposClinicoLabel[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                                        <?= labelStatusAgendamento($ag['Status']) ?>
+                                        <span class="fw-medium ms-1"><?= h($ag['Titulo']) ?></span>
+                                    </div>
+                                </div>
+                                <p class="small text-secondary mb-0">
+                                    <?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
+                                    <?= $ag['NomeVeterinario'] ? ' · ' . h($ag['NomeVeterinario']) : '' ?>
+                                </p>
+                                <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
+                                    <p class="small mb-0 mt-1"><?= nl2br(h($ag['ObservacoesPos'])) ?></p>
                                 <?php endif ?>
                             </div>
                         <?php endforeach ?>

@@ -188,6 +188,14 @@ function montarMensagemCancelamento(string $nomeAnimal, string $tipo, string $ti
         . ' às ' . date('H:i', strtotime($dataHoraInicio)) . ' foi cancelado. Qualquer dúvida, é só chamar por aqui.';
 }
 
+function montarMensagemRemarcacao(string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+{
+    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
+    return "Olá, {$nomeCliente}! O agendamento de {$tipoTexto} ({$titulo}) para {$nomeAnimal} foi remarcado "
+        . 'para o dia ' . formatarData($dataHoraInicio) . ' às ' . date('H:i', strtotime($dataHoraInicio))
+        . '. Qualquer dúvida, é só chamar por aqui.';
+}
+
 function redirecionarComMensagem(string $url, string $msg, string $tipo): never
 {
     if (session_status() === PHP_SESSION_NONE) {
