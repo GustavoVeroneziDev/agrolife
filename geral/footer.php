@@ -82,6 +82,12 @@ function voltarInteligente(e) {
 }
 
 // ── Modal de confirmação global ───────────────────────────────
+// getOrCreateInstance (não "new") — esse modal é reaberto várias vezes
+// na mesma página (uma vez por ação confirmável, ex: cada "Faltou" na
+// agenda). "new bootstrap.Modal(...)" a cada chamada criava uma
+// instância nova sem saber da anterior, podia deixar um backdrop órfão
+// pra trás se a transição de fechar não tivesse terminado ainda —
+// tela ficava cinza e travada. Ver limpeza de segurança mais abaixo.
 function vsConfirm(msg, onOk, label) {
     document.getElementById('modalConfirmMsg').textContent = msg;
     var okBtn = document.getElementById('modalConfirmOk');
@@ -89,11 +95,26 @@ function vsConfirm(msg, onOk, label) {
     var novo = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(novo, okBtn);
     novo.addEventListener('click', function () {
-        bootstrap.Modal.getInstance(document.getElementById('modalConfirm')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirm'))?.hide();
         onOk();
     });
-    new bootstrap.Modal(document.getElementById('modalConfirm')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirm')).show();
 }
+
+// Rede de segurança: se por qualquer motivo (instância duplicada de
+// modal, reload no meio da transição de fechar) um backdrop ficar pra
+// trás sem nenhum modal de fato aberto, remove ele — sem isso a tela
+// fica cinza e sem dar pra clicar em nada até recarregar manualmente.
+document.addEventListener('hidden.bs.modal', function () {
+    setTimeout(function () {
+        if (!document.querySelector('.modal.show')) {
+            document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+    }, 350);
+});
 
 // ── Máscara de telefone ───────────────────────────────────────
 function vsMascaraTel(input) {

@@ -223,12 +223,17 @@ require_once __DIR__ . '/../geral/header.php';
                         <?= count($agendamentosAtivos) === 1 ? 'Já tem um agendamento' : count($agendamentosAtivos) . ' agendamentos ativos' ?>
                     </div>
                     <?php foreach ($agendamentosAtivos as $ag): ?>
-                        <div class="small mb-1">
+                        <div class="small mb-2">
                             <span class="badge" style="background:var(--bg-card);color:var(--accent);"><?= h($tiposClinicoLabel[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                            <span class="fw-medium"><?= h($ag['Titulo']) ?></span>
+                            —
                             <?= substr($ag['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($ag['DataHoraInicio']) ?>
                             às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
                             <?= labelStatusAgendamento($ag['Status']) ?>
                             <?php if ($ag['NomeVeterinario']): ?><span class="text-secondary">· <?= h($ag['NomeVeterinario']) ?></span><?php endif ?>
+                            <?php if ($ag['Observacoes']): ?>
+                                <div class="text-secondary mt-1" style="font-size:.85em;"><?= nl2br(h($ag['Observacoes'])) ?></div>
+                            <?php endif ?>
                         </div>
                     <?php endforeach ?>
                 </div>

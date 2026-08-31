@@ -8,8 +8,16 @@ exigirLogin('admin', 'funcionario');
 $hoje = date('Y-m-d');
 
 try {
-    $totalAnimais = (int) $pdo->query("SELECT COUNT(*) FROM Animais WHERE Ativo = 1")->fetchColumn();
-    $totalDonos   = (int) $pdo->query("SELECT COUNT(*) FROM Usuarios WHERE NivelAcesso = 'cliente' AND Ativo = 1")->fetchColumn();
+    // Espelha do lado do atendimento os dois cards de urgência que vacina já
+    // tinha (atrasada/vencendo) — antes só vacina tinha sinal de "precisa
+    // agir", atendimento ficava sem nenhum no topo do dashboard.
+    $agendamentosPendentes = (int) $pdo->query(
+        "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'pendente'"
+    )->fetchColumn();
+
+    $faltasSemana = (int) $pdo->query(
+        "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'faltou' AND DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+    )->fetchColumn();
 
     $atrasadas = (int) $pdo->query(
         "SELECT COUNT(*) FROM RegistrosVacinas rv
@@ -98,7 +106,7 @@ try {
     )->fetchAll();
 } catch (PDOException $e) {
     error_log('[PainelDash] ' . $e->getMessage());
-    $totalAnimais = $totalDonos = $vencendo = $atrasadas = 0;
+    $agendamentosPendentes = $faltasSemana = $vencendo = $atrasadas = 0;
     $filtroVac = '';
     $souVeterinario = false;
     $proximas = $agendamentosHoje = $proximosAgendamentos = $recentes = [];
@@ -113,11 +121,15 @@ require_once __DIR__ . '/../geral/header.php';
 
 <div class="row g-3 mb-4">
     <?php
+    // 2 sinais de urgência de vacina + 2 sinais de urgência de atendimento —
+    // mesma linguagem de cor entre os dois assuntos (vermelho = já passou
+    // do ponto, âmbar = precisa agir logo), em vez de vacina ter alerta e
+    // atendimento só ter contagem neutra.
     $stats = [
-        ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,    BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas'],
-        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias', $vencendo,     BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo'],
-        ['bi-clipboard2-pulse',          'var(--accent)',      'var(--accent-light)',   'Animais ativos',       $totalAnimais, BASE . '/painel/animais.php',  false],
-        ['bi-people',                    'var(--cor-info)',    'var(--cor-info-bg)',    'Clientes cadastrados', $totalDonos,   BASE . '/painel/clientes.php', false],
+        ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,             BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas'],
+        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias',  $vencendo,              BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo'],
+        ['bi-hourglass-split',           'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Aguardando confirmação', $agendamentosPendentes, BASE . '/painel/agenda.php',  false],
+        ['bi-calendar-x-fill',           'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Faltas essa semana',  $faltasSemana,          BASE . '/painel/agenda.php',  false],
     ];
     foreach ($stats as [$icon, $color, $bg, $label, $valor, $link, $ativo]):
     ?>
@@ -135,41 +147,102 @@ require_once __DIR__ . '/../geral/header.php';
     <?php endforeach ?>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
-        <span><i class="bi bi-calendar-day me-2 text-accent"></i><?= $souVeterinario ? 'Sua agenda de hoje' : 'Agenda de hoje' ?></span>
-        <a href="<?= BASE ?>/painel/agenda.php?vista=semana&dia=<?= $hoje ?>" class="small">Ver na agenda</a>
+<!-- Agenda (atendimento) e Vacinas lado a lado, mesmo peso visual — antes
+     vacina tinha um card grande com filtros e atendimento só uma tabela
+     simples acima; nenhum dos dois assuntos deve "ganhar" da entrada. -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
+                <span><i class="bi bi-calendar-day me-2 text-accent"></i><?= $souVeterinario ? 'Sua agenda de hoje' : 'Agenda de hoje' ?></span>
+                <a href="<?= BASE ?>/painel/agenda.php?vista=semana&dia=<?= $hoje ?>" class="small">Ver na agenda</a>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($agendamentosHoje)): ?>
+                    <div class="text-center py-5 text-secondary">
+                        <i class="bi bi-cup-hot fs-1 d-block mb-2 opacity-25"></i>
+                        <p class="mb-0">Nada agendado pra hoje.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead style="background:var(--bg-hover);">
+                                <tr>
+                                    <th class="px-4 py-3">Horário</th>
+                                    <th>Animal</th>
+                                    <th>Título</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($agendamentosHoje as $ag): ?>
+                                    <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($ag['IDAnimal']) ?>'">
+                                        <td class="px-4 small fw-medium"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
+                                        <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
+                                        <td class="small"><?= h($ag['Titulo']) ?></td>
+                                        <td><?= labelStatusAgendamento($ag['Status']) ?></td>
+                                    </tr>
+                                <?php endforeach ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif ?>
+            </div>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <?php if (empty($agendamentosHoje)): ?>
-            <div class="text-center py-4 text-secondary">
-                <i class="bi bi-cup-hot fs-2 d-block mb-2 opacity-25"></i>
-                <p class="mb-0 small">Nada agendado pra hoje.</p>
+
+    <div class="col-lg-6">
+        <div class="card h-100" id="vacinas">
+            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3">
+                <span><i class="bi bi-calendar-check me-2 text-accent"></i>Vacinas a vencer</span>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="<?= BASE ?>/painel/index.php#vacinas" class="btn <?= $filtroVac === '' ? 'btn-accent' : 'btn-outline-accent' ?>">Todas</a>
+                    <a href="<?= BASE ?>/painel/index.php?vac=atrasadas#vacinas" class="btn <?= $filtroVac === 'atrasadas' ? 'btn-accent' : 'btn-outline-accent' ?>">Atrasadas</a>
+                    <a href="<?= BASE ?>/painel/index.php?vac=vencendo#vacinas" class="btn <?= $filtroVac === 'vencendo' ? 'btn-accent' : 'btn-outline-accent' ?>">Vencendo</a>
+                </div>
             </div>
-        <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead style="background:var(--bg-hover);">
-                        <tr>
-                            <th class="px-4 py-3">Horário</th>
-                            <th>Animal</th>
-                            <th>Título</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($agendamentosHoje as $ag): ?>
-                            <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($ag['IDAnimal']) ?>'">
-                                <td class="px-4 small fw-medium"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
-                                <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
-                                <td class="small"><?= h($ag['Titulo']) ?></td>
-                                <td><?= labelStatusAgendamento($ag['Status']) ?></td>
-                            </tr>
-                        <?php endforeach ?>
-                    </tbody>
-                </table>
+            <div class="card-body p-0">
+                <?php if (empty($proximas)): ?>
+                    <div class="text-center py-5 text-secondary">
+                        <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
+                        <p class="mb-0">Nenhuma vacina <?= $filtroVac ? 'nessa situação.' : 'agendada.' ?></p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead style="background:var(--bg-hover);">
+                                <tr>
+                                    <th class="px-4 py-3">Animal</th>
+                                    <th class="d-none d-xl-table-cell">Cliente</th>
+                                    <th>Vacina</th>
+                                    <th>Data</th>
+                                    <th>Situação</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($proximas as $p): ?>
+                                    <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($p['IDAnimal']) ?>'">
+                                        <td class="px-4 fw-medium"><?= h($p['NomeAnimal']) ?></td>
+                                        <td class="d-none d-xl-table-cell"><?= h($p['NomeDono']) ?></td>
+                                        <td class="small"><?= h($p['NomeVacina']) ?></td>
+                                        <td class="small"><?= formatarData($p['ProximaData']) ?></td>
+                                        <td><?= labelSituacaoVacina($p['ProximaData']) ?></td>
+                                        <td>
+                                            <?php if ($p['Telefone']): ?>
+                                                <a href="<?= h(waLink($p['Telefone'])) ?>" target="_blank" class="btn btn-sm btn-outline-success" title="WhatsApp" onclick="event.stopPropagation()">
+                                                    <i class="bi bi-whatsapp"></i>
+                                                </a>
+                                            <?php endif ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif ?>
             </div>
-        <?php endif ?>
+        </div>
     </div>
 </div>
 
@@ -206,64 +279,10 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 <?php endif ?>
 
+<?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
 <div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card h-100" id="vacinas">
-            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3">
-                <span><i class="bi bi-calendar-check me-2 text-accent"></i>Vacinas a vencer</span>
-                <div class="btn-group btn-group-sm" role="group">
-                    <a href="<?= BASE ?>/painel/index.php#vacinas" class="btn <?= $filtroVac === '' ? 'btn-accent' : 'btn-outline-accent' ?>">Todas</a>
-                    <a href="<?= BASE ?>/painel/index.php?vac=atrasadas#vacinas" class="btn <?= $filtroVac === 'atrasadas' ? 'btn-accent' : 'btn-outline-accent' ?>">Atrasadas</a>
-                    <a href="<?= BASE ?>/painel/index.php?vac=vencendo#vacinas" class="btn <?= $filtroVac === 'vencendo' ? 'btn-accent' : 'btn-outline-accent' ?>">Vencendo</a>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <?php if (empty($proximas)): ?>
-                    <div class="text-center py-5 text-secondary">
-                        <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
-                        <p class="mb-0">Nenhuma vacina <?= $filtroVac ? 'nessa situação.' : 'agendada.' ?></p>
-                    </div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead style="background:var(--bg-hover);">
-                                <tr>
-                                    <th class="px-4 py-3">Animal</th>
-                                    <th class="d-none d-md-table-cell">Cliente</th>
-                                    <th>Vacina</th>
-                                    <th>Data</th>
-                                    <th>Situação</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($proximas as $p): ?>
-                                    <tr class="tr-link" onclick="location.href='<?= BASE ?>/painel/animal_detalhe.php?id=<?= h($p['IDAnimal']) ?>'">
-                                        <td class="px-4 fw-medium"><?= h($p['NomeAnimal']) ?></td>
-                                        <td class="d-none d-md-table-cell"><?= h($p['NomeDono']) ?></td>
-                                        <td class="small"><?= h($p['NomeVacina']) ?></td>
-                                        <td class="small"><?= formatarData($p['ProximaData']) ?></td>
-                                        <td><?= labelSituacaoVacina($p['ProximaData']) ?></td>
-                                        <td>
-                                            <?php if ($p['Telefone']): ?>
-                                                <a href="<?= h(waLink($p['Telefone'])) ?>" target="_blank" class="btn btn-sm btn-outline-success" title="WhatsApp" onclick="event.stopPropagation()">
-                                                    <i class="bi bi-whatsapp"></i>
-                                                </a>
-                                            <?php endif ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif ?>
-            </div>
-        </div>
-    </div>
-
-    <?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
-    <div class="col-lg-4">
-        <div class="card p-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
             <h6 class="fw-semibold mb-3"><i class="bi bi-lightning me-2 text-accent"></i>Ações rápidas</h6>
             <div class="d-grid gap-2">
                 <?php if ($souAdmin): ?>
@@ -295,9 +314,11 @@ require_once __DIR__ . '/../geral/header.php';
                 </a>
             </div>
         </div>
+    </div>
 
+    <div class="col-lg-6">
         <?php if (!empty($recentes)): ?>
-        <div class="card p-4">
+        <div class="card p-4 h-100">
             <h6 class="fw-semibold mb-3"><i class="bi bi-clock-history me-2 text-accent"></i>Cadastros recentes</h6>
             <div class="d-flex flex-column gap-1">
                 <?php foreach ($recentes as $r):
