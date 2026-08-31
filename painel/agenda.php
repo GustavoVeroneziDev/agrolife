@@ -763,7 +763,18 @@ document.addEventListener('click', function (e) {
     var btnAcao = e.target.closest('.btn-acao-agendamento');
     if (btnAcao) {
         e.preventDefault();
-        e.stopPropagation();
+        // stopImmediatePropagation, não só stopPropagation: esses botões têm
+        // data-confirm E a classe btn-acao-agendamento ao mesmo tempo, então
+        // dois listeners de click no document (esse aqui e o genérico de
+        // data-confirm no footer.php) disparavam pro MESMO clique. Os dois
+        // chamavam vsConfirm() em sequência — o segundo (genérico) sobrescrevia
+        // o botão "Confirmar" do modal com o próprio callback dele (que só
+        // sabe submeter um <form> ou seguir um href, nenhum dos dois existe
+        // aqui) — por isso Faltar/Cancelar/Reabrir pareciam não fazer nada:
+        // o clique real ia pro callback errado. stopPropagation() sozinho não
+        // impede outro listener no MESMO elemento de rodar — só impede a
+        // propagação pra elementos ancestrais.
+        e.stopImmediatePropagation();
         function executar() {
             btnAcao.disabled = true;
             fetch(BASE + '/painel/api_agendamento.php', {
