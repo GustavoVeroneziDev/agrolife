@@ -396,7 +396,9 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
                                     <?= $ag['NomeVeterinario'] ? ' · ' . h($ag['NomeVeterinario']) : '' ?>
                                 </p>
-                                <?php if ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
+                                <?php if ($ag['Status'] === 'concluido' && $ag['FKRegistroClinico']): ?>
+                                    <p class="small text-secondary mb-0 mt-1"><i class="bi bi-journal-medical me-1"></i>Registro clínico criado — ver acima</p>
+                                <?php elseif ($ag['Status'] === 'concluido' && $ag['ObservacoesPos']): ?>
                                     <p class="small mb-0 mt-1"><?= nl2br(h($ag['ObservacoesPos'])) ?></p>
                                 <?php endif ?>
                             </div>
