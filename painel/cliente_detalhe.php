@@ -72,10 +72,23 @@ try {
         redirecionarComMensagem(BASE . '/painel/clientes.php', 'Cliente não encontrado.', 'warning');
     }
 
+    // Além do que tá vindo (próxima vacina, próximo agendamento), busca
+    // também o que já aconteceu — sem isso, um animal com anos de
+    // histórico mas nada agendado no momento parecia idêntico a um
+    // cadastro novo em folha, sem nenhuma pista de que já teve vida por
+    // aqui.
     $animaisStmt = $pdo->prepare(
         'SELECT a.*, e.Nome AS NomeEspecie, e.Icone AS IconeEspecie,
                 (SELECT MIN(rv.ProximaData) FROM RegistrosVacinas rv
-                  WHERE rv.FKAnimal = a.IDAnimal AND rv.ProximaData IS NOT NULL) AS ProximaVacina
+                  WHERE rv.FKAnimal = a.IDAnimal AND rv.ProximaData IS NOT NULL) AS ProximaVacina,
+                (SELECT MAX(rv2.DataAplicacao) FROM RegistrosVacinas rv2
+                  WHERE rv2.FKAnimal = a.IDAnimal) AS UltimaVacinaAplicada,
+                (SELECT ag.DataHoraInicio FROM Agendamentos ag
+                  WHERE ag.FKAnimal = a.IDAnimal AND ag.DataHoraInicio < NOW()
+                  ORDER BY ag.DataHoraInicio DESC LIMIT 1) AS UltimoAtendimentoData,
+                (SELECT ag.Tipo FROM Agendamentos ag
+                  WHERE ag.FKAnimal = a.IDAnimal AND ag.DataHoraInicio < NOW()
+                  ORDER BY ag.DataHoraInicio DESC LIMIT 1) AS UltimoAtendimentoTipo
          FROM Animais a
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
          WHERE a.FKDono = :id AND a.Ativo = 1
@@ -216,16 +229,25 @@ require_once __DIR__ . '/../geral/header.php';
                                                 <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$prox['Tipo']] ?? $prox['Tipo']) ?></span>
                                                 <?= substr($prox['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($prox['DataHoraInicio']) ?>
                                                 às <?= date('H:i', strtotime($prox['DataHoraInicio'])) ?>
+                                            <?php elseif ($a['UltimoAtendimentoData']): ?>
+                                                <span class="text-secondary">
+                                                    Último: <?= h($tiposAgenda[$a['UltimoAtendimentoTipo']] ?? $a['UltimoAtendimentoTipo']) ?>
+                                                    · <?= formatarData($a['UltimoAtendimentoData']) ?>
+                                                </span>
                                             <?php else: ?>
-                                                <span class="text-secondary">—</span>
+                                                <span class="text-secondary">Nenhum atendimento</span>
                                             <?php endif ?>
                                         </td>
                                         <td>
                                             <?php if ($a['ProximaVacina']): ?>
                                                 <?= labelSituacaoVacina($a['ProximaVacina']) ?>
                                                 <span class="small text-secondary ms-1"><?= formatarData($a['ProximaVacina']) ?></span>
+                                            <?php elseif ($a['UltimaVacinaAplicada']): ?>
+                                                <span class="badge" style="background:var(--accent-light);color:var(--accent);">
+                                                    Última: <?= formatarData($a['UltimaVacinaAplicada']) ?>
+                                                </span>
                                             <?php else: ?>
-                                                <span class="badge bg-secondary">Sem registro</span>
+                                                <span class="badge bg-secondary">Nenhuma vacina</span>
                                             <?php endif ?>
                                         </td>
                                         <td>
