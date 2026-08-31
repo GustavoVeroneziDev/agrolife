@@ -45,9 +45,16 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="<?= h(APP_NOME) ?>">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <?php
+    // Bootstrap CSS/JS e Icons ficam servidos do próprio domínio (ver
+    // assets/vendor/) em vez de vir do jsdelivr — nessa hospedagem o site
+    // roda em HTTP/1.1 (sem multiplexação), então cada origem externa é uma
+    // negociação de DNS+TLS a mais em toda visita nova, sem o benefício de
+    // cache compartilhado entre sites que os navegadores atuais não dão mais
+    // (cache já vem particionado por site de qualquer forma).
+    ?>
+    <link href="<?= BASE ?>/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= BASE ?>/assets/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/paleta.css?v=<?= APP_VERSAO ?>">
     <link rel="stylesheet" href="<?= BASE ?>/assets/css/estrutura.css?v=<?= APP_VERSAO ?>">
     <?php foreach ($paginaCssExtra ?? [] as $_css): ?>
