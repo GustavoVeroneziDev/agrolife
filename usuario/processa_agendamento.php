@@ -20,10 +20,7 @@ if ($acao !== 'cancelar' || $id === '') {
     redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Ação inválida.', 'warning');
 }
 
-$tiposAgenda = [
-    'cirurgia' => 'Cirurgia', 'consulta' => 'Consulta', 'exame' => 'Exame',
-    'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
-];
+$tiposAgenda = tiposAgendaMap();
 
 try {
     // Confere que o agendamento é de um animal desse cliente antes de

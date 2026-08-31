@@ -67,13 +67,7 @@ try {
     // (confirmar, marcar_falta, reabrir) ficam sem notificação automática
     // por ora, são ajustes mais internos.
     if ($acao === 'cancelar' && $ag['Telefone']) {
-        $tiposAgenda = [
-            'cirurgia' => 'Cirurgia', 'consulta' => 'Consulta', 'exame' => 'Exame',
-            'procedimento' => 'Procedimento', 'observacao' => 'Observação', 'outro' => 'Outro',
-        ];
-        $msg = "O agendamento de {$ag['NomeAnimal']} (" . ($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) . ' — ' . $ag['Titulo']
-             . ' em ' . formatarData($ag['DataHoraInicio']) . ' às ' . date('H:i', strtotime($ag['DataHoraInicio']))
-             . ') foi cancelado. Qualquer dúvida, é só chamar por aqui.';
+        $msg = montarMensagemCancelamento($ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $ag['DataHoraInicio']);
         enviarWhatsApp(waNumero($ag['Telefone']), $msg);
     }
 

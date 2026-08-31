@@ -36,6 +36,18 @@ Serve pra validar o sistema inteiro em produção, com dados e fluxos
 reais, sem risco de mensagem cair em cliente de verdade enquanto ainda
 em teste. Pra ir ao ar de vez: desliga o checkbox.
 
+## Demonstração ao vivo
+
+Em **Configurações → Demonstração ao vivo**, 3 botões (`painel/demo_whatsapp.php`)
+disparam pro **número de teste** configurado uma mensagem de exemplo com dados
+fictícios (cliente "Ana Paula", animal "Spok"), usando o **mesmo texto** que um
+cliente de verdade recebe — as funções que montam a mensagem
+(`montarMensagemNovoAgendamento()`, `montarMensagemCancelamento()`, ambas em
+`config/funcoes.php`) são as mesmas usadas pelos fluxos reais, não uma cópia à
+parte. Serve pra mostrar o sistema funcionando numa reunião sem precisar criar
+agendamento de verdade. Sempre manda pro número de teste, mesmo com o modo de
+teste geral desligado — nunca depende de um número vindo do formulário.
+
 ## O que já dispara WhatsApp
 
 Testado de ponta a ponta (mensagem chegando de verdade no celular):

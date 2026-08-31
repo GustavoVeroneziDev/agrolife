@@ -96,6 +96,7 @@ require_once __DIR__ . '/../geral/header.php';
                        value="<?= h(formatarTelefoneExibicao($valores['whatsapp_numero_teste'])) ?>">
             </div>
         </div>
+
     </div>
 </div>
 
@@ -103,5 +104,41 @@ require_once __DIR__ . '/../geral/header.php';
     <button type="submit" class="btn btn-accent btn-lg"><i class="bi bi-check2 me-2"></i> Salvar configurações</button>
 </div>
 </form>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card p-4 mb-4">
+            <h6 class="fw-semibold mb-2"><i class="bi bi-play-circle me-2 text-accent"></i>Demonstração ao vivo</h6>
+            <p class="small text-secondary">
+                Dispara pro <strong>número de teste</strong> configurado acima uma mensagem de
+                exemplo, igual à que um cliente de verdade recebe — pra mostrar o sistema
+                funcionando numa reunião, sem precisar de um agendamento real.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="cenario" value="agendamento">
+                    <button type="submit" class="btn btn-outline-accent">
+                        <i class="bi bi-calendar-plus me-1"></i> Agendamento criado
+                    </button>
+                </form>
+                <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="cenario" value="cancelamento">
+                    <button type="submit" class="btn btn-outline-accent">
+                        <i class="bi bi-calendar-x me-1"></i> Cancelamento
+                    </button>
+                </form>
+                <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="cenario" value="vacina">
+                    <button type="submit" class="btn btn-outline-accent">
+                        <i class="bi bi-shield-plus me-1"></i> Lembrete de vacina
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

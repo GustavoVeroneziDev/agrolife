@@ -5,14 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 exigirLogin('admin', 'funcionario');
 
-$tiposAgenda = [
-    'cirurgia'     => 'Cirurgia',
-    'consulta'     => 'Consulta',
-    'exame'        => 'Exame',
-    'procedimento' => 'Procedimento',
-    'observacao'   => 'Observação',
-    'outro'        => 'Outro',
-];
+$tiposAgenda = tiposAgendaMap();
 
 // Verifica sobreposição de horário pro mesmo veterinário — mesma checagem
 // de verdade tanto no cadastro quanto (se precisar) numa futura remarcação.
@@ -87,13 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Avisa o dono do animal pelo WhatsApp — sem isso, ele só ficava
             // sabendo do agendamento se entrasse no site por conta própria.
             $donoStmt = $pdo->prepare(
-                'SELECT u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+                'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
             );
             $donoStmt->execute([':id' => $fkAnimal]);
             $dono = $donoStmt->fetch();
             if ($dono && $dono['Telefone']) {
-                $msg = "Olá! Agendamos um horário para {$dono['NomeAnimal']}: " . $tiposAgenda[$tipo] . ' — '
-                     . $titulo . ' em ' . formatarData($inicio) . ' às ' . $hora . '. Qualquer dúvida, é só chamar por aqui.';
+                $msg = montarMensagemNovoAgendamento($dono['NomeCliente'], $dono['NomeAnimal'], $tipo, $titulo, $inicio);
                 enviarWhatsApp(waNumero($dono['Telefone']), $msg);
             }
 
@@ -845,7 +837,7 @@ function mostrarDiaMes(data, diaNum) {
                  + '<div class="d-flex align-items-center gap-1 flex-wrap">'
                  + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
                  + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
-                 + '<span class="fw-medium">' + (ag.icone || '') + ' ' + escHtmlPicker(ag.animal) + '</span>'
+                 + '<span class="fw-medium">' + iconeHtmlPicker(ag.icone) + escHtmlPicker(ag.animal) + '</span>'
                  + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'
                  + '</div>'
                  + '<span class="text-secondary small d-block">' + escHtmlPicker(ag.titulo) + (ag.vet ? ' · ' + escHtmlPicker(ag.vet) : ' · sem veterinário definido') + '</span>'

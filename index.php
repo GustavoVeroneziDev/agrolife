@@ -51,6 +51,7 @@ $servicosHome = [
     ['icone' => 'bi-shield-plus',     'titulo' => 'Vacinas e Medicamentos', 'texto' => 'Protocolo por espécie, com lembrete automático de reforço.'],
     ['icone' => 'bi-capsule',         'titulo' => 'Procedimentos',          'texto' => 'Curativos, limpeza dentária, aplicações e outros cuidados periódicos.'],
     ['icone' => 'bi-journal-medical', 'titulo' => 'Acompanhamento',         'texto' => 'Registro clínico completo — nada se perde entre uma consulta e outra.'],
+    ['icone' => 'bi-basket2-fill',    'titulo' => 'Produtos Agropecuários', 'texto' => 'Ração, medicamentos e itens pro dia a dia do seu animal ou da sua produção.'],
 ];
 
 $especiesHome = [];

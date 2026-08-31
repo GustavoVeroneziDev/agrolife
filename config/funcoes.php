@@ -158,6 +158,36 @@ function registrarLogWhatsApp(
     }
 }
 
+function tiposAgendaMap(): array
+{
+    return [
+        'cirurgia'     => 'Cirurgia',
+        'consulta'     => 'Consulta',
+        'exame'        => 'Exame',
+        'procedimento' => 'Procedimento',
+        'observacao'   => 'Observação',
+        'outro'        => 'Outro',
+    ];
+}
+
+// Texto usado tanto no agendamento real quanto no botão de demonstração
+// (Configurações → WhatsApp) — assim a mensagem que o cliente vê numa
+// demo é exatamente a mesma que um cliente de verdade recebe.
+function montarMensagemNovoAgendamento(string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+{
+    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
+    return "Olá, {$nomeCliente}! Foi realizado um agendamento de {$tipoTexto} ({$titulo}) para {$nomeAnimal}, "
+        . 'no dia ' . formatarData($dataHoraInicio) . ' às ' . date('H:i', strtotime($dataHoraInicio))
+        . '. Não esqueça de chegar alguns minutos antes do horário, para uma melhor organização 😉 Muito obrigado!';
+}
+
+function montarMensagemCancelamento(string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+{
+    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
+    return "O agendamento de {$nomeAnimal} ({$tipoTexto} — {$titulo}) em " . formatarData($dataHoraInicio)
+        . ' às ' . date('H:i', strtotime($dataHoraInicio)) . ' foi cancelado. Qualquer dúvida, é só chamar por aqui.';
+}
+
 function redirecionarComMensagem(string $url, string $msg, string $tipo): never
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -240,7 +270,8 @@ function criarTokenLembrarMe(PDO $pdo, string $idUsuario, int $dias = 30): void
     try {
         $pdo->prepare('DELETE FROM TokensLembrarMe WHERE FKUsuario = :id AND Expira < NOW()')
             ->execute([':id' => $idUsuario]);
-    } catch (PDOException) {}
+    } catch (PDOException) {
+    }
 
     $idToken    = gerarUuid();
     $tokenPlain = bin2hex(random_bytes(32));
@@ -304,7 +335,8 @@ function tentarLoginLembrado(PDO $pdo): void
         try {
             $pdo->prepare('DELETE FROM TokensLembrarMe WHERE FKUsuario = :id')
                 ->execute([':id' => $row['FKUsuario']]);
-        } catch (PDOException) {}
+        } catch (PDOException) {
+        }
         _limparCookieLembrarMe();
         error_log('[LembrarMe] Token inválido para usuário ' . $row['FKUsuario'] . ' — todos os tokens apagados.');
         return;
@@ -316,7 +348,8 @@ function tentarLoginLembrado(PDO $pdo): void
         try {
             $pdo->prepare('DELETE FROM TokensLembrarMe WHERE IDToken = :id')
                 ->execute([':id' => $idToken]);
-        } catch (PDOException) {}
+        } catch (PDOException) {
+        }
         criarTokenLembrarMe($pdo, $row['FKUsuario']);
     }
 
@@ -354,7 +387,8 @@ function criarTokenResetSenha(PDO $pdo, string $idUsuario, int $horas = 24): arr
     try {
         $pdo->prepare('DELETE FROM TokensResetSenha WHERE FKUsuario = :id')
             ->execute([':id' => $idUsuario]);
-    } catch (PDOException) {}
+    } catch (PDOException) {
+    }
 
     $idToken    = gerarUuid();
     $tokenPlain = bin2hex(random_bytes(32));
@@ -588,7 +622,7 @@ function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCanc
     $podeCancelar = $permitirCancelar
         && in_array($ag['Status'], ['pendente', 'confirmado'], true)
         && $ag['DataHoraInicio'] > date('Y-m-d H:i:s');
-    ?>
+?>
     <div class="card p-3 mb-2">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="d-flex align-items-center gap-3">
@@ -622,7 +656,7 @@ function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCanc
             </div>
         <?php endif ?>
     </div>
-    <?php
+<?php
 }
 
 /**
