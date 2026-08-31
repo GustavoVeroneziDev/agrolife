@@ -158,7 +158,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )->execute([':obs' => $obsPos ?: null, ':rc' => $fkRegistroClinico, ':id' => $id]);
             registrarEventoAgendamento($pdo, $id, 'concluido');
 
-            redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento concluído com sucesso!', 'success');
+            // Retorno agendado automaticamente a partir daqui (ex: retirada de
+            // pontos após uma cirurgia) — reaproveita animal/veterinário/duração
+            // do agendamento original, só desloca a data.
+            $mensagemFinal = 'Agendamento concluído com sucesso!';
+            $retornoDias   = (int) ($_POST['retorno_dias'] ?? 0);
+            if (!empty($_POST['agendar_retorno']) && $retornoDias > 0) {
+                $retornoTitulo = trim($_POST['retorno_titulo'] ?? '') ?: ('Retorno — ' . $ag['Titulo']);
+                $duracaoSegundos = strtotime($ag['DataHoraFim']) - strtotime($ag['DataHoraInicio']);
+                $retornoInicio   = date('Y-m-d H:i:s', strtotime($ag['DataHoraInicio']) + $retornoDias * 86400);
+                $retornoFim      = date('Y-m-d H:i:s', strtotime($retornoInicio) + $duracaoSegundos);
+                $retornoId       = gerarUuid();
+
+                $pdo->prepare(
+                    'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim)
+                     VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim)'
+                )->execute([
+                    ':id'     => $retornoId,
+                    ':animal' => $ag['FKAnimal'],
+                    ':vet'    => $ag['FKVeterinario'],
+                    ':origem' => $id,
+                    ':tipo'   => $ag['Tipo'],
+                    ':titulo' => $retornoTitulo,
+                    ':inicio' => $retornoInicio,
+                    ':fim'    => $retornoFim,
+                ]);
+                registrarEventoAgendamento($pdo, $retornoId, 'criado', 'Retorno de ' . formatarDataHora($ag['DataHoraInicio']));
+
+                $donoStmt = $pdo->prepare(
+                    'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+                );
+                $donoStmt->execute([':id' => $ag['FKAnimal']]);
+                $dono = $donoStmt->fetch();
+                if ($dono && $dono['Telefone']) {
+                    $msg = montarMensagemNovoAgendamento($dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
+                    enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+                }
+
+                $mensagemFinal = 'Agendamento concluído com sucesso! Retorno marcado para ' . formatarData($retornoInicio) . '.';
+            }
+
+            redirecionarComMensagem(BASE . '/painel/agenda.php', $mensagemFinal, 'success');
         } catch (PDOException $e) {
             error_log('[ConcluirAgendamento] ' . $e->getMessage());
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao concluir agendamento.', 'danger');
@@ -325,7 +365,7 @@ try {
         $fimMes    = date('Y-m-d', strtotime('+1 month', strtotime($inicioMes)));
 
         $stmt = $pdo->prepare(
-            "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
+            "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.FKAgendamentoOrigem,
                     a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
                     u.Nome AS NomeDono, v.Nome AS NomeVeterinario
              FROM Agendamentos ag
@@ -354,6 +394,7 @@ try {
                 'dono'   => $ag['NomeDono'],
                 'vet'    => $ag['NomeVeterinario'],
                 'status' => $ag['Status'],
+                'origem' => !empty($ag['FKAgendamentoOrigem']),
             ];
         }
 
@@ -539,6 +580,9 @@ require_once __DIR__ . '/../geral/header.php';
                                 <div class="flex-grow-1 min-w-0">
                                     <div class="d-flex align-items-center gap-1 flex-wrap">
                                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                                        <?php if (!empty($ag['FKAgendamentoOrigem'])): ?>
+                                            <span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>
+                                        <?php endif ?>
                                         <?= labelStatusAgendamento($ag['Status']) ?>
                                         <span class="fw-medium"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
                                         <span class="text-secondary small">— <?= h($ag['NomeDono']) ?></span>
@@ -688,6 +732,23 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="mb-1">
                         <label class="form-label">Imagens <span class="text-secondary">(opcional, vai junto no registro clínico)</span></label>
                         <input type="file" name="imagens[]" class="form-control" accept="image/png,image/jpeg,image/webp" capture="environment" multiple>
+                    </div>
+                    <hr>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="agendar_retorno" id="concluirAgendarRetorno" value="1">
+                        <label class="form-check-label" for="concluirAgendarRetorno">
+                            Agendar retorno <span class="text-secondary">(ex: retirada de pontos)</span>
+                        </label>
+                    </div>
+                    <div id="concluirRetornoCampos" class="row g-2 mb-1" style="display:none;">
+                        <div class="col-5">
+                            <label class="form-label small">Em quantos dias</label>
+                            <input type="number" name="retorno_dias" id="concluirRetornoDias" class="form-control" min="1" max="365" value="10">
+                        </div>
+                        <div class="col-7">
+                            <label class="form-label small">Motivo do retorno</label>
+                            <input type="text" name="retorno_titulo" id="concluirRetornoTitulo" class="form-control" placeholder="Ex: Retirada de pontos">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -859,7 +920,18 @@ document.addEventListener('click', function (e) {
     if (btnConcluir) {
         document.getElementById('concluirId').value = btnConcluir.dataset.id;
         document.getElementById('concluirTitulo').textContent = btnConcluir.dataset.titulo;
+        // Reseta o bloco de retorno a cada abertura — o modal é reaproveitado
+        // pra qualquer agendamento, sem isso ficava marcado do anterior.
+        document.getElementById('concluirAgendarRetorno').checked = false;
+        document.getElementById('concluirRetornoCampos').style.display = 'none';
+        document.getElementById('concluirRetornoDias').value = 10;
+        document.getElementById('concluirRetornoTitulo').value = 'Retorno — ' + btnConcluir.dataset.titulo;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConcluir')).show();
+        return;
+    }
+
+    if (e.target.id === 'concluirAgendarRetorno') {
+        document.getElementById('concluirRetornoCampos').style.display = e.target.checked ? '' : 'none';
         return;
     }
 
@@ -975,6 +1047,7 @@ function mostrarDiaMes(data, diaNum) {
                  + '<div class="flex-grow-1 min-w-0">'
                  + '<div class="d-flex align-items-center gap-1 flex-wrap">'
                  + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
+                 + (ag.origem ? '<span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>' : '')
                  + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
                  + '<span class="fw-medium">' + iconeHtmlPicker(ag.icone) + escHtmlPicker(ag.animal) + '</span>'
                  + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'
