@@ -15,11 +15,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fkAnimal = trim($_POST['animal'] ?? '');
     $fkTipo   = trim($_POST['tipo']   ?? '');
     $dataAp   = trim($_POST['data_aplicacao'] ?? '');
-    $proximaManual = trim($_POST['proxima_data'] ?? '');
-    $ciclica  = !empty($_POST['ciclica']);
+    $proximaManual    = trim($_POST['proxima_data'] ?? '');
+    $sequenciaExtra   = array_values(array_filter(array_map('trim', $_POST['proxima_data_extra'] ?? []), fn($v) => $v !== ''));
+    $ciclica          = !empty($_POST['ciclica']);
+    $intervaloValor   = (int) ($_POST['intervalo_valor'] ?? 0);
+    $intervaloUnidade = trim($_POST['intervalo_unidade'] ?? '');
     $vet      = trim($_POST['veterinario'] ?? '');
     $lote     = trim($_POST['lote'] ?? '');
     $obs      = trim($_POST['observacoes'] ?? '');
+
+    $unidadesValidas = ['semana' => 'weeks', 'mes' => 'months', 'ano' => 'years'];
 
     if ($fkAnimal === '' || $fkTipo === '' || $dataAp === '') {
         redirecionarComMensagem(BASE . '/painel/registrar_vacina.php?animal=' . $fkAnimal, 'Animal, vacina e data de aplicação são obrigatórios.', 'warning');
@@ -30,32 +35,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tipoStmt->execute([':id' => $fkTipo]);
         $tipo = $tipoStmt->fetch();
 
+        // Cíclica não depende mais do intervalo do catálogo — a pessoa
+        // escolhe livremente "a cada X semanas/meses/anos" na hora.
+        $ciclica = $ciclica && $intervaloValor > 0 && isset($unidadesValidas[$intervaloUnidade]);
+
         $proximaData = null;
-        if ($proximaManual !== '') {
+        if ($ciclica) {
+            $dt = new DateTimeImmutable($dataAp);
+            $proximaData = $dt->modify('+' . $intervaloValor . ' ' . $unidadesValidas[$intervaloUnidade])->format('Y-m-d');
+        } elseif ($proximaManual !== '') {
             $proximaData = $proximaManual;
         } elseif ($tipo && $tipo['IntervaloMeses']) {
             $dt = new DateTimeImmutable($dataAp);
             $proximaData = $dt->modify('+' . (int) $tipo['IntervaloMeses'] . ' months')->format('Y-m-d');
         }
 
-        // Cíclica só faz sentido se a vacina tem intervalo de reforço — sem
-        // isso não tem por quanto tempo avançar a data sozinha.
-        $ciclica = $ciclica && $tipo && $tipo['IntervaloMeses'] && $proximaData;
-
         $pdo->prepare(
-            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, FKVeterinario, Lote, Observacoes)
-             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :vet, :lote, :obs)'
+            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, IntervaloCiclicoValor, IntervaloCiclicoUnidade, FKVeterinario, Lote, Observacoes)
+             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :intvalor, :intunidade, :vet, :lote, :obs)'
         )->execute([
-            ':id'      => gerarUuid(),
-            ':animal'  => $fkAnimal,
-            ':tipo'    => $fkTipo,
-            ':data'    => $dataAp,
-            ':proxima' => $proximaData,
-            ':ciclica' => $ciclica ? 1 : 0,
-            ':vet'     => $vet ?: null,
-            ':lote'    => $lote ?: null,
-            ':obs'     => $obs ?: null,
+            ':id'         => gerarUuid(),
+            ':animal'     => $fkAnimal,
+            ':tipo'       => $fkTipo,
+            ':data'       => $dataAp,
+            ':proxima'    => $proximaData,
+            ':ciclica'    => $ciclica ? 1 : 0,
+            ':intvalor'   => $ciclica ? $intervaloValor : null,
+            ':intunidade' => $ciclica ? $intervaloUnidade : null,
+            ':vet'        => $vet ?: null,
+            ':lote'       => $lote ?: null,
+            ':obs'        => $obs ?: null,
         ]);
+
+        // Sequência manual: cada data extra vira um lembrete futuro
+        // independente (ainda não aplicado — DataAplicacao fica em branco),
+        // pra quem prefere planejar várias doses na mão de uma vez em vez de
+        // depender do modo cíclico.
+        if (!$ciclica) {
+            foreach ($sequenciaExtra as $dataExtra) {
+                $pdo->prepare(
+                    'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKVeterinario, Observacoes)
+                     VALUES (:id, :animal, :tipo, NULL, :proxima, :vet, :obs)'
+                )->execute([
+                    ':id'      => gerarUuid(),
+                    ':animal'  => $fkAnimal,
+                    ':tipo'    => $fkTipo,
+                    ':proxima' => $dataExtra,
+                    ':vet'     => $vet ?: null,
+                    ':obs'     => 'Aplicação futura planejada manualmente.',
+                ]);
+            }
+        }
 
         redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $fkAnimal, 'Vacina registrada com sucesso!', 'success');
     } catch (PDOException $e) {
@@ -141,23 +171,47 @@ require_once __DIR__ . '/../geral/header.php';
                     <?= campoPicker('rvTipo', 'tipo', 'Selecione a vacina', '', obrigatorio: true, comBusca: false) ?>
                 </div>
 
-                <div class="row g-2 mb-3">
+                <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label">Data de aplicação *</label>
                         <input type="date" name="data_aplicacao" class="form-control" required max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Próxima dose <span class="text-secondary">(opcional)</span></label>
-                        <input type="date" name="proxima_data" class="form-control">
+                        <input type="date" name="proxima_data" class="form-control" id="rvProximaData">
                         <div class="form-text">Deixe em branco para calcular automaticamente pelo intervalo da vacina.</div>
                     </div>
                 </div>
 
-                <div class="form-check mb-3" id="ciclicaWrap" style="display:none;">
-                    <input class="form-check-input" type="checkbox" name="ciclica" id="rvCiclica" value="1">
-                    <label class="form-check-label" for="rvCiclica">
-                        Repetir automaticamente <span class="text-secondary" id="rvCiclicaTexto"></span>
-                    </label>
+                <div id="rvSequenciaExtra" class="mb-1"></div>
+                <div class="mb-3">
+                    <button type="button" id="rvAddSequencia" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-plus-lg me-1"></i> Adicionar outra data
+                    </button>
+                    <span class="text-secondary small ms-1">planeja uma sequência de aplicações futuras, uma por uma</span>
+                </div>
+
+                <div class="mb-3 p-3 rounded-3" style="background:var(--bg-hover);">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="ciclica" id="rvCiclica" value="1">
+                        <label class="form-check-label fw-medium" for="rvCiclica">
+                            Repetir automaticamente <span class="text-secondary fw-normal">(em vez da sequência manual acima)</span>
+                        </label>
+                    </div>
+                    <div id="rvIntervaloWrap" class="row g-2 align-items-center" style="display:none;">
+                        <label class="col-auto small text-secondary mb-0">A cada</label>
+                        <div class="col-3">
+                            <input type="number" name="intervalo_valor" id="rvIntervaloValor" class="form-control form-control-sm" min="1" max="120" value="12">
+                        </div>
+                        <div class="col-auto">
+                            <select name="intervalo_unidade" id="rvIntervaloUnidade" class="form-select form-select-sm">
+                                <option value="semana">semana(s)</option>
+                                <option value="mes" selected>mês(es)</option>
+                                <option value="ano">ano(s)</option>
+                            </select>
+                        </div>
+                        <div class="col-auto small text-secondary">sem precisar reaplicar pra gerar a próxima data</div>
+                    </div>
                 </div>
 
                 <div class="row g-2 mb-3">
@@ -212,17 +266,36 @@ function vacinasParaEspecie(especie) {
     return TIPOS_VACINA.filter(function (t) { return !especie || !t.especie || t.especie === especie; });
 }
 
-function atualizarCiclicaWrap(tipoId) {
+// Pré-preenche o "a cada X" com o intervalo de reforço do catálogo da
+// vacina, se ela tiver um — só um ponto de partida, continua editável.
+function atualizarIntervaloSugerido(tipoId) {
     var t = TIPOS_VACINA.find(function (x) { return x.id === tipoId; });
-    var wrap = document.getElementById('ciclicaWrap');
     if (t && t.intervalo) {
-        wrap.style.display = '';
-        document.getElementById('rvCiclicaTexto').textContent = '(a cada ' + t.intervalo + ' meses, sem precisar reaplicar pra gerar a próxima data)';
-    } else {
-        wrap.style.display = 'none';
-        document.getElementById('rvCiclica').checked = false;
+        document.getElementById('rvIntervaloValor').value = t.intervalo;
+        document.getElementById('rvIntervaloUnidade').value = 'mes';
     }
 }
+
+// Cíclica e sequência manual são estratégias alternativas pra mesma coisa
+// (gerar as próximas datas) — liga uma, desliga a outra, pra não ficar uma
+// combinação confusa de "repete sozinha" + "mas também tem 3 datas na mão".
+var rvCiclicaChk = document.getElementById('rvCiclica');
+rvCiclicaChk.addEventListener('change', function () {
+    document.getElementById('rvIntervaloWrap').style.display = this.checked ? '' : 'none';
+    document.getElementById('rvProximaData').disabled = this.checked;
+    document.getElementById('rvSequenciaExtra').style.display = this.checked ? 'none' : '';
+    document.getElementById('rvAddSequencia').disabled = this.checked;
+});
+
+document.getElementById('rvAddSequencia').addEventListener('click', function () {
+    var wrap = document.createElement('div');
+    wrap.className = 'input-group input-group-sm mb-2';
+    wrap.style.maxWidth = '260px';
+    wrap.innerHTML = '<input type="date" name="proxima_data_extra[]" class="form-control" required>'
+        + '<button type="button" class="btn btn-outline-danger">&times;</button>';
+    wrap.querySelector('button').addEventListener('click', function () { wrap.remove(); });
+    document.getElementById('rvSequenciaExtra').appendChild(wrap);
+});
 
 var rvTipoPk = initPicker({
     pickerId: 'rvTipoPicker', triggerId: 'rvTipoTrigger', dropdownId: 'rvTipoDropdown',
@@ -232,7 +305,7 @@ var rvTipoPk = initPicker({
     renderItem: function (t) { return { title: labelVacina(t) }; },
     matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nenhuma vacina encontrada.',
-    onSelect: function (t) { atualizarCiclicaWrap(t.id); },
+    onSelect: function (t) { atualizarIntervaloSugerido(t.id); },
 });
 
 var animalPicker = initPicker({

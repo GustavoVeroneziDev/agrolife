@@ -61,26 +61,34 @@ function processarLote(PDO $pdo, string $sql, string $tipoConfig, string $tipoLo
 try {
     // Vacinas cíclicas (ex: antirrábica anual) renovam a própria data sozinhas
     // quando vencem — sem isso, cada ciclo dependia do vet reaplicar de
-    // verdade só pra ProximaData ser recalculada de novo. Roda em loop
-    // (limitado) porque, se o cron ficou parado um tempo, uma vacina pode
-    // estar atrasada por mais de um ciclo inteiro.
-    $sqlAvancar = "
-        UPDATE RegistrosVacinas rv
-        JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
-        SET rv.ProximaData = DATE_ADD(rv.ProximaData, INTERVAL tv.IntervaloMeses MONTH),
-            rv.NotificacaoSemanaEnviada = 0,
-            rv.NotificacaoDiaEnviada = 0
-        WHERE rv.Ciclica = 1
-          AND rv.ProximaData < CURDATE()
-          AND tv.IntervaloMeses IS NOT NULL AND tv.IntervaloMeses > 0
-    ";
+    // verdade só pra ProximaData ser recalculada de novo. O intervalo é o
+    // que a pessoa escolheu na hora (semana/mês/ano), não mais um valor fixo
+    // do catálogo — por isso uma query separada por unidade (DATE_ADD exige
+    // a unidade como palavra-chave fixa, não dá pra parametrizar). Cada uma
+    // roda em loop (limitado) porque, se o cron ficou parado um tempo, uma
+    // vacina pode estar atrasada por mais de um ciclo inteiro.
+    $unidadesSql = ['semana' => 'WEEK', 'mes' => 'MONTH', 'ano' => 'YEAR'];
     $totalAvancadas = 0;
-    $iteracoes = 0;
-    do {
-        $afetadas = $pdo->exec($sqlAvancar);
-        $totalAvancadas += $afetadas;
-        $iteracoes++;
-    } while ($afetadas > 0 && $iteracoes < 60);
+    foreach ($unidadesSql as $unidade => $unidadeSql) {
+        $sqlAvancar = "
+            UPDATE RegistrosVacinas
+            SET ProximaData = DATE_ADD(ProximaData, INTERVAL IntervaloCiclicoValor {$unidadeSql}),
+                NotificacaoSemanaEnviada = 0,
+                NotificacaoDiaEnviada = 0
+            WHERE Ciclica = 1
+              AND ProximaData < CURDATE()
+              AND IntervaloCiclicoUnidade = :unidade
+              AND IntervaloCiclicoValor IS NOT NULL AND IntervaloCiclicoValor > 0
+        ";
+        $stmt = $pdo->prepare($sqlAvancar);
+        $iteracoes = 0;
+        do {
+            $stmt->execute([':unidade' => $unidade]);
+            $afetadas = $stmt->rowCount();
+            $totalAvancadas += $afetadas;
+            $iteracoes++;
+        } while ($afetadas > 0 && $iteracoes < 60);
+    }
     if ($totalAvancadas > 0) {
         echo "[CICLICA] {$totalAvancadas} renovação(ões) de vacina cíclica avançada(s) automaticamente." . PHP_EOL;
     }

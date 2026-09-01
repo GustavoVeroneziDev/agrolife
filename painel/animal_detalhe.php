@@ -302,14 +302,23 @@ require_once __DIR__ . '/../geral/header.php';
                                 </tr>
                             </thead>
                             <tbody>
+                                <?php
+                                    $unidadesPlural = ['semana' => 'semana(s)', 'mes' => 'mês(es)', 'ano' => 'ano(s)'];
+                                ?>
                                 <?php foreach ($historico as $reg): ?>
                                     <tr data-id="<?= h($reg['IDRegistro']) ?>">
                                         <td class="px-4 fw-medium"><?= h($reg['NomeVacina']) ?></td>
-                                        <td class="small"><?= formatarData($reg['DataAplicacao']) ?></td>
+                                        <td class="small">
+                                            <?php if ($reg['DataAplicacao']): ?>
+                                                <?= formatarData($reg['DataAplicacao']) ?>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary">Planejada</span>
+                                            <?php endif ?>
+                                        </td>
                                         <td class="small">
                                             <?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?>
                                             <?php if ($reg['Ciclica']): ?>
-                                                <i class="bi bi-arrow-repeat text-accent ms-1" title="Cíclica — renova sozinha a cada <?= (int) $reg['IntervaloMeses'] ?> meses"></i>
+                                                <i class="bi bi-arrow-repeat text-accent ms-1" title="Cíclica — renova sozinha a cada <?= (int) $reg['IntervaloCiclicoValor'] ?> <?= $unidadesPlural[$reg['IntervaloCiclicoUnidade']] ?? 'meses' ?>"></i>
                                             <?php endif ?>
                                         </td>
                                         <td><?= labelSituacaoVacina($reg['ProximaData']) ?></td>
@@ -320,7 +329,8 @@ require_once __DIR__ . '/../geral/header.php';
                                                     data-vacina="<?= h($reg['NomeVacina']) ?>"
                                                     data-proxima="<?= h($reg['ProximaData'] ?? '') ?>"
                                                     data-ciclica="<?= $reg['Ciclica'] ? '1' : '0' ?>"
-                                                    data-intervalo="<?= (int) ($reg['IntervaloMeses'] ?? 0) ?>"
+                                                    data-intervalo-valor="<?= (int) ($reg['IntervaloCiclicoValor'] ?: ($reg['IntervaloMeses'] ?: 12)) ?>"
+                                                    data-intervalo-unidade="<?= h($reg['IntervaloCiclicoUnidade'] ?: 'mes') ?>"
                                                     title="Definir/agendar próxima aplicação">
                                                     <i class="bi bi-calendar-plus"></i>
                                                 </button>
@@ -514,11 +524,22 @@ require_once __DIR__ . '/../geral/header.php';
                     <label class="form-label">Data</label>
                     <input type="date" id="pvData" class="form-control">
                 </div>
-                <div class="form-check mb-1" id="pvCiclicaWrap">
+                <div class="form-check mb-2">
                     <input class="form-check-input" type="checkbox" id="pvCiclica">
-                    <label class="form-check-label" for="pvCiclica">
-                        Repetir automaticamente <span class="text-secondary" id="pvCiclicaTexto"></span>
-                    </label>
+                    <label class="form-check-label" for="pvCiclica">Repetir automaticamente</label>
+                </div>
+                <div id="pvIntervaloWrap" class="row g-2 align-items-center mb-2" style="display:none;">
+                    <label class="col-auto small text-secondary mb-0">A cada</label>
+                    <div class="col-3">
+                        <input type="number" id="pvIntervaloValor" class="form-control form-control-sm" min="1" max="120" value="12">
+                    </div>
+                    <div class="col-auto">
+                        <select id="pvIntervaloUnidade" class="form-select form-select-sm">
+                            <option value="semana">semana(s)</option>
+                            <option value="mes" selected>mês(es)</option>
+                            <option value="ano">ano(s)</option>
+                        </select>
+                    </div>
                 </div>
                 <p class="small text-secondary mb-0">
                     Pra pré-agendar mais de uma data futura, salve essa e repita a operação depois que ela passar —
@@ -567,19 +588,16 @@ document.querySelectorAll('.btn-editar-proxima-vacina').forEach(function (btn) {
         document.getElementById('pvVacina').textContent = btn.dataset.vacina;
         document.getElementById('pvData').value = btn.dataset.proxima || '';
         document.getElementById('pvCiclica').checked = btn.dataset.ciclica === '1';
-
-        var intervalo = parseInt(btn.dataset.intervalo, 10) || 0;
-        var wrap = document.getElementById('pvCiclicaWrap');
-        if (intervalo > 0) {
-            wrap.style.display = '';
-            document.getElementById('pvCiclicaTexto').textContent = '(a cada ' + intervalo + ' meses)';
-        } else {
-            wrap.style.display = 'none';
-            document.getElementById('pvCiclica').checked = false;
-        }
+        document.getElementById('pvIntervaloValor').value = btn.dataset.intervaloValor || 12;
+        document.getElementById('pvIntervaloUnidade').value = btn.dataset.intervaloUnidade || 'mes';
+        document.getElementById('pvIntervaloWrap').style.display = btn.dataset.ciclica === '1' ? '' : 'none';
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProximaVacina')).show();
     });
+});
+
+document.getElementById('pvCiclica').addEventListener('change', function () {
+    document.getElementById('pvIntervaloWrap').style.display = this.checked ? '' : 'none';
 });
 
 document.getElementById('pvSalvar').addEventListener('click', function () {
@@ -596,6 +614,8 @@ document.getElementById('pvSalvar').addEventListener('click', function () {
             id: pvIdAtual,
             proxima_data: data,
             ciclica: document.getElementById('pvCiclica').checked,
+            intervalo_valor: parseInt(document.getElementById('pvIntervaloValor').value, 10) || 0,
+            intervalo_unidade: document.getElementById('pvIntervaloUnidade').value,
             csrf_token: '<?= gerarTokenCSRF() ?>',
         }),
     })
