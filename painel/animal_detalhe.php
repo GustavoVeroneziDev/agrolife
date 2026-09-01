@@ -90,7 +90,7 @@ try {
     }
 
     $historico = $pdo->prepare(
-        'SELECT rv.*, tv.Nome AS NomeVacina
+        'SELECT rv.*, tv.Nome AS NomeVacina, tv.IntervaloMeses
          FROM RegistrosVacinas rv
          JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
          WHERE rv.FKAnimal = :id
@@ -306,10 +306,24 @@ require_once __DIR__ . '/../geral/header.php';
                                     <tr data-id="<?= h($reg['IDRegistro']) ?>">
                                         <td class="px-4 fw-medium"><?= h($reg['NomeVacina']) ?></td>
                                         <td class="small"><?= formatarData($reg['DataAplicacao']) ?></td>
-                                        <td class="small"><?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?></td>
+                                        <td class="small">
+                                            <?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?>
+                                            <?php if ($reg['Ciclica']): ?>
+                                                <i class="bi bi-arrow-repeat text-accent ms-1" title="Cíclica — renova sozinha a cada <?= (int) $reg['IntervaloMeses'] ?> meses"></i>
+                                            <?php endif ?>
+                                        </td>
                                         <td><?= labelSituacaoVacina($reg['ProximaData']) ?></td>
-                                        <td>
+                                        <td class="text-nowrap">
                                             <?php if ($souAdmin): ?>
+                                                <button class="btn btn-sm btn-outline-secondary btn-editar-proxima-vacina"
+                                                    data-id="<?= h($reg['IDRegistro']) ?>"
+                                                    data-vacina="<?= h($reg['NomeVacina']) ?>"
+                                                    data-proxima="<?= h($reg['ProximaData'] ?? '') ?>"
+                                                    data-ciclica="<?= $reg['Ciclica'] ? '1' : '0' ?>"
+                                                    data-intervalo="<?= (int) ($reg['IntervaloMeses'] ?? 0) ?>"
+                                                    title="Definir/agendar próxima aplicação">
+                                                    <i class="bi bi-calendar-plus"></i>
+                                                </button>
                                                 <button class="btn btn-sm btn-outline-danger btn-excluir-vacina"
                                                     data-id="<?= h($reg['IDRegistro']) ?>"
                                                     data-confirm="Excluir este registro de vacina?">
@@ -488,6 +502,37 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </div>
 
+<div class="modal fade" id="modalProximaVacina" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold">Próxima aplicação: <span id="pvVacina"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Data</label>
+                    <input type="date" id="pvData" class="form-control">
+                </div>
+                <div class="form-check mb-1" id="pvCiclicaWrap">
+                    <input class="form-check-input" type="checkbox" id="pvCiclica">
+                    <label class="form-check-label" for="pvCiclica">
+                        Repetir automaticamente <span class="text-secondary" id="pvCiclicaTexto"></span>
+                    </label>
+                </div>
+                <p class="small text-secondary mb-0">
+                    Pra pré-agendar mais de uma data futura, salve essa e repita a operação depois que ela passar —
+                    ou marque "repetir automaticamente" pra deixar o sistema renovando sozinho.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="pvSalvar" class="btn btn-accent"><i class="bi bi-check2 me-1"></i> Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 var EA_RACAS = <?= json_encode($racas, JSON_UNESCAPED_UNICODE) ?>.map(function (n) { return { nome: n }; });
 
@@ -513,6 +558,56 @@ initPicker({
     renderItem: function (s) { return { title: s.label, icon: s.icon }; },
     matches: function (s, q) { return s.label.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nada encontrado.',
+});
+
+var pvIdAtual = null;
+document.querySelectorAll('.btn-editar-proxima-vacina').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        pvIdAtual = btn.dataset.id;
+        document.getElementById('pvVacina').textContent = btn.dataset.vacina;
+        document.getElementById('pvData').value = btn.dataset.proxima || '';
+        document.getElementById('pvCiclica').checked = btn.dataset.ciclica === '1';
+
+        var intervalo = parseInt(btn.dataset.intervalo, 10) || 0;
+        var wrap = document.getElementById('pvCiclicaWrap');
+        if (intervalo > 0) {
+            wrap.style.display = '';
+            document.getElementById('pvCiclicaTexto').textContent = '(a cada ' + intervalo + ' meses)';
+        } else {
+            wrap.style.display = 'none';
+            document.getElementById('pvCiclica').checked = false;
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProximaVacina')).show();
+    });
+});
+
+document.getElementById('pvSalvar').addEventListener('click', function () {
+    var data = document.getElementById('pvData').value;
+    if (!data) {
+        vsToast('Escolha uma data.', 'warning');
+        return;
+    }
+    fetch(BASE + '/painel/api_vacina.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            acao: 'editar_proxima',
+            id: pvIdAtual,
+            proxima_data: data,
+            ciclica: document.getElementById('pvCiclica').checked,
+            csrf_token: '<?= gerarTokenCSRF() ?>',
+        }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+        if (d.ok) {
+            vsRecarregarPreservandoScroll();
+        } else {
+            vsToast(d.msg || 'Erro ao salvar.', 'danger');
+        }
+    })
+    .catch(function () { vsToast('Falha na conexão.', 'danger'); });
 });
 
 document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {

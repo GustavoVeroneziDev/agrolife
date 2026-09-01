@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fkTipo   = trim($_POST['tipo']   ?? '');
     $dataAp   = trim($_POST['data_aplicacao'] ?? '');
     $proximaManual = trim($_POST['proxima_data'] ?? '');
+    $ciclica  = !empty($_POST['ciclica']);
     $vet      = trim($_POST['veterinario'] ?? '');
     $lote     = trim($_POST['lote'] ?? '');
     $obs      = trim($_POST['observacoes'] ?? '');
@@ -37,15 +38,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $proximaData = $dt->modify('+' . (int) $tipo['IntervaloMeses'] . ' months')->format('Y-m-d');
         }
 
+        // Cíclica só faz sentido se a vacina tem intervalo de reforço — sem
+        // isso não tem por quanto tempo avançar a data sozinha.
+        $ciclica = $ciclica && $tipo && $tipo['IntervaloMeses'] && $proximaData;
+
         $pdo->prepare(
-            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKVeterinario, Lote, Observacoes)
-             VALUES (:id, :animal, :tipo, :data, :proxima, :vet, :lote, :obs)'
+            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, FKVeterinario, Lote, Observacoes)
+             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :vet, :lote, :obs)'
         )->execute([
             ':id'      => gerarUuid(),
             ':animal'  => $fkAnimal,
             ':tipo'    => $fkTipo,
             ':data'    => $dataAp,
             ':proxima' => $proximaData,
+            ':ciclica' => $ciclica ? 1 : 0,
             ':vet'     => $vet ?: null,
             ':lote'    => $lote ?: null,
             ':obs'     => $obs ?: null,
@@ -147,6 +153,13 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                 </div>
 
+                <div class="form-check mb-3" id="ciclicaWrap" style="display:none;">
+                    <input class="form-check-input" type="checkbox" name="ciclica" id="rvCiclica" value="1">
+                    <label class="form-check-label" for="rvCiclica">
+                        Repetir automaticamente <span class="text-secondary" id="rvCiclicaTexto"></span>
+                    </label>
+                </div>
+
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Veterinário</label>
@@ -199,6 +212,18 @@ function vacinasParaEspecie(especie) {
     return TIPOS_VACINA.filter(function (t) { return !especie || !t.especie || t.especie === especie; });
 }
 
+function atualizarCiclicaWrap(tipoId) {
+    var t = TIPOS_VACINA.find(function (x) { return x.id === tipoId; });
+    var wrap = document.getElementById('ciclicaWrap');
+    if (t && t.intervalo) {
+        wrap.style.display = '';
+        document.getElementById('rvCiclicaTexto').textContent = '(a cada ' + t.intervalo + ' meses, sem precisar reaplicar pra gerar a próxima data)';
+    } else {
+        wrap.style.display = 'none';
+        document.getElementById('rvCiclica').checked = false;
+    }
+}
+
 var rvTipoPk = initPicker({
     pickerId: 'rvTipoPicker', triggerId: 'rvTipoTrigger', dropdownId: 'rvTipoDropdown',
     searchId: 'rvTipoSearch', listId: 'rvTipoList', hiddenId: 'inprvTipoId', labelId: 'rvTipoLabel',
@@ -207,6 +232,7 @@ var rvTipoPk = initPicker({
     renderItem: function (t) { return { title: labelVacina(t) }; },
     matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nenhuma vacina encontrada.',
+    onSelect: function (t) { atualizarCiclicaWrap(t.id); },
 });
 
 var animalPicker = initPicker({

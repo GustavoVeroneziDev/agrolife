@@ -59,6 +59,32 @@ function processarLote(PDO $pdo, string $sql, string $tipoConfig, string $tipoLo
 }
 
 try {
+    // Vacinas cíclicas (ex: antirrábica anual) renovam a própria data sozinhas
+    // quando vencem — sem isso, cada ciclo dependia do vet reaplicar de
+    // verdade só pra ProximaData ser recalculada de novo. Roda em loop
+    // (limitado) porque, se o cron ficou parado um tempo, uma vacina pode
+    // estar atrasada por mais de um ciclo inteiro.
+    $sqlAvancar = "
+        UPDATE RegistrosVacinas rv
+        JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
+        SET rv.ProximaData = DATE_ADD(rv.ProximaData, INTERVAL tv.IntervaloMeses MONTH),
+            rv.NotificacaoSemanaEnviada = 0,
+            rv.NotificacaoDiaEnviada = 0
+        WHERE rv.Ciclica = 1
+          AND rv.ProximaData < CURDATE()
+          AND tv.IntervaloMeses IS NOT NULL AND tv.IntervaloMeses > 0
+    ";
+    $totalAvancadas = 0;
+    $iteracoes = 0;
+    do {
+        $afetadas = $pdo->exec($sqlAvancar);
+        $totalAvancadas += $afetadas;
+        $iteracoes++;
+    } while ($afetadas > 0 && $iteracoes < 60);
+    if ($totalAvancadas > 0) {
+        echo "[CICLICA] {$totalAvancadas} renovação(ões) de vacina cíclica avançada(s) automaticamente." . PHP_EOL;
+    }
+
     $sqlSemana = "
         SELECT rv.IDRegistro, rv.ProximaData, a.Nome AS NomeAnimal,
                u.Nome AS NomeDono, u.Telefone, tv.Nome AS NomeVacina
