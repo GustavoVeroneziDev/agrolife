@@ -53,9 +53,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $intervaloValor = max(1, min(120, $intervaloValor));
 
     try {
-        $tipoStmt = $pdo->prepare('SELECT IntervaloMeses FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
+        $tipoStmt = $pdo->prepare('SELECT Nome, IntervaloMeses FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
         $tipoStmt->execute([':id' => $fkTipo]);
         $tipo = $tipoStmt->fetch();
+
+        // Uma vacina com data futura é um compromisso de verdade — sem
+        // aparecer na Agenda, o vet não tinha como lembrar de atender
+        // naquele dia (só quem olhasse a carteirinha do animal saberia).
+        // Reaproveita o mesmo padrão de "novo agendamento": evento +
+        // WhatsApp pro cliente.
+        $criarAgendamentoVacina = function (string $data) use ($pdo, $fkAnimal, $tipo, $vet) {
+            $inicio = $data . ' 09:00:00';
+            $fim    = date('Y-m-d H:i:s', strtotime($inicio) + 30 * 60);
+            $agId   = gerarUuid();
+            $titulo = 'Vacina: ' . ($tipo['Nome'] ?? 'aplicação');
+
+            $pdo->prepare(
+                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim)
+                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim)'
+            )->execute([
+                ':id' => $agId, ':animal' => $fkAnimal, ':vet' => $vet ?: null,
+                ':tipo' => 'procedimento', ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,
+            ]);
+            registrarEventoAgendamento($pdo, $agId, 'criado', 'Planejado a partir do registro de vacina.');
+
+            $donoStmt = $pdo->prepare(
+                'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+            );
+            $donoStmt->execute([':id' => $fkAnimal]);
+            $dono = $donoStmt->fetch();
+            if ($dono && $dono['Telefone']) {
+                $msg = montarMensagemNovoAgendamento($dono['NomeCliente'], $dono['NomeAnimal'], 'procedimento', $titulo, $inicio);
+                enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+            }
+
+            return $agId;
+        };
 
         // Cíclica não depende mais do intervalo do catálogo — a pessoa
         // escolhe livremente "a cada X semanas/meses/anos" na hora.
@@ -83,9 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Só entra na Agenda quando a aplicação em si ainda não aconteceu —
+        // uma data de hoje/passado é um registro histórico normal, não um
+        // compromisso a lembrar.
+        $fkAgendamentoPrimario = $dataAp > date('Y-m-d') ? $criarAgendamentoVacina($dataAp) : null;
+
         $pdo->prepare(
-            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, IntervaloCiclicoValor, IntervaloCiclicoUnidade, FKVeterinario, Lote, Observacoes)
-             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :intvalor, :intunidade, :vet, :lote, :obs)'
+            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, IntervaloCiclicoValor, IntervaloCiclicoUnidade, FKAgendamento, FKVeterinario, Lote, Observacoes)
+             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :intvalor, :intunidade, :agendamento, :vet, :lote, :obs)'
         )->execute([
             ':id'         => gerarUuid(),
             ':animal'     => $fkAnimal,
@@ -95,25 +133,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':ciclica'    => $ciclica ? 1 : 0,
             ':intvalor'   => $ciclica ? $intervaloValor : null,
             ':intunidade' => $ciclica ? $intervaloUnidade : null,
+            ':agendamento' => $fkAgendamentoPrimario,
             ':vet'        => $vet ?: null,
             ':lote'       => $lote ?: null,
             ':obs'        => $obs ?: null,
         ]);
 
         // Sequência manual: cada data extra vira um lembrete futuro
-        // independente (ainda não aplicado — DataAplicacao fica em branco),
-        // pra quem prefere planejar várias doses na mão de uma vez em vez de
-        // depender do modo cíclico.
+        // independente (ainda não aplicado — DataAplicacao fica em branco) E
+        // um compromisso na Agenda, pra quem prefere planejar várias doses
+        // na mão de uma vez em vez de depender do modo cíclico.
         if (!$ciclica) {
             foreach ($sequenciaExtra as $dataExtra) {
+                $fkAg = $criarAgendamentoVacina($dataExtra);
                 $pdo->prepare(
-                    'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKVeterinario, Observacoes)
-                     VALUES (:id, :animal, :tipo, NULL, :proxima, :vet, :obs)'
+                    'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKAgendamento, FKVeterinario, Observacoes)
+                     VALUES (:id, :animal, :tipo, NULL, :proxima, :agendamento, :vet, :obs)'
                 )->execute([
                     ':id'      => gerarUuid(),
                     ':animal'  => $fkAnimal,
                     ':tipo'    => $fkTipo,
                     ':proxima' => $dataExtra,
+                    ':agendamento' => $fkAg,
                     ':vet'     => $vet ?: null,
                     ':obs'     => 'Aplicação futura planejada manualmente.',
                 ]);

@@ -308,7 +308,7 @@ require_once __DIR__ . '/../geral/header.php';
                                 <?php foreach ($historico as $reg): ?>
                                     <tr data-id="<?= h($reg['IDRegistro']) ?>">
                                         <td class="px-4 fw-medium"><?= h($reg['NomeVacina']) ?></td>
-                                        <td class="small"><?= labelAplicacaoVacina($reg['DataAplicacao']) ?></td>
+                                        <td class="small"><?= labelAplicacaoVacina($reg['DataAplicacao'], $reg['ProximaData']) ?></td>
                                         <td class="small">
                                             <?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?>
                                             <?php if ($reg['Ciclica']): ?>

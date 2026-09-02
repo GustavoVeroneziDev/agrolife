@@ -30,7 +30,21 @@ $id   = trim($dados['id'] ?? '');
 
 if ($acao === 'excluir' && $id) {
     try {
+        // Se essa vacina tinha um compromisso vinculado na Agenda (data
+        // futura planejada), cancela ele também — sem isso ficava um
+        // agendamento órfão de "Vacina: X" sem nenhum registro por trás.
+        $vinculo = $pdo->prepare('SELECT FKAgendamento FROM RegistrosVacinas WHERE IDRegistro = :id LIMIT 1');
+        $vinculo->execute([':id' => $id]);
+        $fkAgendamento = $vinculo->fetchColumn();
+
         $pdo->prepare('DELETE FROM RegistrosVacinas WHERE IDRegistro = :id')->execute([':id' => $id]);
+
+        if ($fkAgendamento) {
+            $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :ag AND Status NOT IN ('concluido', 'cancelado')")
+                ->execute([':ag' => $fkAgendamento]);
+            registrarEventoAgendamento($pdo, $fkAgendamento, 'cancelado', 'Vacina planejada removida do histórico do animal.');
+        }
+
         echo json_encode(['ok' => true]);
     } catch (PDOException $e) {
         error_log('[ApiVacina] ' . $e->getMessage());

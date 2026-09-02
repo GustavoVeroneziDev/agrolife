@@ -624,16 +624,21 @@ function labelSituacaoVacina(?string $proximaData): string
 }
 
 // Uma aplicação "planejada" ainda não aconteceu de verdade — seja porque não
-// tem DataAplicacao nenhuma (entrada de sequência manual) ou porque a data
-// marcada é no futuro (a pessoa moveu a "Data de aplicação" pra frente de
-// propósito, pra já deixar reservado antes mesmo de acontecer). Compartilhado
-// entre o painel e o portal do cliente pra não duplicar essa regra.
-function labelAplicacaoVacina(?string $dataAplicacao): string
+// tem DataAplicacao nenhuma (entrada de sequência manual, onde a única data
+// que existe é a ProximaData) ou porque a data marcada é no futuro (a pessoa
+// moveu a "Data de aplicação" pra frente de propósito, pra já deixar
+// reservado antes mesmo de acontecer). Em qualquer um dos dois casos, o
+// badge sempre vem com a data — nunca "Planejada" sozinho sem dizer quando,
+// que é exatamente o que ficava confuso antes. Compartilhado entre o painel
+// e o portal do cliente pra não duplicar essa regra.
+function labelAplicacaoVacina(?string $dataAplicacao, ?string $proximaData = null): string
 {
-    if (!$dataAplicacao || $dataAplicacao > date('Y-m-d')) {
-        return '<span class="badge bg-secondary">Planejada</span>';
+    if ($dataAplicacao && $dataAplicacao <= date('Y-m-d')) {
+        return formatarData($dataAplicacao);
     }
-    return formatarData($dataAplicacao);
+    $dataPlanejada = $dataAplicacao ?: $proximaData;
+    $sufixo = $dataPlanejada ? ' · ' . formatarData($dataPlanejada) : '';
+    return '<span class="badge bg-secondary">Planejada</span>' . $sufixo;
 }
 
 function labelStatusAgendamento(string $status): string

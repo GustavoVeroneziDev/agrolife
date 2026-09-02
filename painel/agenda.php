@@ -158,6 +158,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )->execute([':obs' => $obsPos ?: null, ':rc' => $fkRegistroClinico, ':id' => $id]);
             registrarEventoAgendamento($pdo, $id, 'concluido');
 
+            // Se esse compromisso nasceu de uma vacina planejada (data futura
+            // ou sequência manual), concluir aqui é a aplicação acontecendo
+            // de verdade — sem isso a vacina ficava marcada "Planejada" pra
+            // sempre, mesmo depois de já ter sido feita.
+            $pdo->prepare(
+                "UPDATE RegistrosVacinas SET DataAplicacao = :hoje
+                 WHERE FKAgendamento = :ag AND (DataAplicacao IS NULL OR DataAplicacao > :hoje2)"
+            )->execute([':hoje' => date('Y-m-d'), ':hoje2' => date('Y-m-d'), ':ag' => $id]);
+
             // Retorno agendado automaticamente a partir daqui (ex: retirada de
             // pontos após uma cirurgia) — reaproveita animal/veterinário/duração
             // do agendamento original, só desloca a data.
