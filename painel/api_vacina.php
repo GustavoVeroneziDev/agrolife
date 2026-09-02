@@ -53,17 +53,30 @@ if ($acao === 'editar_proxima' && $id) {
         echo json_encode(['ok' => false, 'msg' => 'Data inválida.']);
         exit;
     }
+    if ($proximaData < '2000-01-01' || $proximaData > date('Y-m-d', strtotime('+10 years'))) {
+        echo json_encode(['ok' => false, 'msg' => 'Data fora do intervalo permitido (confira o ano).']);
+        exit;
+    }
 
-    // Cíclica precisa de um intervalo válido pra ter por quanto tempo
-    // avançar a data sozinha depois — a pessoa escolhe livremente, não
-    // depende mais do intervalo do catálogo da vacina.
-    $ciclica = $ciclica && $intervaloValor > 0 && in_array($intervaloUnidade, $unidadesValidas, true);
+    // Cíclica precisa de um intervalo válido pra ter por quanto tempo avançar
+    // a data sozinha depois — a pessoa escolhe livremente, não depende mais
+    // do intervalo do catálogo da vacina. Trava entre 1 e 120 (mesmo limite
+    // do campo na tela) pra um valor absurdo não estourar o DATE_ADD do cron.
+    $intervaloValor = max(1, min(120, $intervaloValor));
+    $ciclica = $ciclica && in_array($intervaloUnidade, $unidadesValidas, true);
 
     try {
-        $existe = $pdo->prepare('SELECT 1 FROM RegistrosVacinas WHERE IDRegistro = :id LIMIT 1');
+        $existe = $pdo->prepare('SELECT DataAplicacao FROM RegistrosVacinas WHERE IDRegistro = :id LIMIT 1');
         $existe->execute([':id' => $id]);
-        if (!$existe->fetchColumn()) {
+        $atual = $existe->fetch();
+        if (!$atual) {
             echo json_encode(['ok' => false, 'msg' => 'Registro não encontrado.']);
+            exit;
+        }
+        // Mesma checagem de sanidade do cadastro: próxima dose antes da
+        // aplicação é normalmente sinal de ano digitado errado.
+        if ($atual['DataAplicacao'] && $proximaData < $atual['DataAplicacao']) {
+            echo json_encode(['ok' => false, 'msg' => 'Essa data é anterior à aplicação — confira o ano.']);
             exit;
         }
 

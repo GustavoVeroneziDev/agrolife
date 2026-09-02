@@ -25,10 +25,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $obs      = trim($_POST['observacoes'] ?? '');
 
     $unidadesValidas = ['semana' => 'weeks', 'mes' => 'months', 'ano' => 'years'];
+    $voltar          = BASE . '/painel/registrar_vacina.php?animal=' . $fkAnimal;
+    $formatoData     = '/^\d{4}-\d{2}-\d{2}$/';
 
     if ($fkAnimal === '' || $fkTipo === '' || $dataAp === '') {
-        redirecionarComMensagem(BASE . '/painel/registrar_vacina.php?animal=' . $fkAnimal, 'Animal, vacina e data de aplicação são obrigatórios.', 'warning');
+        redirecionarComMensagem($voltar, 'Animal, vacina e data de aplicação são obrigatórios.', 'warning');
     }
+
+    // Valida o formato de toda data recebida antes de tentar interpretá-la —
+    // sem isso, um valor mal-formado (ou um ano digitado errado, tipo "2006"
+    // em vez de "2026") só ia estourar mais na frente de um jeito confuso,
+    // ou pior, quebrar a página inteira.
+    $todasAsDatas = array_merge([$dataAp], $proximaManual !== '' ? [$proximaManual] : [], $sequenciaExtra);
+    foreach ($todasAsDatas as $d) {
+        if (!preg_match($formatoData, $d)) {
+            redirecionarComMensagem($voltar, 'Uma das datas informadas é inválida.', 'warning');
+        }
+    }
+    $limitePassado = '2000-01-01';
+    $limiteFuturo  = date('Y-m-d', strtotime('+10 years'));
+    if ($dataAp < $limitePassado || $dataAp > $limiteFuturo) {
+        redirecionarComMensagem($voltar, 'Data de aplicação fora do intervalo permitido (confira o ano).', 'warning');
+    }
+
+    // Trava o intervalo entre 1 e 120 (mesmo limite do campo na tela) — sem
+    // isso um valor absurdo vindo fora da tela normal estouraria o DATE_ADD.
+    $intervaloValor = max(1, min(120, $intervaloValor));
 
     try {
         $tipoStmt = $pdo->prepare('SELECT IntervaloMeses FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
@@ -37,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Cíclica não depende mais do intervalo do catálogo — a pessoa
         // escolhe livremente "a cada X semanas/meses/anos" na hora.
-        $ciclica = $ciclica && $intervaloValor > 0 && isset($unidadesValidas[$intervaloUnidade]);
+        $ciclica = $ciclica && isset($unidadesValidas[$intervaloUnidade]);
 
         $proximaData = null;
         if ($ciclica) {
@@ -48,6 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tipo && $tipo['IntervaloMeses']) {
             $dt = new DateTimeImmutable($dataAp);
             $proximaData = $dt->modify('+' . (int) $tipo['IntervaloMeses'] . ' months')->format('Y-m-d');
+        }
+
+        // A próxima dose (ou qualquer data da sequência) antes da aplicação
+        // não faz sentido — normalmente é sinal de ano digitado errado.
+        if ($proximaData !== null && $proximaData < $dataAp) {
+            redirecionarComMensagem($voltar, 'A próxima dose não pode ser antes da data de aplicação — confira o ano.', 'warning');
+        }
+        foreach ($sequenciaExtra as $dataExtra) {
+            if ($dataExtra < $dataAp) {
+                redirecionarComMensagem($voltar, 'Uma das datas da sequência está antes da aplicação — confira o ano.', 'warning');
+            }
         }
 
         $pdo->prepare(
@@ -171,14 +204,16 @@ require_once __DIR__ . '/../geral/header.php';
                     <?= campoPicker('rvTipo', 'tipo', 'Selecione a vacina', '', obrigatorio: true, comBusca: false) ?>
                 </div>
 
-                <div class="row g-2 mb-2">
+                <div class="row g-2 mb-1">
                     <div class="col-6">
                         <label class="form-label">Data de aplicação *</label>
-                        <input type="date" name="data_aplicacao" class="form-control" required max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
+                        <input type="date" name="data_aplicacao" id="rvDataAplicacao" class="form-control" required
+                            min="2000-01-01" max="<?= date('Y-m-d', strtotime('+10 years')) ?>" value="<?= date('Y-m-d') ?>">
+                        <div class="form-text">Pode ser uma data futura — se ainda não aconteceu, fica marcada como "Planejada".</div>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Próxima dose <span class="text-secondary">(opcional)</span></label>
-                        <input type="date" name="proxima_data" class="form-control" id="rvProximaData">
+                        <input type="date" name="proxima_data" id="rvProximaData" class="form-control" min="2000-01-01" max="<?= date('Y-m-d', strtotime('+10 years')) ?>">
                         <div class="form-text">Deixe em branco para calcular automaticamente pelo intervalo da vacina.</div>
                     </div>
                 </div>
@@ -210,7 +245,13 @@ require_once __DIR__ . '/../geral/header.php';
                                 <option value="ano">ano(s)</option>
                             </select>
                         </div>
-                        <div class="col-auto small text-secondary">sem precisar reaplicar pra gerar a próxima data</div>
+                        <div class="col-12 mt-1">
+                            <span class="text-secondary small me-2">Atalhos:</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rv-atalho-intervalo" data-valor="3" data-unidade="semana">21 dias</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rv-atalho-intervalo" data-valor="1" data-unidade="mes">1 mês</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rv-atalho-intervalo" data-valor="6" data-unidade="mes">6 meses</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rv-atalho-intervalo" data-valor="1" data-unidade="ano">1 ano</button>
+                        </div>
                     </div>
                 </div>
 
@@ -287,11 +328,41 @@ rvCiclicaChk.addEventListener('change', function () {
     document.getElementById('rvAddSequencia').disabled = this.checked;
 });
 
+// Atalhos pros intervalos cíclicos mais comuns na prática — evita ficar
+// digitando "21" + trocar o seletor pra "semana(s)" toda vez.
+document.querySelectorAll('.rv-atalho-intervalo').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        document.getElementById('rvIntervaloValor').value = btn.dataset.valor;
+        document.getElementById('rvIntervaloUnidade').value = btn.dataset.unidade;
+    });
+});
+
+// Cada "+" sugere a próxima data 21 dias depois da última já preenchida
+// (ou da data de aplicação, se ainda não tem nenhuma) — só um ponto de
+// partida pra não começar sempre em branco, continua editável.
+function ultimaDataDaSequencia() {
+    var inputs = document.querySelectorAll('#rvSequenciaExtra input[type="date"]');
+    for (var i = inputs.length - 1; i >= 0; i--) {
+        if (inputs[i].value) return inputs[i].value;
+    }
+    var proxima = document.getElementById('rvProximaData').value;
+    if (proxima) return proxima;
+    return document.getElementById('rvDataAplicacao').value;
+}
+
 document.getElementById('rvAddSequencia').addEventListener('click', function () {
+    var base = ultimaDataDaSequencia();
+    var sugestao = '';
+    if (base) {
+        var d = new Date(base + 'T00:00:00');
+        d.setDate(d.getDate() + 21);
+        sugestao = d.toISOString().slice(0, 10);
+    }
+
     var wrap = document.createElement('div');
     wrap.className = 'input-group input-group-sm mb-2';
     wrap.style.maxWidth = '260px';
-    wrap.innerHTML = '<input type="date" name="proxima_data_extra[]" class="form-control" required>'
+    wrap.innerHTML = '<input type="date" name="proxima_data_extra[]" class="form-control" required min="2000-01-01" max="<?= date('Y-m-d', strtotime('+10 years')) ?>" value="' + sugestao + '">'
         + '<button type="button" class="btn btn-outline-danger">&times;</button>';
     wrap.querySelector('button').addEventListener('click', function () { wrap.remove(); });
     document.getElementById('rvSequenciaExtra').appendChild(wrap);

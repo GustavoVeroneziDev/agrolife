@@ -512,9 +512,9 @@ function setConfig(PDO $pdo, string $chave, string $valor): void
     ]);
 }
 
-function formatarData(string $date): string
+function formatarData(?string $date): string
 {
-    return date('d/m/Y', strtotime($date));
+    return $date ? date('d/m/Y', strtotime($date)) : '—';
 }
 
 function formatarDataHora(string $datetime): string
@@ -621,6 +621,19 @@ function labelSituacaoVacina(?string $proximaData): string
 {
     [$label, $cor] = situacaoVacina($proximaData);
     return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
+}
+
+// Uma aplicação "planejada" ainda não aconteceu de verdade — seja porque não
+// tem DataAplicacao nenhuma (entrada de sequência manual) ou porque a data
+// marcada é no futuro (a pessoa moveu a "Data de aplicação" pra frente de
+// propósito, pra já deixar reservado antes mesmo de acontecer). Compartilhado
+// entre o painel e o portal do cliente pra não duplicar essa regra.
+function labelAplicacaoVacina(?string $dataAplicacao): string
+{
+    if (!$dataAplicacao || $dataAplicacao > date('Y-m-d')) {
+        return '<span class="badge bg-secondary">Planejada</span>';
+    }
+    return formatarData($dataAplicacao);
 }
 
 function labelStatusAgendamento(string $status): string

@@ -94,7 +94,7 @@ try {
          FROM RegistrosVacinas rv
          JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
          WHERE rv.FKAnimal = :id
-         ORDER BY rv.DataAplicacao DESC'
+         ORDER BY COALESCE(rv.DataAplicacao, rv.ProximaData) DESC'
     );
     $historico->execute([':id' => $id]);
     $historico = $historico->fetchAll();
@@ -308,13 +308,7 @@ require_once __DIR__ . '/../geral/header.php';
                                 <?php foreach ($historico as $reg): ?>
                                     <tr data-id="<?= h($reg['IDRegistro']) ?>">
                                         <td class="px-4 fw-medium"><?= h($reg['NomeVacina']) ?></td>
-                                        <td class="small">
-                                            <?php if ($reg['DataAplicacao']): ?>
-                                                <?= formatarData($reg['DataAplicacao']) ?>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary">Planejada</span>
-                                            <?php endif ?>
-                                        </td>
+                                        <td class="small"><?= labelAplicacaoVacina($reg['DataAplicacao']) ?></td>
                                         <td class="small">
                                             <?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?>
                                             <?php if ($reg['Ciclica']): ?>
@@ -522,7 +516,7 @@ require_once __DIR__ . '/../geral/header.php';
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Data</label>
-                    <input type="date" id="pvData" class="form-control">
+                    <input type="date" id="pvData" class="form-control" min="2000-01-01" max="<?= date('Y-m-d', strtotime('+10 years')) ?>">
                 </div>
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="checkbox" id="pvCiclica">

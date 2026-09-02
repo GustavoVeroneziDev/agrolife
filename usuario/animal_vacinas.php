@@ -30,7 +30,7 @@ try {
          FROM RegistrosVacinas rv
          JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
          WHERE rv.FKAnimal = :id
-         ORDER BY rv.DataAplicacao DESC'
+         ORDER BY COALESCE(rv.DataAplicacao, rv.ProximaData) DESC'
     );
     $historico->execute([':id' => $id]);
     $historico = $historico->fetchAll();
@@ -101,7 +101,7 @@ require_once __DIR__ . '/../geral/header.php';
                                 <?php foreach ($historico as $reg): ?>
                                     <tr>
                                         <td class="px-4 fw-medium"><?= h($reg['NomeVacina']) ?></td>
-                                        <td><?= formatarData($reg['DataAplicacao']) ?></td>
+                                        <td><?= labelAplicacaoVacina($reg['DataAplicacao']) ?></td>
                                         <td><?= $reg['ProximaData'] ? formatarData($reg['ProximaData']) : '—' ?></td>
                                         <td><?= labelSituacaoVacina($reg['ProximaData']) ?></td>
                                     </tr>
