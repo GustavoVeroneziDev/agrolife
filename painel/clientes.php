@@ -95,13 +95,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
     }
 }
 
-$busca = trim($_GET['q'] ?? '');
-$pag   = max(1, (int) ($_GET['pag'] ?? 1));
-$por   = 20;
-$off   = ($pag - 1) * $por;
+$busca   = trim($_GET['q'] ?? '');
+$statusF = in_array($_GET['status'] ?? '', ['ativos', 'inativos', 'todos'], true) ? $_GET['status'] : 'ativos';
+$pag     = max(1, (int) ($_GET['pag'] ?? 1));
+$por     = 20;
+$off     = ($pag - 1) * $por;
+
+$statusLabels = ['ativos' => 'Ativos', 'inativos' => 'Excluídos', 'todos' => 'Todos'];
 
 try {
-    $where  = "WHERE u.NivelAcesso = 'cliente' AND u.Ativo = 1";
+    $where  = match ($statusF) {
+        'inativos' => "WHERE u.NivelAcesso = 'cliente' AND u.Ativo = 0",
+        'todos'    => "WHERE u.NivelAcesso = 'cliente'",
+        default    => "WHERE u.NivelAcesso = 'cliente' AND u.Ativo = 1",
+    };
     $params = [];
     if ($busca !== '') {
         // Prepare nativo (EMULATE_PREPARES=false) não aceita o mesmo
@@ -119,7 +126,7 @@ try {
     $total = (int) $cntStmt->fetchColumn();
 
     $stmt = $pdo->prepare(
-        "SELECT u.IDUsuario, u.Nome, u.Email, u.Telefone, u.MomentoRegistro,
+        "SELECT u.IDUsuario, u.Nome, u.Email, u.Telefone, u.MomentoRegistro, u.Ativo,
                 COUNT(a.IDAnimal) AS TotalAnimais
          FROM Usuarios u
          LEFT JOIN Animais a ON a.FKDono = u.IDUsuario AND a.Ativo = 1
@@ -158,15 +165,24 @@ require_once __DIR__ . '/../geral/header.php';
     <?php endif ?>
 </div>
 
-<form class="mb-4" method="GET">
-    <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control" placeholder="Buscar por nome, e-mail ou telefone..."
-            value="<?= h($busca) ?>">
-        <button class="btn btn-accent" type="submit">Buscar</button>
-        <?php if ($busca): ?>
-            <a href="<?= BASE ?>/painel/clientes.php" class="btn btn-outline-secondary">Limpar</a>
-        <?php endif ?>
+<form class="row g-2 mb-4" method="GET">
+    <div class="col-sm-8">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nome, e-mail ou telefone..."
+                value="<?= h($busca) ?>">
+            <button class="btn btn-accent" type="submit">Buscar</button>
+            <?php if ($busca): ?>
+                <a href="<?= BASE ?>/painel/clientes.php" class="btn btn-outline-secondary">Limpar</a>
+            <?php endif ?>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <?php foreach ($statusLabels as $valor => $label): ?>
+                <option value="<?= h($valor) ?>" <?= $statusF === $valor ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach ?>
+        </select>
     </div>
 </form>
 
@@ -193,7 +209,10 @@ require_once __DIR__ . '/../geral/header.php';
                     <tbody>
                         <?php foreach ($donos as $d): ?>
                             <tr>
-                                <td class="px-4 fw-medium"><?= h($d['Nome']) ?></td>
+                                <td class="px-4 fw-medium">
+                                    <?= h($d['Nome']) ?>
+                                    <?php if (!$d['Ativo']): ?><span class="badge bg-secondary">Excluído</span><?php endif ?>
+                                </td>
                                 <td class="d-none d-md-table-cell text-secondary small email-cell">
                                     <?php if ($d['Email']): ?>
                                         <span title="<?= h($d['Email']) ?>"><?= h($d['Email']) ?></span>
@@ -232,7 +251,7 @@ require_once __DIR__ . '/../geral/header.php';
                         <ul class="pagination pagination-sm mb-0">
                             <?php for ($p = 1; $p <= $totalPag; $p++): ?>
                                 <li class="page-item <?= $p === $pag ? 'active' : '' ?>">
-                                    <a class="page-link" href="?pag=<?= $p ?>&q=<?= urlencode($busca) ?>"><?= $p ?></a>
+                                    <a class="page-link" href="?pag=<?= $p ?>&q=<?= urlencode($busca) ?>&status=<?= urlencode($statusF) ?>"><?= $p ?></a>
                                 </li>
                             <?php endfor ?>
                         </ul>

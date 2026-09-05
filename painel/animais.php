@@ -60,12 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
 
 $busca    = trim($_GET['q'] ?? '');
 $especieF = trim($_GET['especie'] ?? '');
+$statusF  = in_array($_GET['status'] ?? '', ['ativos', 'inativos', 'todos'], true) ? $_GET['status'] : 'ativos';
 $pag      = max(1, (int) ($_GET['pag'] ?? 1));
 $por      = 24;
 $off      = ($pag - 1) * $por;
 
+$statusLabels = ['ativos' => 'Ativos', 'inativos' => 'Excluídos', 'todos' => 'Todos'];
+
 try {
-    $where  = 'WHERE a.Ativo = 1';
+    $where  = match ($statusF) {
+        'inativos' => 'WHERE a.Ativo = 0',
+        'todos'    => 'WHERE 1=1',
+        default    => 'WHERE a.Ativo = 1',
+    };
     $params = [];
     if ($busca !== '') {
         // Prepare nativo (EMULATE_PREPARES=false) não aceita o mesmo
@@ -157,7 +164,7 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 
 <form class="row g-2 mb-4" method="GET" id="formAnimais">
-    <div class="col-sm-7">
+    <div class="col-sm-5">
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input type="text" name="q" class="form-control" placeholder="Buscar por nome do animal, cliente ou raça..."
@@ -172,6 +179,13 @@ require_once __DIR__ . '/../geral/header.php';
             }
         ?>
         <?= campoPicker('animaisEspecie', 'especie', 'Todas as espécies', '', $especieF, $especieFNome, obrigatorio: false, comBusca: false) ?>
+    </div>
+    <div class="col-sm-2">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <?php foreach ($statusLabels as $valor => $label): ?>
+                <option value="<?= h($valor) ?>" <?= $statusF === $valor ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach ?>
+        </select>
     </div>
     <div class="col-sm-2 d-grid">
         <button class="btn btn-accent" type="submit">Buscar</button>
@@ -209,6 +223,9 @@ require_once __DIR__ . '/../geral/header.php';
                             </div>
                         </div>
                         <div class="d-flex flex-wrap gap-1">
+                            <?php if (!$a['Ativo']): ?>
+                                <span class="badge bg-secondary">Excluído</span>
+                            <?php endif ?>
                             <?php if ($a['ProximaVacina']): [$labelVac, $corVac] = situacaoVacina($a['ProximaVacina']); ?>
                                 <span class="badge bg-<?= $corVac ?>">
                                     <i class="bi bi-shield-plus me-1"></i><?= h($labelVac) ?>
@@ -236,7 +253,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <ul class="pagination pagination-sm mb-0">
                     <?php for ($p = 1; $p <= $totalPag; $p++): ?>
                         <li class="page-item <?= $p === $pag ? 'active' : '' ?>">
-                            <a class="page-link" href="?pag=<?= $p ?>&q=<?= urlencode($busca) ?>&especie=<?= urlencode($especieF) ?>"><?= $p ?></a>
+                            <a class="page-link" href="?pag=<?= $p ?>&q=<?= urlencode($busca) ?>&especie=<?= urlencode($especieF) ?>&status=<?= urlencode($statusF) ?>"><?= $p ?></a>
                         </li>
                     <?php endfor ?>
                 </ul>

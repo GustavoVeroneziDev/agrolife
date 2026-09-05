@@ -274,6 +274,41 @@ function registrarEventoAgendamento(PDO $pdo, string $fkAgendamento, string $tip
     }
 }
 
+// "Excluir" um animal é sempre desativação (Ativo=0) — mantém todo o
+// histórico (vacinas, clínico, agendamentos passados) intacto, só some das
+// listas e pickers. Cancela junto os agendamentos futuros que ainda
+// estavam pendentes/confirmados, senão ficavam "fantasmas" na agenda pra
+// um animal que não aparece em lugar nenhum.
+function desativarAnimal(PDO $pdo, string $idAnimal): void
+{
+    $pdo->prepare('UPDATE Animais SET Ativo = 0 WHERE IDAnimal = :id')->execute([':id' => $idAnimal]);
+
+    $stmt = $pdo->prepare(
+        "SELECT IDAgendamento FROM Agendamentos WHERE FKAnimal = :id AND Status IN ('pendente', 'confirmado')"
+    );
+    $stmt->execute([':id' => $idAnimal]);
+    foreach ($stmt->fetchAll() as $ag) {
+        $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :id")
+            ->execute([':id' => $ag['IDAgendamento']]);
+        registrarEventoAgendamento($pdo, $ag['IDAgendamento'], 'cancelado', 'Cancelado — animal excluído.');
+    }
+}
+
+// "Excluir" um cliente também é desativação, e arrasta os animais dele
+// junto (mesma lógica acima, um por um) — sem isso, o dono some da lista
+// de clientes mas os bichos dele continuam aparecendo normalmente em
+// Animais, órfãos de dono "ativo".
+function desativarCliente(PDO $pdo, string $idCliente): void
+{
+    $pdo->prepare('UPDATE Usuarios SET Ativo = 0 WHERE IDUsuario = :id')->execute([':id' => $idCliente]);
+
+    $stmt = $pdo->prepare('SELECT IDAnimal FROM Animais WHERE FKDono = :id AND Ativo = 1');
+    $stmt->execute([':id' => $idCliente]);
+    foreach ($stmt->fetchAll() as $a) {
+        desativarAnimal($pdo, $a['IDAnimal']);
+    }
+}
+
 function redirecionarComMensagem(string $url, string $msg, string $tipo): never
 {
     if (session_status() === PHP_SESSION_NONE) {

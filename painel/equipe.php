@@ -164,15 +164,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'editar_
     }
 }
 
+// Excluir membro = desativação (Ativo=0) — bloqueia o login (já checado em
+// processa_login.php) e some das listas/pickers de veterinário, sem apagar
+// nada do histórico (quem registrou o quê continua intacto). Deletar outro
+// admin exige ser "dev" (mesma trava de editar_membro) e ninguém se
+// desativa sozinho por engano.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['acao'] ?? '', ['desativar_membro', 'reativar_membro'], true)) {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Token inválido.', 'danger');
+    }
+    $idAlvo = trim($_POST['id'] ?? '');
+    $ligar  = ($_POST['acao'] ?? '') === 'reativar_membro';
+
+    if ($idAlvo === $_SESSION['usuario_id']) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Você não pode excluir sua própria conta.', 'warning');
+    }
+
+    try {
+        $chkStmt = $pdo->prepare('SELECT NivelAcesso FROM Usuarios WHERE IDUsuario = :id LIMIT 1');
+        $chkStmt->execute([':id' => $idAlvo]);
+        $nivelAlvo = $chkStmt->fetchColumn();
+        if (!in_array($nivelAlvo, ['admin', 'funcionario'], true)) {
+            redirecionarComMensagem(BASE . '/painel/equipe.php', 'Membro não encontrado.', 'warning');
+        }
+        if ($nivelAlvo === 'admin' && !$souDev) {
+            redirecionarComMensagem(BASE . '/painel/equipe.php', 'Só o desenvolvedor do sistema pode excluir outro admin.', 'danger');
+        }
+
+        $pdo->prepare('UPDATE Usuarios SET Ativo = :ativo WHERE IDUsuario = :id')
+            ->execute([':ativo' => $ligar ? 1 : 0, ':id' => $idAlvo]);
+
+        redirecionarComMensagem(BASE . '/painel/equipe.php', $ligar ? 'Membro reativado com sucesso!' : 'Membro excluído — o login fica bloqueado, mas o histórico é mantido.', 'success');
+    } catch (PDOException $e) {
+        error_log('[DesativarMembroEquipe] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Erro ao salvar.', 'danger');
+    }
+}
+
+$statusF = in_array($_GET['status'] ?? '', ['ativos', 'inativos', 'todos'], true) ? $_GET['status'] : 'ativos';
+$statusLabels = ['ativos' => 'Ativos', 'inativos' => 'Excluídos', 'todos' => 'Todos'];
+$statusCondicao = match ($statusF) {
+    'inativos' => 'Ativo = 0',
+    'todos'    => '1=1',
+    default    => 'Ativo = 1',
+};
+
 try {
     // Todo funcionario entra (independente de ter cargo definido ou não)
     // + admin, mas só quem tiver cargo (mostra os donos que também
     // atendem, ex: José/Dayvid como veterinário — sem cargo, um admin
     // "só de sistema" não precisa aparecer no quadro da equipe).
     $vets = $pdo->query(
-        "SELECT IDUsuario, Nome, Email, Telefone, Cargo, NivelAcesso, MomentoRegistro
+        "SELECT IDUsuario, Nome, Email, Telefone, Cargo, NivelAcesso, MomentoRegistro, Ativo
          FROM Usuarios
-         WHERE Ativo = 1
+         WHERE {$statusCondicao}
            AND (NivelAcesso = 'funcionario' OR (NivelAcesso = 'admin' AND Cargo IS NOT NULL))
          ORDER BY Nome ASC"
     )->fetchAll();
@@ -197,6 +242,16 @@ require_once __DIR__ . '/../geral/header.php';
     Funcionário só visualiza — agenda, animais, clientes, catálogo. Criar, editar e excluir é só pra administrador.
 </p>
 
+<form class="row g-2 mb-4" method="GET">
+    <div class="col-sm-4 col-md-3">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <?php foreach ($statusLabels as $valor => $label): ?>
+                <option value="<?= h($valor) ?>" <?= $statusF === $valor ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach ?>
+        </select>
+    </div>
+</form>
+
 <div class="card">
     <div class="card-body p-0">
         <?php if (empty($vets)): ?>
@@ -215,13 +270,16 @@ require_once __DIR__ . '/../geral/header.php';
                             <th class="d-none d-md-table-cell email-cell">E-mail</th>
                             <th class="d-none d-md-table-cell">WhatsApp</th>
                             <th class="d-none d-md-table-cell">Cadastro</th>
-                            <?php if ($souDev): ?><th></th><?php endif ?>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($vets as $v): ?>
                             <tr>
-                                <td class="px-4 fw-medium"><?= h($v['Nome']) ?></td>
+                                <td class="px-4 fw-medium">
+                                    <?= h($v['Nome']) ?>
+                                    <?php if (!$v['Ativo']): ?><span class="badge bg-secondary">Excluído</span><?php endif ?>
+                                </td>
                                 <td class="small">
                                     <?php if ($v['NivelAcesso'] === 'admin'): ?>
                                         <span class="badge bg-secondary">Admin</span>
@@ -253,14 +311,39 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell small text-secondary"><?= formatarData($v['MomentoRegistro']) ?></td>
-                                <?php if ($souDev): ?>
-                                    <td class="text-end">
+                                <td class="text-end text-nowrap">
+                                    <?php if ($souDev): ?>
                                         <button class="btn btn-sm btn-outline-accent"
                                             onclick='abrirModalEditarMembro(<?= json_encode($v, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                    </td>
-                                <?php endif ?>
+                                    <?php endif ?>
+                                    <?php
+                                        // Excluir admin exige ser dev, e ninguém exclui a própria conta —
+                                        // some o botão em vez de deixar clicar num caminho que só volta com erro.
+                                        $podeExcluir = $v['IDUsuario'] !== $_SESSION['usuario_id']
+                                            && ($v['NivelAcesso'] !== 'admin' || $souDev);
+                                    ?>
+                                    <?php if ($podeExcluir && $v['Ativo']): ?>
+                                        <form method="POST" class="d-inline" data-confirm="Excluir <?= h($v['Nome']) ?>? O login fica bloqueado, mas o histórico é mantido — dá pra reativar depois.">
+                                            <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                                            <input type="hidden" name="acao" value="desativar_membro">
+                                            <input type="hidden" name="id" value="<?= h($v['IDUsuario']) ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    <?php elseif ($podeExcluir && !$v['Ativo']): ?>
+                                        <form method="POST" class="d-inline" data-confirm="Reativar <?= h($v['Nome']) ?>?">
+                                            <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                                            <input type="hidden" name="acao" value="reativar_membro">
+                                            <input type="hidden" name="id" value="<?= h($v['IDUsuario']) ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-accent">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif ?>
+                                </td>
                             </tr>
                         <?php endforeach ?>
                     </tbody>

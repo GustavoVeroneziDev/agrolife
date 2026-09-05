@@ -134,6 +134,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'editar_
     }
 }
 
+// Excluir cliente = desativação (Ativo=0), arrastando os animais dele
+// junto — mantém todo o histórico, só some das listas. Reativar volta o
+// cliente (não os animais dele automaticamente — cada um se reativa à
+// parte, caso só alguns devam voltar).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'excluir_cliente') {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Token inválido.', 'danger');
+    }
+    exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
+    try {
+        desativarCliente($pdo, $id);
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente excluído — os animais dele também ficaram inativos. Dá pra reativar quando quiser.', 'success');
+    } catch (PDOException $e) {
+        error_log('[ExcluirCliente] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Erro ao excluir.', 'danger');
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'reativar_cliente') {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Token inválido.', 'danger');
+    }
+    exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
+    try {
+        $pdo->prepare('UPDATE Usuarios SET Ativo = 1 WHERE IDUsuario = :id')->execute([':id' => $id]);
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente reativado com sucesso!', 'success');
+    } catch (PDOException $e) {
+        error_log('[ReativarCliente] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Erro ao reativar.', 'danger');
+    }
+}
+
 try {
     // Sem filtrar por NivelAcesso: um admin pode ser dono de animal também,
     // e essa página precisa abrir certo quando alguém clicar no dono dele.
@@ -223,7 +255,10 @@ require_once __DIR__ . '/../geral/header.php';
     <a href="<?= BASE ?>/painel/clientes.php" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <h4 class="fw-bold mb-0"><?= h($dono['Nome']) ?></h4>
+    <h4 class="fw-bold mb-0">
+        <?= h($dono['Nome']) ?>
+        <?php if (!$dono['Ativo']): ?><span class="badge bg-secondary align-middle">Inativo</span><?php endif ?>
+    </h4>
 </div>
 
 <?php if (!empty($agendamentosHoje)): ?>
@@ -261,9 +296,28 @@ require_once __DIR__ . '/../geral/header.php';
                 <dd><?= count($animais) ?></dd>
             </dl>
             <?php if ($dono['Telefone']): ?>
-                <a href="<?= h(waLink($dono['Telefone'])) ?>" target="_blank" class="btn btn-outline-accent w-100">
+                <a href="<?= h(waLink($dono['Telefone'])) ?>" target="_blank" class="btn btn-outline-accent w-100 mb-2">
                     <i class="bi bi-whatsapp me-1"></i> Conversar no WhatsApp
                 </a>
+            <?php endif ?>
+            <?php if ($souAdmin): ?>
+                <?php if ($dono['Ativo']): ?>
+                    <form method="POST" data-confirm="Excluir <?= h($dono['Nome']) ?>? Os animais dele também ficam inativos e os agendamentos futuros são cancelados, mas o histórico é mantido — dá pra reativar depois.">
+                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                        <input type="hidden" name="acao" value="excluir_cliente">
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-trash me-1"></i> Excluir cliente
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <form method="POST" data-confirm="Reativar <?= h($dono['Nome']) ?>?">
+                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                        <input type="hidden" name="acao" value="reativar_cliente">
+                        <button type="submit" class="btn btn-accent w-100">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reativar cliente
+                        </button>
+                    </form>
+                <?php endif ?>
             <?php endif ?>
         </div>
     </div>

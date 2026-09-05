@@ -61,14 +61,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($acao === 'desativar') {
         try {
-            $stmt = $pdo->prepare('SELECT FKDono FROM Animais WHERE IDAnimal = :id');
-            $stmt->execute([':id' => $id]);
-            $fkDono = $stmt->fetchColumn();
-            $pdo->prepare('UPDATE Animais SET Ativo = 0 WHERE IDAnimal = :id')->execute([':id' => $id]);
-            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $fkDono, 'Animal removido.', 'success');
+            desativarAnimal($pdo, $id);
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Animal excluído — some das listas, mas o histórico fica guardado. Dá pra reativar quando quiser.', 'success');
         } catch (PDOException $e) {
             error_log('[DesativarAnimal] ' . $e->getMessage());
-            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Erro ao remover.', 'danger');
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Erro ao excluir.', 'danger');
+        }
+    }
+
+    if ($acao === 'reativar') {
+        try {
+            $pdo->prepare('UPDATE Animais SET Ativo = 1 WHERE IDAnimal = :id')->execute([':id' => $id]);
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Animal reativado com sucesso!', 'success');
+        } catch (PDOException $e) {
+            error_log('[ReativarAnimal] ' . $e->getMessage());
+            redirecionarComMensagem(BASE . '/painel/animal_detalhe.php?id=' . $id, 'Erro ao reativar.', 'danger');
         }
     }
 }
@@ -80,7 +87,7 @@ try {
          FROM Animais a
          JOIN Especies e ON e.IDEspecie = a.FKEspecie
          JOIN Usuarios u ON u.IDUsuario = a.FKDono
-         WHERE a.IDAnimal = :id AND a.Ativo = 1
+         WHERE a.IDAnimal = :id
          LIMIT 1'
     );
     $stmt->execute([':id' => $id]);
@@ -186,7 +193,10 @@ require_once __DIR__ . '/../geral/header.php';
     <a href="<?= BASE ?>/painel/cliente_detalhe.php?id=<?= h($animal['IDDono']) ?>" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <h4 class="fw-bold mb-0"><?= especieIconeHtml($animal['IconeEspecie'], '1.4rem') ?> <?= h($animal['Nome']) ?></h4>
+    <h4 class="fw-bold mb-0">
+        <?= especieIconeHtml($animal['IconeEspecie'], '1.4rem') ?> <?= h($animal['Nome']) ?>
+        <?php if (!$animal['Ativo']): ?><span class="badge bg-secondary align-middle">Inativo</span><?php endif ?>
+    </h4>
 </div>
 
 <div class="row g-4">
@@ -267,13 +277,23 @@ require_once __DIR__ . '/../geral/header.php';
                 <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
                     <i class="bi bi-journal-medical me-1"></i> Registrar clínico
                 </a>
-                <form method="POST" data-confirm="Remover <?= h($animal['Nome']) ?>? Esta ação não pode ser desfeita.">
-                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
-                    <input type="hidden" name="acao" value="desativar">
-                    <button type="submit" class="btn btn-outline-danger w-100">
-                        <i class="bi bi-trash me-1"></i> Remover animal
-                    </button>
-                </form>
+                <?php if ($animal['Ativo']): ?>
+                    <form method="POST" data-confirm="Excluir <?= h($animal['Nome']) ?>? Fica oculto das listas e os agendamentos futuros são cancelados, mas o histórico é mantido — dá pra reativar depois.">
+                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                        <input type="hidden" name="acao" value="desativar">
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-trash me-1"></i> Excluir animal
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <form method="POST" data-confirm="Reativar <?= h($animal['Nome']) ?>?">
+                        <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                        <input type="hidden" name="acao" value="reativar">
+                        <button type="submit" class="btn btn-accent w-100">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reativar animal
+                        </button>
+                    </form>
+                <?php endif ?>
             <?php endif ?>
         </div>
     </div>
