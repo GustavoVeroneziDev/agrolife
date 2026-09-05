@@ -88,7 +88,7 @@ require_once __DIR__ . '/../geral/header.php';
 
 <h4 class="fw-bold mb-4"><i class="bi bi-gear me-2 text-accent"></i>Configurações</h4>
 
-<form method="POST">
+<form method="POST" id="formConfiguracoes">
 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
 
 <div class="row g-4">
@@ -306,5 +306,16 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     </div>
 </div>
+
+<script>
+// Salvar aqui é um form comum (POST + redirect de volta pra essa mesma
+// página) — sem isso, a página inteira recarregava do topo, e numa tela
+// longa com vários cards a pessoa perdia de vista o campo que acabou de
+// editar. A restauração já existe globalmente (footer.php); só faltava
+// gravar a posição antes de sair da página.
+document.getElementById('formConfiguracoes').addEventListener('submit', function () {
+    try { sessionStorage.setItem('vsScrollY', String(window.scrollY)); } catch (e) {}
+});
+</script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>
