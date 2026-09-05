@@ -185,6 +185,8 @@ function templatesWhatsAppPadrao(): array
             . 'Qualquer dúvida, é só chamar por aqui.',
         'msg_remarcacao' => 'Olá, {nome_cliente}! O agendamento de {tipo} ({titulo}) para {nome_animal} foi remarcado '
             . 'para o dia {data} às {hora}. Qualquer dúvida, é só chamar por aqui.',
+        'msg_retorno' => 'Olá, {nome_cliente}! Já deixamos agendado o retorno de {nome_animal} ({titulo}) '
+            . 'para o dia {data} às {hora}. Nos vemos lá!',
         'msg_vacina_semana' => "Olá, {nome_dono}! 🐾 Passando para lembrar que a vacina *{vacina}* d(a) *{nome_animal}* "
             . "vence em uma semana, no dia *{data}*.\n\nAgende um horário com antecedência para não perder a data!",
         'msg_vacina_dia' => "Olá, {nome_dono}! 🐾 Hoje, *{data}*, vence a vacina *{vacina}* d(a) *{nome_animal}*.\n\n"
@@ -195,6 +197,23 @@ function templatesWhatsAppPadrao(): array
 function montarMensagemNovoAgendamento(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
     $tpl = getConfig($pdo, 'msg_agendamento_criado', '') ?: templatesWhatsAppPadrao()['msg_agendamento_criado'];
+
+    return strtr($tpl, [
+        '{nome_cliente}' => $nomeCliente,
+        '{nome_animal}'  => $nomeAnimal,
+        '{tipo}'         => tiposAgendaMap()[$tipo] ?? $tipo,
+        '{titulo}'       => $titulo,
+        '{data}'         => formatarData($dataHoraInicio),
+        '{hora}'         => date('H:i', strtotime($dataHoraInicio)),
+    ]);
+}
+
+// Separado de montarMensagemNovoAgendamento() de propósito — um retorno
+// (ex: retirada de pontos) tem um tom diferente de uma primeira marcação,
+// e a clínica pode querer personalizar cada um separadamente.
+function montarMensagemRetorno(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+{
+    $tpl = getConfig($pdo, 'msg_retorno', '') ?: templatesWhatsAppPadrao()['msg_retorno'];
 
     return strtr($tpl, [
         '{nome_cliente}' => $nomeCliente,

@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $donoStmt->execute([':id' => $ag['FKAnimal']]);
                 $dono = $donoStmt->fetch();
                 if ($dono && $dono['Telefone']) {
-                    $msg = montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
+                    $msg = montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
                     enviarWhatsApp(waNumero($dono['Telefone']), $msg);
                 }
 

@@ -19,7 +19,7 @@ $campos = [
     'nome_clinica', 'telefone_clinica', 'email_clinica', 'instagram_clinica',
     'endereco_rua', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf', 'endereco_cep',
     ...array_keys($diasSemana),
-    'msg_vacina_semana', 'msg_vacina_dia', 'msg_agendamento_criado', 'msg_cancelamento', 'msg_remarcacao',
+    'msg_vacina_semana', 'msg_vacina_dia', 'msg_agendamento_criado', 'msg_cancelamento', 'msg_remarcacao', 'msg_retorno',
     'whatsapp_modo_teste', 'whatsapp_numero_teste',
 ];
 
@@ -205,6 +205,14 @@ require_once __DIR__ . '/../geral/header.php';
             </div>
 
             <div class="mb-3 pb-3 border-bottom">
+                <label class="form-label mb-1">Retorno</label>
+                <p class="small text-secondary mb-2">
+                    Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
+                </p>
+                <textarea name="msg_retorno" class="form-control" rows="3"><?= h($valores['msg_retorno']) ?></textarea>
+            </div>
+
+            <div class="mb-3 pb-3 border-bottom">
                 <label class="form-label mb-1">Aviso de vacina — 7 dias antes do vencimento</label>
                 <p class="small text-secondary mb-2">
                     Variáveis: <code>{nome_dono}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
@@ -278,6 +286,13 @@ require_once __DIR__ . '/../geral/header.php';
                     <input type="hidden" name="cenario" value="remarcacao">
                     <button type="submit" class="btn btn-outline-accent">
                         <i class="bi bi-arrow-repeat me-1"></i> Remarcação
+                    </button>
+                </form>
+                <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
+                    <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                    <input type="hidden" name="cenario" value="retorno">
+                    <button type="submit" class="btn btn-outline-accent">
+                        <i class="bi bi-arrow-return-right me-1"></i> Retorno
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">

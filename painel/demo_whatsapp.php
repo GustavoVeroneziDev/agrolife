@@ -43,6 +43,10 @@ switch ($cenario) {
         $msg = montarMensagemRemarcacao($pdo, $clienteDemo, $animalDemo, 'consulta', 'Consulta de rotina', $horarioDemo);
         break;
 
+    case 'retorno':
+        $msg = montarMensagemRetorno($pdo, $clienteDemo, $animalDemo, 'procedimento', 'Retirada de pontos', $horarioDemo);
+        break;
+
     case 'vacina':
         $template = getConfig($pdo, 'msg_vacina_dia', '')
             ?: getConfig($pdo, 'msg_vacina_semana', '')
