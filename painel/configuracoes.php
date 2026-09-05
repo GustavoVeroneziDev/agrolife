@@ -244,7 +244,7 @@ require_once __DIR__ . '/../geral/header.php';
             </div>
             <div class="mb-0">
                 <label class="form-label">Número de teste</label>
-                <input type="tel" name="whatsapp_numero_teste" class="form-control" data-mask="tel"
+                <input type="tel" name="whatsapp_numero_teste" id="whatsappNumeroTeste" class="form-control" data-mask="tel"
                        value="<?= h(formatarTelefoneExibicao($valores['whatsapp_numero_teste'])) ?>">
             </div>
         </div>
@@ -257,8 +257,9 @@ require_once __DIR__ . '/../geral/header.php';
 </div>
 </form>
 
+<?php $temNumeroTeste = $valores['whatsapp_numero_teste'] !== ''; ?>
 <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-lg-6 offset-lg-6">
         <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-2"><i class="bi bi-play-circle me-2 text-accent"></i>Demonstração ao vivo</h6>
             <p class="small text-secondary">
@@ -266,39 +267,42 @@ require_once __DIR__ . '/../geral/header.php';
                 exemplo, igual à que um cliente de verdade recebe — pra mostrar o sistema
                 funcionando numa reunião, sem precisar de um agendamento real.
             </p>
+            <p class="small mb-3" id="demoAvisoSemNumero" style="color:var(--cor-perigo);<?= $temNumeroTeste ? 'display:none;' : '' ?>">
+                <i class="bi bi-exclamation-circle me-1"></i>Configure um número de teste acima pra habilitar.
+            </p>
             <div class="d-flex flex-wrap gap-2">
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="agendamento">
-                    <button type="submit" class="btn btn-outline-accent">
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
                         <i class="bi bi-calendar-plus me-1"></i> Agendamento criado
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="cancelamento">
-                    <button type="submit" class="btn btn-outline-accent">
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
                         <i class="bi bi-calendar-x me-1"></i> Cancelamento
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="remarcacao">
-                    <button type="submit" class="btn btn-outline-accent">
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
                         <i class="bi bi-arrow-repeat me-1"></i> Remarcação
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="retorno">
-                    <button type="submit" class="btn btn-outline-accent">
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
                         <i class="bi bi-arrow-return-right me-1"></i> Retorno
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="vacina">
-                    <button type="submit" class="btn btn-outline-accent">
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
                         <i class="bi bi-shield-plus me-1"></i> Lembrete de vacina
                     </button>
                 </form>
@@ -316,6 +320,21 @@ require_once __DIR__ . '/../geral/header.php';
 document.getElementById('formConfiguracoes').addEventListener('submit', function () {
     try { sessionStorage.setItem('vsScrollY', String(window.scrollY)); } catch (e) {}
 });
+
+// Os botões de demonstração dependem de ter um número de teste configurado
+// (é pra lá que toda mensagem de demo vai) — sem isso, clicar só voltava
+// com um aviso de erro. Desabilita direto na tela, e já reage ao digitar,
+// sem precisar salvar e recarregar pra destravar.
+(function () {
+    var campoNumero = document.getElementById('whatsappNumeroTeste');
+    var aviso = document.getElementById('demoAvisoSemNumero');
+    var botoes = document.querySelectorAll('.btn-demo-whatsapp');
+    campoNumero.addEventListener('input', function () {
+        var tem = campoNumero.value.trim() !== '';
+        botoes.forEach(function (b) { b.disabled = !tem; });
+        aviso.style.display = tem ? 'none' : '';
+    });
+})();
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>
