@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $donoStmt->execute([':id' => $fkAnimal]);
             $dono = $donoStmt->fetch();
             if ($dono && $dono['Telefone']) {
-                $msg = montarMensagemNovoAgendamento($dono['NomeCliente'], $dono['NomeAnimal'], $tipo, $titulo, $inicio);
+                $msg = montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $tipo, $titulo, $inicio);
                 enviarWhatsApp(waNumero($dono['Telefone']), $msg);
             }
 
@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $donoStmt->execute([':id' => $ag['FKAnimal']]);
                 $dono = $donoStmt->fetch();
                 if ($dono && $dono['Telefone']) {
-                    $msg = montarMensagemNovoAgendamento($dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
+                    $msg = montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
                     enviarWhatsApp(waNumero($dono['Telefone']), $msg);
                 }
 
@@ -262,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'De ' . formatarDataHora($ag['DataHoraInicio']) . ' para ' . formatarDataHora($novoInicio));
 
             if ($ag['Telefone']) {
-                $msg = montarMensagemRemarcacao($ag['NomeCliente'], $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $novoInicio);
+                $msg = montarMensagemRemarcacao($pdo, $ag['NomeCliente'], $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $novoInicio);
                 enviarWhatsApp(waNumero($ag['Telefone']), $msg);
             }
 

@@ -3,7 +3,47 @@
 <?php else: ?>
 </main>
 
+<?php
+    // Bloco de contato da clínica — só aparece fora do painel (equipe já
+    // conhece os próprios dados) e só mostra o que realmente foi
+    // preenchido em Configurações; nenhum campo em branco aparece como
+    // "placeholder vazio" ou link quebrado.
+    $rcNome     = getConfig($pdo, 'nome_clinica', '');
+    $rcTel      = getConfig($pdo, 'telefone_clinica', '');
+    $rcEmail    = getConfig($pdo, 'email_clinica', '');
+    $rcInsta    = getConfig($pdo, 'instagram_clinica', '');
+    $rcEndereco = implode(', ', array_filter([
+        trim(getConfig($pdo, 'endereco_rua', '') . ' ' . getConfig($pdo, 'endereco_numero', '')),
+        getConfig($pdo, 'endereco_complemento', ''),
+        getConfig($pdo, 'endereco_bairro', ''),
+        trim(getConfig($pdo, 'endereco_cidade', '') . (getConfig($pdo, 'endereco_uf', '') !== '' ? ' - ' . getConfig($pdo, 'endereco_uf', '') : '')),
+        getConfig($pdo, 'endereco_cep', ''),
+    ]));
+    $rcTemAlgo = $rcNome !== '' || $rcTel !== '' || $rcEmail !== '' || $rcInsta !== '' || $rcEndereco !== '';
+?>
+
 <footer class="border-top py-4 mt-auto" style="background:var(--bg-card);">
+    <?php if ($rcTemAlgo): ?>
+        <div class="container-lg text-center small text-secondary d-flex flex-wrap justify-content-center align-items-center gap-3 pb-3 mb-3 border-bottom">
+            <?php if ($rcNome !== ''): ?><span class="fw-medium"><?= h($rcNome) ?></span><?php endif ?>
+            <?php if ($rcEndereco !== ''): ?><span><i class="bi bi-geo-alt me-1"></i><?= h($rcEndereco) ?></span><?php endif ?>
+            <?php if ($rcTel !== ''): ?>
+                <a href="<?= h(waLink($rcTel)) ?>" target="_blank" class="text-secondary text-decoration-none">
+                    <i class="bi bi-whatsapp me-1"></i><?= h(formatarTelefoneExibicao($rcTel)) ?>
+                </a>
+            <?php endif ?>
+            <?php if ($rcEmail !== ''): ?>
+                <a href="mailto:<?= h($rcEmail) ?>" class="text-secondary text-decoration-none">
+                    <i class="bi bi-envelope me-1"></i><?= h($rcEmail) ?>
+                </a>
+            <?php endif ?>
+            <?php if ($rcInsta !== ''): ?>
+                <a href="https://instagram.com/<?= h($rcInsta) ?>" target="_blank" class="text-secondary text-decoration-none">
+                    <i class="bi bi-instagram me-1"></i>@<?= h($rcInsta) ?>
+                </a>
+            <?php endif ?>
+        </div>
+    <?php endif ?>
     <div class="container-lg text-center text-secondary small">
         <span style="color:var(--accent);font-weight:600;"><?= APP_NOME ?></span> &copy; <?= date('Y') ?>
         &nbsp;·&nbsp; Todos os direitos reservados

@@ -170,30 +170,56 @@ function tiposAgendaMap(): array
     ];
 }
 
-// Texto usado tanto no agendamento real quanto no botão de demonstração
-// (Configurações → WhatsApp) — assim a mensagem que o cliente vê numa
-// demo é exatamente a mesma que um cliente de verdade recebe.
-function montarMensagemNovoAgendamento(string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+// Cada mensagem tem um texto padrão embutido (usado se o campo em
+// Configurações → WhatsApp estiver em branco) — assim nada quebra pra quem
+// nunca mexeu nessa tela, e o texto do botão de demonstração é sempre
+// idêntico ao que um cliente de verdade recebe.
+function montarMensagemNovoAgendamento(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
-    return "Olá, {$nomeCliente}! Foi realizado um agendamento de {$tipoTexto} ({$titulo}) para {$nomeAnimal}, "
-        . 'no dia ' . formatarData($dataHoraInicio) . ' às ' . date('H:i', strtotime($dataHoraInicio))
-        . '. Não esqueça de chegar alguns minutos antes do horário, para uma melhor organização 😉 Muito obrigado!';
+    $padrao = 'Olá, {nome_cliente}! Foi realizado um agendamento de {tipo} ({titulo}) para {nome_animal}, '
+        . 'no dia {data} às {hora}. Não esqueça de chegar alguns minutos antes do horário, '
+        . 'para uma melhor organização 😉 Muito obrigado!';
+    $tpl = getConfig($pdo, 'msg_agendamento_criado', '') ?: $padrao;
+
+    return strtr($tpl, [
+        '{nome_cliente}' => $nomeCliente,
+        '{nome_animal}'  => $nomeAnimal,
+        '{tipo}'         => tiposAgendaMap()[$tipo] ?? $tipo,
+        '{titulo}'       => $titulo,
+        '{data}'         => formatarData($dataHoraInicio),
+        '{hora}'         => date('H:i', strtotime($dataHoraInicio)),
+    ]);
 }
 
-function montarMensagemCancelamento(string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+function montarMensagemCancelamento(PDO $pdo, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
-    return "O agendamento de {$nomeAnimal} ({$tipoTexto} — {$titulo}) em " . formatarData($dataHoraInicio)
-        . ' às ' . date('H:i', strtotime($dataHoraInicio)) . ' foi cancelado. Qualquer dúvida, é só chamar por aqui.';
+    $padrao = 'O agendamento de {nome_animal} ({tipo} — {titulo}) em {data} às {hora} foi cancelado. '
+        . 'Qualquer dúvida, é só chamar por aqui.';
+    $tpl = getConfig($pdo, 'msg_cancelamento', '') ?: $padrao;
+
+    return strtr($tpl, [
+        '{nome_animal}' => $nomeAnimal,
+        '{tipo}'        => tiposAgendaMap()[$tipo] ?? $tipo,
+        '{titulo}'      => $titulo,
+        '{data}'        => formatarData($dataHoraInicio),
+        '{hora}'        => date('H:i', strtotime($dataHoraInicio)),
+    ]);
 }
 
-function montarMensagemRemarcacao(string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+function montarMensagemRemarcacao(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $tipoTexto = tiposAgendaMap()[$tipo] ?? $tipo;
-    return "Olá, {$nomeCliente}! O agendamento de {$tipoTexto} ({$titulo}) para {$nomeAnimal} foi remarcado "
-        . 'para o dia ' . formatarData($dataHoraInicio) . ' às ' . date('H:i', strtotime($dataHoraInicio))
-        . '. Qualquer dúvida, é só chamar por aqui.';
+    $padrao = 'Olá, {nome_cliente}! O agendamento de {tipo} ({titulo}) para {nome_animal} foi remarcado '
+        . 'para o dia {data} às {hora}. Qualquer dúvida, é só chamar por aqui.';
+    $tpl = getConfig($pdo, 'msg_remarcacao', '') ?: $padrao;
+
+    return strtr($tpl, [
+        '{nome_cliente}' => $nomeCliente,
+        '{nome_animal}'  => $nomeAnimal,
+        '{tipo}'         => tiposAgendaMap()[$tipo] ?? $tipo,
+        '{titulo}'       => $titulo,
+        '{data}'         => formatarData($dataHoraInicio),
+        '{hora}'         => date('H:i', strtotime($dataHoraInicio)),
+    ]);
 }
 
 // Registra uma linha no "Histórico de movimentações" do agendamento — sem

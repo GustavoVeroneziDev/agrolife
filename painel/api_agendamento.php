@@ -77,7 +77,7 @@ try {
     // (confirmar, marcar_falta, reabrir) ficam sem notificação automática
     // por ora, são ajustes mais internos.
     if ($acao === 'cancelar' && $ag['Telefone']) {
-        $msg = montarMensagemCancelamento($ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $ag['DataHoraInicio']);
+        $msg = montarMensagemCancelamento($pdo, $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $ag['DataHoraInicio']);
         enviarWhatsApp(waNumero($ag['Telefone']), $msg);
     }
 

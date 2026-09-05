@@ -32,11 +32,15 @@ $cenario = $_POST['cenario'] ?? '';
 
 switch ($cenario) {
     case 'agendamento':
-        $msg = montarMensagemNovoAgendamento($clienteDemo, $animalDemo, 'cirurgia', 'Castração', $horarioDemo);
+        $msg = montarMensagemNovoAgendamento($pdo, $clienteDemo, $animalDemo, 'cirurgia', 'Castração', $horarioDemo);
         break;
 
     case 'cancelamento':
-        $msg = montarMensagemCancelamento($animalDemo, 'consulta', 'Consulta de rotina', $horarioDemo);
+        $msg = montarMensagemCancelamento($pdo, $animalDemo, 'consulta', 'Consulta de rotina', $horarioDemo);
+        break;
+
+    case 'remarcacao':
+        $msg = montarMensagemRemarcacao($pdo, $clienteDemo, $animalDemo, 'consulta', 'Consulta de rotina', $horarioDemo);
         break;
 
     case 'vacina':
