@@ -29,7 +29,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-person"></i></span>
                         <input type="text" id="identificador" name="identificador" class="form-control"
-                               placeholder="seu@email.com ou (11) 99999-9999" required autocomplete="username"
+                               required autocomplete="username"
                                value="<?= h($_GET['identificador'] ?? '') ?>">
                     </div>
                 </div>
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-lock"></i></span>
                         <input type="password" id="senha" name="senha" class="form-control"
-                               placeholder="••••••••" required autocomplete="current-password">
+                               required autocomplete="current-password">
                         <button class="btn btn-outline-secondary" type="button" id="toggleSenha">
                             <i class="bi bi-eye" id="iconeSenha"></i>
                         </button>
