@@ -19,7 +19,10 @@ function processarLote(PDO $pdo, string $sql, string $tipoConfig, string $tipoLo
     $stmt = $pdo->query($sql);
     $registros = $stmt->fetchAll();
 
-    $msgTpl = getConfig($pdo, $tipoConfig, '');
+    // Mesmo texto padrão exibido em Configurações — sem isso, uma instalação
+    // nova (ou alguém que apagou o campo) simplesmente parava de mandar
+    // lembrete de vacina nenhum, silenciosamente.
+    $msgTpl = getConfig($pdo, $tipoConfig, '') ?: (templatesWhatsAppPadrao()[$tipoConfig] ?? '');
     $enviados = 0;
     $erros    = 0;
 

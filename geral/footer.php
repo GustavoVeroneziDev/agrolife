@@ -19,13 +19,21 @@
         trim(getConfig($pdo, 'endereco_cidade', '') . (getConfig($pdo, 'endereco_uf', '') !== '' ? ' - ' . getConfig($pdo, 'endereco_uf', '') : '')),
         getConfig($pdo, 'endereco_cep', ''),
     ]));
-    $rcTemAlgo = $rcNome !== '' || $rcTel !== '' || $rcEmail !== '' || $rcInsta !== '' || $rcEndereco !== '';
+    // Só o horário de HOJE — as 7 linhas completas ficam só na tela de
+    // Configurações, aqui no rodapé o que importa é "abre a que horas hoje".
+    $rcDiaSemanaChave = [
+        'horario_domingo', 'horario_segunda', 'horario_terca', 'horario_quarta',
+        'horario_quinta', 'horario_sexta', 'horario_sabado',
+    ][(int) date('w')];
+    $rcHorarioHoje = getConfig($pdo, $rcDiaSemanaChave, '');
+    $rcTemAlgo = $rcNome !== '' || $rcTel !== '' || $rcEmail !== '' || $rcInsta !== '' || $rcEndereco !== '' || $rcHorarioHoje !== '';
 ?>
 
 <footer class="border-top py-4 mt-auto" style="background:var(--bg-card);">
     <?php if ($rcTemAlgo): ?>
         <div class="container-lg text-center small text-secondary d-flex flex-wrap justify-content-center align-items-center gap-3 pb-3 mb-3 border-bottom">
             <?php if ($rcNome !== ''): ?><span class="fw-medium"><?= h($rcNome) ?></span><?php endif ?>
+            <?php if ($rcHorarioHoje !== ''): ?><span><i class="bi bi-clock me-1"></i>Hoje: <?= h($rcHorarioHoje) ?></span><?php endif ?>
             <?php if ($rcEndereco !== ''): ?><span><i class="bi bi-geo-alt me-1"></i><?= h($rcEndereco) ?></span><?php endif ?>
             <?php if ($rcTel !== ''): ?>
                 <a href="<?= h(waLink($rcTel)) ?>" target="_blank" class="text-secondary text-decoration-none">

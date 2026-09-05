@@ -170,16 +170,31 @@ function tiposAgendaMap(): array
     ];
 }
 
-// Cada mensagem tem um texto padrão embutido (usado se o campo em
-// Configurações → WhatsApp estiver em branco) — assim nada quebra pra quem
-// nunca mexeu nessa tela, e o texto do botão de demonstração é sempre
-// idêntico ao que um cliente de verdade recebe.
+// Texto padrão de cada template de WhatsApp — usado tanto como fallback na
+// hora de mandar (campo vazio em Configurações) quanto pra pré-preencher o
+// campo na tela de Configurações, pra editar em cima do texto real em vez
+// de começar do zero ou só ver um placeholder genérico. Um lugar só pros
+// dois usos não saírem de sincronia.
+function templatesWhatsAppPadrao(): array
+{
+    return [
+        'msg_agendamento_criado' => 'Olá, {nome_cliente}! Foi realizado um agendamento de {tipo} ({titulo}) para {nome_animal}, '
+            . 'no dia {data} às {hora}. Não esqueça de chegar alguns minutos antes do horário, '
+            . 'para uma melhor organização 😉 Muito obrigado!',
+        'msg_cancelamento' => 'O agendamento de {nome_animal} ({tipo} — {titulo}) em {data} às {hora} foi cancelado. '
+            . 'Qualquer dúvida, é só chamar por aqui.',
+        'msg_remarcacao' => 'Olá, {nome_cliente}! O agendamento de {tipo} ({titulo}) para {nome_animal} foi remarcado '
+            . 'para o dia {data} às {hora}. Qualquer dúvida, é só chamar por aqui.',
+        'msg_vacina_semana' => "Olá, {nome_dono}! 🐾 Passando para lembrar que a vacina *{vacina}* d(a) *{nome_animal}* "
+            . "vence em uma semana, no dia *{data}*.\n\nAgende um horário com antecedência para não perder a data!",
+        'msg_vacina_dia' => "Olá, {nome_dono}! 🐾 Hoje, *{data}*, vence a vacina *{vacina}* d(a) *{nome_animal}*.\n\n"
+            . "Entre em contato para agendar a aplicação o quanto antes.",
+    ];
+}
+
 function montarMensagemNovoAgendamento(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $padrao = 'Olá, {nome_cliente}! Foi realizado um agendamento de {tipo} ({titulo}) para {nome_animal}, '
-        . 'no dia {data} às {hora}. Não esqueça de chegar alguns minutos antes do horário, '
-        . 'para uma melhor organização 😉 Muito obrigado!';
-    $tpl = getConfig($pdo, 'msg_agendamento_criado', '') ?: $padrao;
+    $tpl = getConfig($pdo, 'msg_agendamento_criado', '') ?: templatesWhatsAppPadrao()['msg_agendamento_criado'];
 
     return strtr($tpl, [
         '{nome_cliente}' => $nomeCliente,
@@ -193,9 +208,7 @@ function montarMensagemNovoAgendamento(PDO $pdo, string $nomeCliente, string $no
 
 function montarMensagemCancelamento(PDO $pdo, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $padrao = 'O agendamento de {nome_animal} ({tipo} — {titulo}) em {data} às {hora} foi cancelado. '
-        . 'Qualquer dúvida, é só chamar por aqui.';
-    $tpl = getConfig($pdo, 'msg_cancelamento', '') ?: $padrao;
+    $tpl = getConfig($pdo, 'msg_cancelamento', '') ?: templatesWhatsAppPadrao()['msg_cancelamento'];
 
     return strtr($tpl, [
         '{nome_animal}' => $nomeAnimal,
@@ -208,9 +221,7 @@ function montarMensagemCancelamento(PDO $pdo, string $nomeAnimal, string $tipo, 
 
 function montarMensagemRemarcacao(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
-    $padrao = 'Olá, {nome_cliente}! O agendamento de {tipo} ({titulo}) para {nome_animal} foi remarcado '
-        . 'para o dia {data} às {hora}. Qualquer dúvida, é só chamar por aqui.';
-    $tpl = getConfig($pdo, 'msg_remarcacao', '') ?: $padrao;
+    $tpl = getConfig($pdo, 'msg_remarcacao', '') ?: templatesWhatsAppPadrao()['msg_remarcacao'];
 
     return strtr($tpl, [
         '{nome_cliente}' => $nomeCliente,

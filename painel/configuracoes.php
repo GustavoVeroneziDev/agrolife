@@ -5,9 +5,20 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 exigirLogin('admin');
 
+$diasSemana = [
+    'horario_domingo'   => 'Domingo',
+    'horario_segunda'   => 'Segunda-feira',
+    'horario_terca'     => 'Terça-feira',
+    'horario_quarta'    => 'Quarta-feira',
+    'horario_quinta'    => 'Quinta-feira',
+    'horario_sexta'     => 'Sexta-feira',
+    'horario_sabado'    => 'Sábado',
+];
+
 $campos = [
     'nome_clinica', 'telefone_clinica', 'email_clinica', 'instagram_clinica',
     'endereco_rua', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf', 'endereco_cep',
+    ...array_keys($diasSemana),
     'msg_vacina_semana', 'msg_vacina_dia', 'msg_agendamento_criado', 'msg_cancelamento', 'msg_remarcacao',
     'whatsapp_modo_teste', 'whatsapp_numero_teste',
 ];
@@ -58,6 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $valores = [];
 foreach ($campos as $c) {
     $valores[$c] = getConfig($pdo, $c, '');
+}
+// Campo de template vazio mostra o texto padrão real (não um placeholder
+// genérico) — dá pra editar em cima dele. Salvando sem mexer, grava esse
+// texto explicitamente; apagando tudo e salvando em branco, volta a usar
+// o padrão automaticamente (nada muda nesse mecanismo, só o que aparece
+// na tela antes de mexer).
+foreach (templatesWhatsAppPadrao() as $chave => $texto) {
+    if ($valores[$chave] === '') {
+        $valores[$chave] = $texto;
+    }
 }
 
 $paginaTitulo = 'Configurações';
@@ -136,13 +157,27 @@ require_once __DIR__ . '/../geral/header.php';
                 </div>
             </div>
         </div>
+
+        <div class="card p-4 mb-4">
+            <h6 class="fw-semibold mb-3"><i class="bi bi-clock me-2 text-accent"></i>Horário de funcionamento</h6>
+            <p class="small text-secondary mb-3">Ex: "07:30 - 18:00" ou "Fechado". Deixe em branco pra não mostrar esse dia.</p>
+            <?php foreach ($diasSemana as $chave => $rotulo): ?>
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-5"><label class="form-label mb-0"><?= h($rotulo) ?></label></div>
+                    <div class="col-7">
+                        <input type="text" name="<?= h($chave) ?>" class="form-control form-control-sm" placeholder="07:30 - 18:00" value="<?= h($valores[$chave]) ?>">
+                    </div>
+                </div>
+            <?php endforeach ?>
+        </div>
     </div>
 
     <div class="col-lg-6">
         <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-2"><i class="bi bi-whatsapp me-2 text-accent"></i>Templates de WhatsApp</h6>
             <p class="small text-secondary mb-3">
-                Deixe um template em branco pra usar o texto padrão do sistema.
+                Cada campo já vem com o texto padrão do sistema — edite à vontade.
+                Apagando tudo e salvando em branco, volta a usar o padrão automaticamente.
             </p>
 
             <div class="mb-3 pb-3 border-bottom">
@@ -150,7 +185,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <p class="small text-secondary mb-2">
                     Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
                 </p>
-                <textarea name="msg_agendamento_criado" class="form-control" rows="3" placeholder="Texto padrão do sistema"><?= h($valores['msg_agendamento_criado']) ?></textarea>
+                <textarea name="msg_agendamento_criado" class="form-control" rows="3"><?= h($valores['msg_agendamento_criado']) ?></textarea>
             </div>
 
             <div class="mb-3 pb-3 border-bottom">
@@ -158,7 +193,7 @@ require_once __DIR__ . '/../geral/header.php';
                 <p class="small text-secondary mb-2">
                     Variáveis: <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
                 </p>
-                <textarea name="msg_cancelamento" class="form-control" rows="3" placeholder="Texto padrão do sistema"><?= h($valores['msg_cancelamento']) ?></textarea>
+                <textarea name="msg_cancelamento" class="form-control" rows="3"><?= h($valores['msg_cancelamento']) ?></textarea>
             </div>
 
             <div class="mb-3 pb-3 border-bottom">
@@ -166,13 +201,13 @@ require_once __DIR__ . '/../geral/header.php';
                 <p class="small text-secondary mb-2">
                     Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
                 </p>
-                <textarea name="msg_remarcacao" class="form-control" rows="3" placeholder="Texto padrão do sistema"><?= h($valores['msg_remarcacao']) ?></textarea>
+                <textarea name="msg_remarcacao" class="form-control" rows="3"><?= h($valores['msg_remarcacao']) ?></textarea>
             </div>
 
             <div class="mb-3 pb-3 border-bottom">
                 <label class="form-label mb-1">Aviso de vacina — 7 dias antes do vencimento</label>
                 <p class="small text-secondary mb-2">
-                    Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
+                    Variáveis: <code>{nome_dono}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
                 </p>
                 <textarea name="msg_vacina_semana" class="form-control" rows="3"><?= h($valores['msg_vacina_semana']) ?></textarea>
             </div>
@@ -180,7 +215,7 @@ require_once __DIR__ . '/../geral/header.php';
             <div class="mb-0">
                 <label class="form-label mb-1">Aviso de vacina — no dia do vencimento</label>
                 <p class="small text-secondary mb-2">
-                    Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
+                    Variáveis: <code>{nome_dono}</code> <code>{nome_animal}</code> <code>{vacina}</code> <code>{data}</code>
                 </p>
                 <textarea name="msg_vacina_dia" class="form-control" rows="3"><?= h($valores['msg_vacina_dia']) ?></textarea>
             </div>
