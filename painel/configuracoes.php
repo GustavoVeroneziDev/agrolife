@@ -229,6 +229,27 @@ require_once __DIR__ . '/../geral/header.php';
             </div>
         </div>
 
+    </div>
+</div>
+
+<div class="d-grid col-lg-6">
+    <button type="submit" class="btn btn-accent btn-lg"><i class="bi bi-check2 me-2"></i> Salvar configurações</button>
+</div>
+</form>
+
+<?php
+    // O switch e o número ficam fisicamente fora do <form> principal (pra
+    // caber no MESMO card que os botões de demonstração — que postam pra um
+    // endpoint diferente, e form dentro de form não existe em HTML), mas
+    // continuam salvando junto com "Salvar configurações" através do
+    // atributo form="formConfiguracoes", que liga um campo a um form em
+    // outro lugar da página.
+    $modoTesteLigado = $valores['whatsapp_modo_teste'] === '1';
+    $temNumeroTeste  = $valores['whatsapp_numero_teste'] !== '';
+    $demoHabilitado  = $modoTesteLigado && $temNumeroTeste;
+?>
+<div class="row g-4">
+    <div class="col-lg-6 offset-lg-6">
         <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-2"><i class="bi bi-bug me-2 text-accent"></i>Modo de teste do WhatsApp</h6>
             <p class="small text-secondary">
@@ -239,70 +260,61 @@ require_once __DIR__ . '/../geral/header.php';
             </p>
             <div class="form-check form-switch mb-3">
                 <input class="form-check-input" type="checkbox" role="switch" name="whatsapp_modo_teste"
-                       id="whatsappModoTeste" value="1" <?= $valores['whatsapp_modo_teste'] === '1' ? 'checked' : '' ?>>
+                       id="whatsappModoTeste" value="1" form="formConfiguracoes" <?= $modoTesteLigado ? 'checked' : '' ?>>
                 <label class="form-check-label" for="whatsappModoTeste">Modo de teste ligado</label>
             </div>
             <div class="mb-0">
                 <label class="form-label">Número de teste</label>
                 <input type="tel" name="whatsapp_numero_teste" id="whatsappNumeroTeste" class="form-control" data-mask="tel"
-                       value="<?= h(formatarTelefoneExibicao($valores['whatsapp_numero_teste'])) ?>">
+                       form="formConfiguracoes" value="<?= h(formatarTelefoneExibicao($valores['whatsapp_numero_teste'])) ?>">
+                <div class="form-text">Esses dois campos salvam junto com "Salvar configurações" acima.</div>
             </div>
-        </div>
 
-    </div>
-</div>
+            <hr class="my-4">
 
-<div class="d-grid col-lg-6">
-    <button type="submit" class="btn btn-accent btn-lg"><i class="bi bi-check2 me-2"></i> Salvar configurações</button>
-</div>
-</form>
-
-<?php $temNumeroTeste = $valores['whatsapp_numero_teste'] !== ''; ?>
-<div class="row g-4">
-    <div class="col-lg-6 offset-lg-6">
-        <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-2"><i class="bi bi-play-circle me-2 text-accent"></i>Demonstração ao vivo</h6>
             <p class="small text-secondary">
-                Dispara pro <strong>número de teste</strong> configurado acima uma mensagem de
-                exemplo, igual à que um cliente de verdade recebe — pra mostrar o sistema
-                funcionando numa reunião, sem precisar de um agendamento real.
+                Dispara pro <strong>número de teste</strong> acima uma mensagem de exemplo, igual à
+                que um cliente de verdade recebe — pra mostrar o sistema funcionando numa reunião,
+                sem precisar de um agendamento real.
             </p>
-            <p class="small mb-3" id="demoAvisoSemNumero" style="color:var(--cor-perigo);<?= $temNumeroTeste ? 'display:none;' : '' ?>">
-                <i class="bi bi-exclamation-circle me-1"></i>Configure um número de teste acima pra habilitar.
+            <p class="small mb-3" id="demoAviso" style="color:var(--cor-perigo);<?= $demoHabilitado ? 'display:none;' : '' ?>">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                <span id="demoAvisoTexto"><?= !$modoTesteLigado ? 'Ligue o "Modo de teste" acima pra habilitar.' : 'Configure um número de teste acima pra habilitar.' ?></span>
             </p>
             <div class="d-flex flex-wrap gap-2">
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="agendamento">
-                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $demoHabilitado ? '' : 'disabled' ?>>
                         <i class="bi bi-calendar-plus me-1"></i> Agendamento criado
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="cancelamento">
-                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $demoHabilitado ? '' : 'disabled' ?>>
                         <i class="bi bi-calendar-x me-1"></i> Cancelamento
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="remarcacao">
-                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $demoHabilitado ? '' : 'disabled' ?>>
                         <i class="bi bi-arrow-repeat me-1"></i> Remarcação
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="retorno">
-                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $demoHabilitado ? '' : 'disabled' ?>>
                         <i class="bi bi-arrow-return-right me-1"></i> Retorno
                     </button>
                 </form>
                 <form method="POST" action="<?= BASE ?>/painel/demo_whatsapp.php">
                     <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                     <input type="hidden" name="cenario" value="vacina">
-                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $temNumeroTeste ? '' : 'disabled' ?>>
+                    <button type="submit" class="btn btn-outline-accent btn-demo-whatsapp" <?= $demoHabilitado ? '' : 'disabled' ?>>
                         <i class="bi bi-shield-plus me-1"></i> Lembrete de vacina
                     </button>
                 </form>
@@ -321,19 +333,34 @@ document.getElementById('formConfiguracoes').addEventListener('submit', function
     try { sessionStorage.setItem('vsScrollY', String(window.scrollY)); } catch (e) {}
 });
 
-// Os botões de demonstração dependem de ter um número de teste configurado
-// (é pra lá que toda mensagem de demo vai) — sem isso, clicar só voltava
-// com um aviso de erro. Desabilita direto na tela, e já reage ao digitar,
-// sem precisar salvar e recarregar pra destravar.
+// Os botões de demonstração só fazem sentido com o modo de teste ligado E
+// um número configurado (é pra lá que toda mensagem de demo vai) — sem
+// isso, clicar só voltava com um aviso de erro. Desabilita direto na tela,
+// e já reage a mexer no switch ou no número, sem precisar salvar e
+// recarregar pra destravar.
 (function () {
+    var campoSwitch = document.getElementById('whatsappModoTeste');
     var campoNumero = document.getElementById('whatsappNumeroTeste');
-    var aviso = document.getElementById('demoAvisoSemNumero');
-    var botoes = document.querySelectorAll('.btn-demo-whatsapp');
-    campoNumero.addEventListener('input', function () {
-        var tem = campoNumero.value.trim() !== '';
-        botoes.forEach(function (b) { b.disabled = !tem; });
-        aviso.style.display = tem ? 'none' : '';
-    });
+    var aviso       = document.getElementById('demoAviso');
+    var avisoTexto  = document.getElementById('demoAvisoTexto');
+    var botoes      = document.querySelectorAll('.btn-demo-whatsapp');
+
+    function atualizar() {
+        var ligado = campoSwitch.checked;
+        var temNumero = campoNumero.value.trim() !== '';
+        var habilitado = ligado && temNumero;
+
+        botoes.forEach(function (b) { b.disabled = !habilitado; });
+        aviso.style.display = habilitado ? 'none' : '';
+        if (!habilitado) {
+            avisoTexto.textContent = !ligado
+                ? 'Ligue o "Modo de teste" acima pra habilitar.'
+                : 'Configure um número de teste acima pra habilitar.';
+        }
+    }
+
+    campoSwitch.addEventListener('change', atualizar);
+    campoNumero.addEventListener('input', atualizar);
 })();
 </script>
 

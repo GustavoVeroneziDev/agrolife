@@ -14,8 +14,13 @@ if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
 
 // Sempre manda pro número de teste configurado, nunca pra um telefone
 // vindo do formulário — assim o botão de demonstração não corre risco
-// de mandar mensagem pra um cliente de verdade, mesmo que o modo de
-// teste geral esteja desligado no momento.
+// de mandar mensagem pra um cliente de verdade. Exige o modo de teste
+// ligado também — a tela já desabilita os botões nesse caso, mas a
+// checagem de verdade é aqui (desabilitar só no HTML não impede um POST
+// direto).
+if (getConfig($pdo, 'whatsapp_modo_teste', '') !== '1') {
+    redirecionarComMensagem(BASE . '/painel/configuracoes.php', 'Ligue o "Modo de teste" antes de usar a demonstração.', 'warning');
+}
 $numeroDemo = getConfig($pdo, 'whatsapp_numero_teste', '');
 if ($numeroDemo === '') {
     redirecionarComMensagem(BASE . '/painel/configuracoes.php', 'Configure um número de teste antes de usar a demonstração.', 'warning');
