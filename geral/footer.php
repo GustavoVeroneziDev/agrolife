@@ -158,6 +158,18 @@ function vsConfirm(msg, onOk, label) {
 // modal, reload no meio da transição de fechar) um backdrop ficar pra
 // trás sem nenhum modal de fato aberto, remove ele — sem isso a tela
 // fica cinza e sem dar pra clicar em nada até recarregar manualmente.
+// Tira o foco de qualquer campo dentro do modal ANTES do Bootstrap marcar
+// aria-hidden="true" nele — sem isso, fechar um modal enquanto ainda tem
+// campo focado (Cancelar clicado, Salvar via Enter, etc.) dispara o aviso
+// do navegador "Blocked aria-hidden... its descendant retained focus".
+// Genérico pra qualquer modal do sistema, não só um específico.
+document.addEventListener('hide.bs.modal', function (e) {
+    var focado = document.activeElement;
+    if (focado && e.target.contains(focado)) {
+        focado.blur();
+    }
+});
+
 document.addEventListener('hidden.bs.modal', function () {
     setTimeout(function () {
         if (!document.querySelector('.modal.show')) {
