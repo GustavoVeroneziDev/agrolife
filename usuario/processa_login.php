@@ -22,22 +22,29 @@ if ($tentativas >= 5 && (time() - $ultimaTentativa) < 300) {
     redirecionarComMensagem(BASE . '/usuario/login.php', 'Muitas tentativas. Aguarde 5 minutos.', 'warning');
 }
 
-$email = trim($_POST['email'] ?? '');
-$senha = $_POST['senha'] ?? '';
+$identificador = trim($_POST['identificador'] ?? '');
+$senha         = $_POST['senha'] ?? '';
 
-// login.php já sabe reler ?email= pra não fazer a pessoa redigitar o
-// e-mail de novo depois de um erro — só falta usar isso aqui.
-$voltarLogin = BASE . '/usuario/login.php?email=' . urlencode($email);
+// login.php já sabe reler ?identificador= pra não fazer a pessoa redigitar
+// de novo depois de um erro — só falta usar isso aqui.
+$voltarLogin = BASE . '/usuario/login.php?identificador=' . urlencode($identificador);
 
-if ($email === '' || $senha === '') {
-    redirecionarComMensagem($voltarLogin, 'Preencha e-mail e senha.', 'warning');
+if ($identificador === '' || $senha === '') {
+    redirecionarComMensagem($voltarLogin, 'Preencha e-mail/WhatsApp e senha.', 'warning');
 }
+
+// WhatsApp virou o dado essencial (muitos clientes não têm e-mail
+// cadastrado) — aceita login tanto por e-mail quanto por telefone.
+// sanitizarTelefone() retorna null se não tiver cara de telefone; nesse
+// caso a comparação com Telefone nunca bate, só a de Email importa.
+$telefoneSanitizado = sanitizarTelefone($identificador);
 
 try {
     $stmt = $pdo->prepare(
-        'SELECT IDUsuario, Nome, Email, Senha, NivelAcesso, Cargo, Ativo FROM Usuarios WHERE Email = :email LIMIT 1'
+        'SELECT IDUsuario, Nome, Email, Senha, NivelAcesso, Cargo, Ativo FROM Usuarios
+         WHERE Email = :email OR (:tel1 IS NOT NULL AND Telefone = :tel2) LIMIT 1'
     );
-    $stmt->execute([':email' => $email]);
+    $stmt->execute([':email' => $identificador, ':tel1' => $telefoneSanitizado, ':tel2' => $telefoneSanitizado]);
     $usuario = $stmt->fetch();
 } catch (PDOException $e) {
     error_log('[Login] ' . $e->getMessage());
@@ -47,7 +54,7 @@ try {
 if (!$usuario || !password_verify($senha, $usuario['Senha'])) {
     $_SESSION['login_tentativas'] = $tentativas + 1;
     $_SESSION['login_ultima']     = time();
-    redirecionarComMensagem($voltarLogin, 'E-mail ou senha incorretos.', 'danger');
+    redirecionarComMensagem($voltarLogin, 'E-mail/WhatsApp ou senha incorretos.', 'danger');
 }
 
 if (!$usuario['Ativo']) {

@@ -25,12 +25,12 @@ require_once __DIR__ . '/../geral/header.php';
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
 
                 <div class="mb-3">
-                    <label class="form-label" for="email">E-mail</label>
+                    <label class="form-label" for="identificador">E-mail ou WhatsApp</label>
                     <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input type="email" id="email" name="email" class="form-control"
-                               placeholder="seu@email.com" required autocomplete="email"
-                               value="<?= h($_GET['email'] ?? '') ?>">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" id="identificador" name="identificador" class="form-control"
+                               placeholder="seu@email.com ou (11) 99999-9999" required autocomplete="username"
+                               value="<?= h($_GET['identificador'] ?? '') ?>">
                     </div>
                 </div>
 

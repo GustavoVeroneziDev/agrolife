@@ -62,6 +62,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
     }
 }
 
+// Editar dados do cliente (nome/e-mail/WhatsApp) e, opcionalmente, definir
+// uma nova senha na hora — sem isso, um cliente sem e-mail cadastrado (agora
+// possível, já que WhatsApp virou o dado essencial) não tinha NENHUMA forma
+// de recuperar o acesso se esquecesse a senha.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'editar_cliente') {
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Token inválido.', 'danger');
+    }
+    exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
+
+    $nome        = trim($_POST['nome']  ?? '');
+    $email       = trim($_POST['email'] ?? '');
+    $tel         = trim($_POST['tel']   ?? '');
+    $novaSenha   = trim($_POST['nova_senha'] ?? '');
+
+    if ($nome === '' || $tel === '') {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Nome e WhatsApp são obrigatórios.', 'warning');
+    }
+    $telSanitizado = sanitizarTelefone($tel);
+    if (!$telSanitizado) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'WhatsApp inválido.', 'warning');
+    }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'E-mail inválido.', 'warning');
+    }
+    if ($novaSenha !== '' && strlen($novaSenha) < 4) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'A nova senha deve ter pelo menos 4 caracteres.', 'warning');
+    }
+
+    try {
+        // Só é cliente de verdade — não deixa esse endpoint mexer em conta
+        // de equipe/admin.
+        $chkAlvo = $pdo->prepare('SELECT NivelAcesso FROM Usuarios WHERE IDUsuario = :id LIMIT 1');
+        $chkAlvo->execute([':id' => $id]);
+        if ($chkAlvo->fetchColumn() !== 'cliente') {
+            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente não encontrado.', 'warning');
+        }
+
+        if ($email !== '') {
+            $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :e AND IDUsuario != :id LIMIT 1');
+            $chk->execute([':e' => $email, ':id' => $id]);
+            if ($chk->fetch()) {
+                redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'E-mail já cadastrado por outra conta.', 'warning');
+            }
+        }
+        $chkTel = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Telefone = :t AND IDUsuario != :id LIMIT 1');
+        $chkTel->execute([':t' => $telSanitizado, ':id' => $id]);
+        if ($chkTel->fetch()) {
+            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Esse WhatsApp já está cadastrado por outra conta.', 'warning');
+        }
+
+        $params = [
+            ':nome'  => $nome,
+            ':email' => $email !== '' ? $email : null,
+            ':tel'   => $telSanitizado,
+            ':id'    => $id,
+        ];
+        $sql = 'UPDATE Usuarios SET Nome = :nome, Email = :email, Telefone = :tel';
+        if ($novaSenha !== '') {
+            $sql .= ', Senha = :senha';
+            $params[':senha'] = password_hash($novaSenha, PASSWORD_DEFAULT);
+        }
+        $sql .= ' WHERE IDUsuario = :id';
+        $pdo->prepare($sql)->execute($params);
+
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente atualizado com sucesso!', 'success');
+    } catch (PDOException $e) {
+        error_log('[EditarCliente] ' . $e->getMessage());
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Erro ao atualizar.', 'danger');
+    }
+}
+
 try {
     // Sem filtrar por NivelAcesso: um admin pode ser dono de animal também,
     // e essa página precisa abrir certo quando alguém clicar no dono dele.
@@ -164,14 +236,19 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card p-4">
-            <div class="text-center mb-3">
+            <div class="text-center mb-3 position-relative">
+                <?php if ($souAdmin): ?>
+                    <button class="btn btn-sm btn-outline-accent position-absolute top-0 end-0" data-bs-toggle="modal" data-bs-target="#modalEditarCliente">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                <?php endif ?>
                 <div class="avatar-circle mx-auto"><?= h(mb_strtoupper(mb_substr($dono['Nome'], 0, 1))) ?></div>
                 <h5 class="fw-bold mt-2 mb-0"><?= h($dono['Nome']) ?></h5>
                 <p class="small text-secondary mb-0">Cliente desde <?= formatarData($dono['MomentoRegistro']) ?></p>
             </div>
             <dl class="mb-3">
                 <dt class="small text-secondary">E-mail</dt>
-                <dd><?= h($dono['Email']) ?></dd>
+                <dd><?= $dono['Email'] ? h($dono['Email']) : '<span class="text-secondary">Não informado</span>' ?></dd>
                 <dt class="small text-secondary">WhatsApp</dt>
                 <dd>
                     <?php if ($dono['Telefone']): ?>
@@ -266,6 +343,49 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
 </div>
 
+<?php if ($souAdmin): ?>
+<div class="modal fade" id="modalEditarCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
+                <input type="hidden" name="acao" value="editar_cliente">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold">Editar cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome completo *</label>
+                        <input type="text" name="nome" class="form-control" required value="<?= h($dono['Nome']) ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">WhatsApp *</label>
+                        <input type="tel" name="tel" class="form-control" data-mask="tel" placeholder="(11) 99999-9999" required
+                            value="<?= h(preg_replace('/^55(?=\d{10,11}$)/', '', (string) $dono['Telefone'])) ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-mail <span class="text-secondary">(opcional)</span></label>
+                        <input type="email" name="email" class="form-control" value="<?= h($dono['Email']) ?>">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Nova senha</label>
+                        <input type="password" name="nova_senha" class="form-control" minlength="4" maxlength="72" autocomplete="new-password">
+                        <div class="form-text">Deixe em branco pra manter a senha atual. Preenchendo, troca na hora — sem e-mail nem confirmação do cliente.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-accent">
+                        <i class="bi bi-check2 me-1"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif ?>
+
 <div class="modal fade" id="modalNovoAnimal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -338,6 +458,15 @@ var NA_RACAS = <?= json_encode(array_map(fn($r) => [
 ], $racas), JSON_UNESCAPED_UNICODE) ?>;
 
 initAnimalPickers('na', NA_ESPECIES, NA_RACAS);
+
+// O campo de WhatsApp do modal de editar já vem preenchido direto pelo PHP
+// (não por JS, como no de equipe) — vsMascaraTel() só formata a partir de um
+// evento "input", então sem isso o número aparecia sem máscara até a pessoa
+// mexer no campo.
+var telEditarCliente = document.querySelector('#modalEditarCliente [name="tel"]');
+if (telEditarCliente && telEditarCliente.value) {
+    telEditarCliente.dispatchEvent(new Event('input'));
+}
 </script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

@@ -26,28 +26,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/equipe.php', 'Token inválido.', 'danger');
     }
-    $nome  = trim($_POST['nome']  ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $tel   = trim($_POST['tel']   ?? '');
-    $cargo = trim($_POST['cargo'] ?? '');
-    $senha = bin2hex(random_bytes(8)); // senha aleatória — o funcionário pode redefinir depois
+    $nome        = trim($_POST['nome']  ?? '');
+    $email       = trim($_POST['email'] ?? '');
+    $tel         = trim($_POST['tel']   ?? '');
+    $cargo       = trim($_POST['cargo'] ?? '');
+    $senhaManual = trim($_POST['senha'] ?? '');
 
-    if ($nome === '' || $email === '') {
-        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Nome e e-mail são obrigatórios.', 'warning');
+    // WhatsApp é o dado essencial — e-mail vira opcional (mesma lógica do
+    // cadastro de cliente).
+    if ($nome === '' || $tel === '') {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Nome e WhatsApp são obrigatórios.', 'warning');
     }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $telSanitizado = sanitizarTelefone($tel);
+    if (!$telSanitizado) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'WhatsApp inválido.', 'warning');
+    }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         redirecionarComMensagem(BASE . '/painel/equipe.php', 'E-mail inválido.', 'warning');
+    }
+    if ($email === '' && $senhaManual === '') {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Sem e-mail cadastrado, defina uma senha manualmente.', 'warning');
+    }
+    if ($senhaManual !== '' && strlen($senhaManual) < 4) {
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'A senha deve ter pelo menos 4 caracteres.', 'warning');
     }
     if ($cargo !== '' && !isset($cargos[$cargo])) {
         $cargo = '';
     }
 
     try {
-        $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :e LIMIT 1');
-        $chk->execute([':e' => $email]);
-        if ($chk->fetch()) {
-            redirecionarComMensagem(BASE . '/painel/equipe.php', 'E-mail já cadastrado.', 'warning');
+        if ($email !== '') {
+            $chk = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Email = :e LIMIT 1');
+            $chk->execute([':e' => $email]);
+            if ($chk->fetch()) {
+                redirecionarComMensagem(BASE . '/painel/equipe.php', 'E-mail já cadastrado.', 'warning');
+            }
         }
+        $chkTel = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Telefone = :t LIMIT 1');
+        $chkTel->execute([':t' => $telSanitizado]);
+        if ($chkTel->fetch()) {
+            redirecionarComMensagem(BASE . '/painel/equipe.php', 'Esse WhatsApp já está cadastrado.', 'warning');
+        }
+
+        $senha = $senhaManual !== '' ? $senhaManual : bin2hex(random_bytes(8));
+
         $novoId = gerarUuid();
         $stmt = $pdo->prepare(
             'INSERT INTO Usuarios (IDUsuario, Nome, Email, Telefone, Senha, NivelAcesso, Cargo)
@@ -56,26 +78,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'cadastr
         $stmt->execute([
             ':id'    => $novoId,
             ':nome'  => $nome,
-            ':email' => $email,
-            ':tel'   => $tel !== '' ? sanitizarTelefone($tel) : null,
+            ':email' => $email !== '' ? $email : null,
+            ':tel'   => $telSanitizado,
             ':senha' => password_hash($senha, PASSWORD_DEFAULT),
             ':cargo' => $cargo !== '' ? $cargo : null,
         ]);
 
-        $token = criarTokenResetSenha($pdo, $novoId);
-        $link  = urlAbsoluta('/usuario/redefinir_senha.php?id=' . $token['id'] . '&t=' . $token['token']);
-        $corpo = '<p>Olá, ' . h($nome) . '!</p>'
-               . '<p>Uma conta foi criada para você em ' . h(APP_NOME) . '. Clique no botão abaixo para definir sua senha de acesso:</p>'
-               . '<p style="text-align:center;margin:24px 0;">'
-               . '<a href="' . h($link) . '" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Definir senha</a>'
-               . '</p>'
-               . '<p style="font-size:13px;color:#6b7c78;">Esse link expira em 24 horas.</p>';
-        $enviou = enviarEmail($email, 'Defina sua senha — ' . APP_NOME, emailHtml('Defina sua senha', $corpo));
+        if ($email !== '' && $senhaManual === '') {
+            $token = criarTokenResetSenha($pdo, $novoId);
+            $link  = urlAbsoluta('/usuario/redefinir_senha.php?id=' . $token['id'] . '&t=' . $token['token']);
+            $corpo = '<p>Olá, ' . h($nome) . '!</p>'
+                   . '<p>Uma conta foi criada para você em ' . h(APP_NOME) . '. Clique no botão abaixo para definir sua senha de acesso:</p>'
+                   . '<p style="text-align:center;margin:24px 0;">'
+                   . '<a href="' . h($link) . '" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Definir senha</a>'
+                   . '</p>'
+                   . '<p style="font-size:13px;color:#6b7c78;">Esse link expira em 24 horas.</p>';
+            $enviou = enviarEmail($email, 'Defina sua senha — ' . APP_NOME, emailHtml('Defina sua senha', $corpo));
 
-        $msg = $enviou
-            ? 'Funcionário cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
-            : 'Funcionário cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
-        redirecionarComMensagem(BASE . '/painel/equipe.php', $msg, $enviou ? 'success' : 'warning');
+            $msg = $enviou
+                ? 'Funcionário cadastrado com sucesso! Enviamos um e-mail para ele definir a senha.'
+                : 'Funcionário cadastrado, mas não conseguimos enviar o e-mail de definição de senha — confira o endereço.';
+            redirecionarComMensagem(BASE . '/painel/equipe.php', $msg, $enviou ? 'success' : 'warning');
+        }
+
+        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Funcionário cadastrado com sucesso! Repasse a senha combinada pra ele.', 'success');
     } catch (PDOException $e) {
         error_log('[CadastroFuncionario] ' . $e->getMessage());
         redirecionarComMensagem(BASE . '/painel/equipe.php', 'Erro ao cadastrar.', 'danger');
@@ -211,7 +237,11 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell text-secondary small email-cell">
-                                    <span title="<?= h($v['Email']) ?>"><?= h($v['Email']) ?></span>
+                                    <?php if ($v['Email']): ?>
+                                        <span title="<?= h($v['Email']) ?>"><?= h($v['Email']) ?></span>
+                                    <?php else: ?>
+                                        <span class="text-secondary">—</span>
+                                    <?php endif ?>
                                 </td>
                                 <td class="d-none d-md-table-cell">
                                     <?php if ($v['Telefone']): ?>
@@ -256,22 +286,25 @@ require_once __DIR__ . '/../geral/header.php';
                         <input type="text" name="nome" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">E-mail *</label>
-                        <input type="email" name="email" class="form-control" required>
+                        <label class="form-label">WhatsApp *</label>
+                        <input type="tel" name="tel" class="form-control" data-mask="tel" placeholder="(11) 99999-9999" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">WhatsApp</label>
-                        <input type="tel" name="tel" class="form-control" data-mask="tel" placeholder="(11) 99999-9999">
+                        <label class="form-label">E-mail <span class="text-secondary">(opcional)</span></label>
+                        <input type="email" name="email" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Cargo</label>
                         <?= campoPicker('funcCargo', 'cargo', 'Selecione…', '', obrigatorio: false, comBusca: false) ?>
                         <div class="form-text">Só usado pra mostrar esse funcionário como opção de "veterinário responsável" num agendamento — não muda o que ele pode fazer no sistema.</div>
                     </div>
-                    <p class="small text-secondary mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Uma senha temporária será gerada automaticamente.
-                    </p>
+                    <div class="mb-1">
+                        <label class="form-label">Senha <span class="text-secondary">(opcional)</span></label>
+                        <input type="password" name="senha" class="form-control" minlength="4" maxlength="72" autocomplete="new-password">
+                        <div class="form-text" id="funcSenhaAjuda">
+                            Deixe em branco pra gerar uma senha aleatória e mandar por e-mail um link pra ele definir a dele.
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -331,6 +364,22 @@ require_once __DIR__ . '/../geral/header.php';
 var CARGOS = <?= json_encode(array_map(fn($valor, $label) => [
     'id' => $valor, 'nome' => $label,
 ], array_keys($cargos), $cargos), JSON_UNESCAPED_UNICODE) ?>;
+
+// Sem e-mail não tem como mandar link de "definir senha" — deixa claro que
+// nesse caso a senha passa a ser obrigatória.
+(function () {
+    var modal = document.getElementById('modalNovoFuncionario');
+    if (!modal) return;
+    var campoEmail = modal.querySelector('[name="email"]');
+    var ajuda = document.getElementById('funcSenhaAjuda');
+    function atualizar() {
+        ajuda.textContent = campoEmail.value.trim() === ''
+            ? 'Sem e-mail, defina a senha aqui — não tem como mandar link de definição por e-mail.'
+            : 'Deixe em branco pra gerar uma senha aleatória e mandar por e-mail um link pra ele definir a dele.';
+    }
+    campoEmail.addEventListener('input', atualizar);
+    atualizar();
+})();
 
 initPicker({
     pickerId: 'funcCargoPicker', triggerId: 'funcCargoTrigger', dropdownId: 'funcCargoDropdown',
