@@ -109,7 +109,10 @@ try {
     $historico->execute([':id' => $id]);
     $historico = $historico->fetchAll();
 
-    $mostrarClinicoExcluidos = ($_GET['clinico'] ?? '') === 'todos';
+    // Ver excluídos é admin-only — o link só aparece pra admin, mas sem essa
+    // checagem aqui um funcionário podia forçar pela URL e ver registro
+    // clínico desativado mesmo assim.
+    $mostrarClinicoExcluidos = ($_GET['clinico'] ?? '') === 'todos' && ($_SESSION['nivel_acesso'] ?? '') === 'admin';
     $clinico = $pdo->prepare(
         'SELECT rc.*, u.Nome AS NomeVeterinario
          FROM RegistrosClinicos rc

@@ -34,8 +34,16 @@ $id   = trim($dados['id'] ?? '');
 // nem sumir sem deixar rastro. Mesmo padrão de cliente/animal/equipe.
 if ($acao === 'excluir' && $id) {
     try {
-        $pdo->prepare('UPDATE RegistrosClinicos SET Ativo = 0 WHERE IDRegistro = :id')->execute([':id' => $id]);
-        registrarAuditoria($pdo, 'registro_clinico', $id, 'excluido');
+        // AND Ativo = 1 faz um clique duplo (ou reenvio) na mesma exclusão
+        // não afetar linha nenhuma da segunda vez em diante — sem isso, cada
+        // clique gravava um novo evento "excluido" na auditoria pra um
+        // registro que já estava excluído, como se tivesse sido excluído de
+        // novo.
+        $stmt = $pdo->prepare('UPDATE RegistrosClinicos SET Ativo = 0 WHERE IDRegistro = :id AND Ativo = 1');
+        $stmt->execute([':id' => $id]);
+        if ($stmt->rowCount() > 0) {
+            registrarAuditoria($pdo, 'registro_clinico', $id, 'excluido');
+        }
 
         echo json_encode(['ok' => true]);
     } catch (PDOException $e) {
@@ -47,8 +55,11 @@ if ($acao === 'excluir' && $id) {
 
 if ($acao === 'reativar' && $id) {
     try {
-        $pdo->prepare('UPDATE RegistrosClinicos SET Ativo = 1 WHERE IDRegistro = :id')->execute([':id' => $id]);
-        registrarAuditoria($pdo, 'registro_clinico', $id, 'reativado');
+        $stmt = $pdo->prepare('UPDATE RegistrosClinicos SET Ativo = 1 WHERE IDRegistro = :id AND Ativo = 0');
+        $stmt->execute([':id' => $id]);
+        if ($stmt->rowCount() > 0) {
+            registrarAuditoria($pdo, 'registro_clinico', $id, 'reativado');
+        }
 
         echo json_encode(['ok' => true]);
     } catch (PDOException $e) {

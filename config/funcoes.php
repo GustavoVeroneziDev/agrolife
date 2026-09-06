@@ -49,6 +49,29 @@ function salvarImagemEnviada(array $arquivo, string $subpasta, bool $permitirPdf
     return '/uploads/' . $subpasta . '/' . $nomeArquivo;
 }
 
+// Soma semana/mês/ano a uma data com o mesmo comportamento do MySQL
+// DATE_ADD: quando o dia de origem não existe no mês de destino (ex: 31/jan
+// + 1 mês), cai no último dia desse mês em vez de estourar pro mês seguinte.
+// DateTimeImmutable::modify('+1 month') sozinho faz 31/jan virar 03/mar —
+// sem isso, o intervalo calculado aqui (PHP) e o que o cron avança depois
+// (SQL) divergiam entre si.
+function somarIntervaloData(string $data, int $valor, string $unidadePhp): string
+{
+    $dt = new DateTimeImmutable($data);
+    if ($unidadePhp === 'weeks') {
+        return $dt->modify("+{$valor} weeks")->format('Y-m-d');
+    }
+
+    $diaOriginal = (int) $dt->format('d');
+    $unidadeSingular = $unidadePhp === 'years' ? 'year' : 'month';
+    $primeiroDiaDestino = $dt->modify("first day of +{$valor} {$unidadeSingular}");
+    $ultimoDiaMes = (int) $primeiroDiaDestino->format('t');
+
+    return $primeiroDiaDestino
+        ->setDate((int) $primeiroDiaDestino->format('Y'), (int) $primeiroDiaDestino->format('m'), min($diaOriginal, $ultimoDiaMes))
+        ->format('Y-m-d');
+}
+
 function sanitizarTelefone(string $tel): ?string
 {
     $tel = preg_replace('/\D/', '', $tel);
@@ -60,10 +83,12 @@ function sanitizarTelefone(string $tel): ?string
     if (strlen($tel) === 11) {
         return '55' . $tel;
     }
-    if (strlen($tel) === 10) {
-        return '55' . substr($tel, 0, 2) . '9' . substr($tel, 2);
-    }
-
+    // 10 dígitos (DDD + 8 dígitos) hoje é sempre um telefone fixo de verdade
+    // — todo celular brasileiro tem 9 dígitos desde a migração nacional.
+    // Antes isso virava um "celular" inventado (DDD + 9 + resto), que nunca
+    // existiu de verdade — o número era salvo, mas todo envio de WhatsApp pra
+    // ele falhava silenciosamente, sem avisar cliente nem equipe. Melhor
+    // recusar aqui e pedir o número certo do que guardar um contato morto.
     return null;
 }
 

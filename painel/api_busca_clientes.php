@@ -26,7 +26,7 @@ try {
     $stmt = $pdo->prepare(
         "SELECT IDUsuario AS id, Nome AS nome, Email AS email, Telefone AS telefone
          FROM Usuarios
-         WHERE NivelAcesso = 'cliente'
+         WHERE NivelAcesso = 'cliente' AND Ativo = 1
            AND (Nome LIKE :q1 OR Email LIKE :q2 OR Telefone LIKE :q3)
          ORDER BY Nome ASC
          LIMIT 15"

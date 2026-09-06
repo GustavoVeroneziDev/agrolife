@@ -7,6 +7,25 @@ exigirLogin('admin', 'funcionario');
 
 $tiposAgenda = tiposAgendaMap();
 
+// Sem isso, duas requisições concorrentes pro MESMO veterinário (dois
+// cliques, duas pessoas usando o painel ao mesmo tempo) podiam ambas passar
+// pela checagem de conflito antes de qualquer uma das duas ter gravado nada,
+// resultando em dois agendamentos sobrepostos. GET_LOCK nomeado por
+// veterinário serializa só quem mexe nesse mesmo vet — outros seguem livres
+// em paralelo. Se o request morrer no meio (ex: exit de
+// redirecionarComMensagem sem passar pelo destravar), o MySQL libera o lock
+// sozinho quando a conexão fecha ao fim do script — não fica preso.
+function travarAgendaVet(PDO $pdo, ?string $fkVet): void
+{
+    if (!$fkVet) return;
+    $pdo->query('SELECT GET_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ', 5)');
+}
+function destravarAgendaVet(PDO $pdo, ?string $fkVet): void
+{
+    if (!$fkVet) return;
+    $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ')');
+}
+
 // Verifica sobreposição de horário pro mesmo veterinário — mesma checagem
 // de verdade tanto no cadastro quanto (se precisar) numa futura remarcação.
 function agendamentoConflita(PDO $pdo, string $fkVet, string $inicio, string $fim, string $ignorarId = ''): bool
@@ -58,7 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $fim = date('Y-m-d H:i:s', $ts + $duracao * 60);
 
+        travarAgendaVet($pdo, $fkVet ?: null);
         if ($fkVet !== '' && agendamentoConflita($pdo, $fkVet, $inicio, $fim)) {
+            destravarAgendaVet($pdo, $fkVet);
             redirecionarComMensagem($voltarNovoAg, 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
         }
 
@@ -77,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':fim'    => $fim,
                 ':obs'    => $obs ?: null,
             ]);
+            destravarAgendaVet($pdo, $fkVet ?: null);
 
             registrarEventoAgendamento($pdo, $novoAgId, 'criado');
 
@@ -210,7 +232,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // colidir com outro compromisso já marcado nesse meio-tempo —
                 // sem checar, o retorno entrava sobrepondo, furando a mesma
                 // regra que "novo agendamento" e "remarcar" sempre respeitam.
+                travarAgendaVet($pdo, $ag['FKVeterinario']);
                 if ($ag['FKVeterinario'] && agendamentoConflita($pdo, $ag['FKVeterinario'], $retornoInicio, $retornoFim)) {
+                    destravarAgendaVet($pdo, $ag['FKVeterinario']);
                     $mensagemFinal = 'Agendamento concluído com sucesso! O retorno NÃO foi marcado — '
                         . 'esse veterinário já tem outro compromisso em ' . formatarDataHora($retornoInicio) . '. '
                         . 'Agende manualmente num horário livre.';
@@ -228,6 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':inicio' => $retornoInicio,
                         ':fim'    => $retornoFim,
                     ]);
+                    destravarAgendaVet($pdo, $ag['FKVeterinario']);
                     registrarEventoAgendamento($pdo, $retornoId, 'criado', 'Retorno de ' . formatarDataHora($ag['DataHoraInicio']));
 
                     $donoStmt = $pdo->prepare(
@@ -285,7 +310,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $duracaoSegundos = strtotime($ag['DataHoraFim']) - strtotime($ag['DataHoraInicio']);
             $novoFim = date('Y-m-d H:i:s', $ts + $duracaoSegundos);
 
+            travarAgendaVet($pdo, $ag['FKVeterinario']);
             if ($ag['FKVeterinario'] && agendamentoConflita($pdo, $ag['FKVeterinario'], $novoInicio, $novoFim, $id)) {
+                destravarAgendaVet($pdo, $ag['FKVeterinario']);
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
             }
 
@@ -306,6 +333,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )->execute([':inicio' => $novoInicio, ':fim' => $novoFim, ':id' => $id]);
             registrarEventoAgendamento($pdo, $id, 'remarcado',
                 'De ' . formatarDataHora($ag['DataHoraInicio']) . ' para ' . formatarDataHora($novoInicio));
+
+            // Se esse agendamento é a própria aplicação futura de uma vacina
+            // (não um retorno), a data planejada precisa acompanhar a
+            // remarcação — senão, ao concluir depois numa data diferente da
+            // originalmente prevista, o guard de "só atualiza se ainda
+            // estava no futuro" (ver acao=concluir) não bate mais e
+            // DataAplicacao fica travada na data antiga pra sempre.
+            $pdo->prepare(
+                "UPDATE RegistrosVacinas SET DataAplicacao = :novadata
+                 WHERE FKAgendamento = :ag AND DataAplicacao IS NOT NULL AND DataAplicacao > :hoje"
+            )->execute([':novadata' => substr($novoInicio, 0, 10), ':ag' => $id, ':hoje' => date('Y-m-d')]);
+            destravarAgendaVet($pdo, $ag['FKVeterinario']);
 
             if ($ag['Telefone']) {
                 $msg = montarMensagemRemarcacao($pdo, $ag['NomeCliente'], $ag['NomeAnimal'], $ag['Tipo'], $ag['Titulo'], $novoInicio);

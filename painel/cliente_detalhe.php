@@ -32,6 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'novo_an
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Data de nascimento inválida — não pode ser no futuro nem passar de 100 anos atrás.', 'warning');
     }
 
+    // Sem isso dava pra cadastrar um animal ativo pendurado num cliente já
+    // excluído — ele nunca seria arrastado pelo desativarCliente() (que só
+    // roda no momento da exclusão), ficando um bicho "ativo" órfão de dono
+    // "inativo" pra sempre.
+    $donoStmt = $pdo->prepare("SELECT NivelAcesso, Ativo FROM Usuarios WHERE IDUsuario = :id LIMIT 1");
+    $donoStmt->execute([':id' => $id]);
+    $donoChk = $donoStmt->fetch();
+    if (!$donoChk || $donoChk['NivelAcesso'] !== 'cliente') {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente não encontrado.', 'warning');
+    }
+    if (!$donoChk['Ativo']) {
+        redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Esse cliente está excluído — reative-o antes de cadastrar um novo animal.', 'warning');
+    }
+
     $foto = !empty($_FILES['foto']['tmp_name']) ? salvarImagemEnviada($_FILES['foto'], 'animais') : null;
     if (!empty($_FILES['foto']['tmp_name']) && $foto === null) {
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Foto inválida — envie um JPG, PNG ou WEBP de até 5 MB.', 'warning');
@@ -345,7 +359,7 @@ require_once __DIR__ . '/../geral/header.php';
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
                 <span><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Animais</span>
-                <?php if ($souAdmin): ?>
+                <?php if ($souAdmin && $dono['Ativo']): ?>
                     <button class="btn btn-sm btn-accent" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
                         <i class="bi bi-plus-lg me-1"></i> Novo animal
                     </button>

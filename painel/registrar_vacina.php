@@ -65,13 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $proximaData = null;
         if ($ciclica) {
-            $dt = new DateTimeImmutable($dataAp);
-            $proximaData = $dt->modify('+' . $intervaloValor . ' ' . $unidadesValidas[$intervaloUnidade])->format('Y-m-d');
+            $proximaData = somarIntervaloData($dataAp, $intervaloValor, $unidadesValidas[$intervaloUnidade]);
         } elseif ($proximaManual !== '') {
             $proximaData = $proximaManual;
         } elseif ($tipo && $tipo['IntervaloMeses']) {
-            $dt = new DateTimeImmutable($dataAp);
-            $proximaData = $dt->modify('+' . (int) $tipo['IntervaloMeses'] . ' months')->format('Y-m-d');
+            $proximaData = somarIntervaloData($dataAp, (int) $tipo['IntervaloMeses'], 'months');
         }
 
         // A próxima dose (ou qualquer data da sequência) antes da aplicação
