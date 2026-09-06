@@ -93,11 +93,19 @@ if ($acao === 'editar_proxima' && $id) {
             echo json_encode(['ok' => false, 'msg' => 'Essa data é anterior à aplicação — confira o ano.']);
             exit;
         }
+        // "Próxima dose" só faz sentido depois que ESSA aplicação já
+        // aconteceu — se DataAplicacao ainda está no futuro (ou nem existe),
+        // o compromisso vinculado é a própria aplicação pendente, não um
+        // retorno, e não pode ser cancelado/substituído por aqui.
+        if (!$atual['DataAplicacao'] || $atual['DataAplicacao'] > date('Y-m-d')) {
+            echo json_encode(['ok' => false, 'msg' => 'Essa vacina ainda não foi aplicada — não dá pra definir o retorno antes da aplicação acontecer.']);
+            exit;
+        }
 
         // Troca o compromisso vinculado — cancela o antigo (a data mudou, o
         // horário marcado antes não faz mais sentido) e cria um novo pra
-        // data nova, sempre como retorno (chegou até aqui, a aplicação
-        // original já é passado).
+        // data nova, sempre como retorno (chegamos até aqui só quando a
+        // aplicação original já é passado, ver checagem acima).
         cancelarAgendamentoVacina($pdo, $atual['FKAgendamento']);
         $novoAgendamento = criarAgendamentoVacina($pdo, $atual['FKAnimal'], $atual['NomeVacina'], $atual['FKVeterinario'], $proximaData, retorno: true);
 

@@ -146,6 +146,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'excluir
     }
     exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
     try {
+        // Mesma trava do editar_cliente — sem isso, dava pra desativar a
+        // conta de um funcionário/admin que também é dono de animal (essa
+        // página não filtra por NivelAcesso ao carregar o "dono").
+        $chkAlvo = $pdo->prepare('SELECT NivelAcesso FROM Usuarios WHERE IDUsuario = :id LIMIT 1');
+        $chkAlvo->execute([':id' => $id]);
+        if ($chkAlvo->fetchColumn() !== 'cliente') {
+            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente não encontrado.', 'warning');
+        }
+
         desativarCliente($pdo, $id);
         registrarAuditoria($pdo, 'cliente', $id, 'excluido');
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente excluído — os animais dele também ficaram inativos. Dá pra reativar quando quiser.', 'success');
@@ -161,6 +170,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acao'] ?? '') === 'reativa
     }
     exigirAdmin(BASE . '/painel/cliente_detalhe.php?id=' . $id);
     try {
+        $chkAlvo = $pdo->prepare('SELECT NivelAcesso FROM Usuarios WHERE IDUsuario = :id LIMIT 1');
+        $chkAlvo->execute([':id' => $id]);
+        if ($chkAlvo->fetchColumn() !== 'cliente') {
+            redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente não encontrado.', 'warning');
+        }
+
         $pdo->prepare('UPDATE Usuarios SET Ativo = 1 WHERE IDUsuario = :id')->execute([':id' => $id]);
         registrarAuditoria($pdo, 'cliente', $id, 'reativado');
         redirecionarComMensagem(BASE . '/painel/cliente_detalhe.php?id=' . $id, 'Cliente reativado com sucesso!', 'success');

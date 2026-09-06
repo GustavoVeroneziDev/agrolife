@@ -127,11 +127,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Sequência manual: cada data extra vira um lembrete futuro
         // independente (ainda não aplicado — DataAplicacao fica em branco) E
         // um compromisso na Agenda, pra quem prefere planejar várias doses
-        // na mão de uma vez em vez de depender do modo cíclico.
+        // na mão de uma vez em vez de depender do modo cíclico. retorno:false
+        // porque essa dose ainda não foi aplicada nenhuma vez — é a mesma
+        // situação do branch "aplicação futura" acima, não um retorno.
         if (!$ciclica) {
             foreach ($sequenciaExtra as $dataExtra) {
-                $fkAg = criarAgendamentoVacina($pdo, $fkAnimal, $nomeVacina, $vet, $dataExtra, retorno: true, notificar: false);
-                $eventosCriados[] = ['inicio' => $dataExtra . ' 09:00:00', 'retorno' => true];
+                $fkAg = criarAgendamentoVacina($pdo, $fkAnimal, $nomeVacina, $vet, $dataExtra, notificar: false);
+                $eventosCriados[] = ['inicio' => $dataExtra . ' 09:00:00', 'retorno' => false];
                 $pdo->prepare(
                     'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, FKAgendamento, FKVeterinario, Observacoes)
                      VALUES (:id, :animal, :tipo, NULL, :proxima, :agendamento, :vet, :obs)'

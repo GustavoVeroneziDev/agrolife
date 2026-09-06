@@ -24,8 +24,8 @@ try {
             SUM(Status = 'concluido') AS Concluidos,
             SUM(Status = 'faltou') AS Faltas,
             SUM(Status = 'cancelado') AS Cancelados,
-            SUM(CASE WHEN StatusPagamento = 'pago' THEN Valor ELSE 0 END) AS Faturado,
-            SUM(CASE WHEN StatusPagamento = 'pendente' THEN Valor ELSE 0 END) AS AReceber
+            SUM(CASE WHEN Status = 'concluido' AND StatusPagamento = 'pago' THEN Valor ELSE 0 END) AS Faturado,
+            SUM(CASE WHEN Status = 'concluido' AND StatusPagamento = 'pendente' THEN Valor ELSE 0 END) AS AReceber
          FROM Agendamentos
          WHERE DataHoraInicio BETWEEN :de AND :ate"
     );

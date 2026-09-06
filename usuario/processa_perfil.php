@@ -31,6 +31,14 @@ if ($acao === 'dados') {
     }
 
     try {
+        if ($telefoneFmt !== null) {
+            $checkTel = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Telefone = :tel AND IDUsuario != :id LIMIT 1');
+            $checkTel->execute([':tel' => $telefoneFmt, ':id' => $uid]);
+            if ($checkTel->fetch()) {
+                redirecionarComMensagem(BASE . '/usuario/perfil.php', 'Esse WhatsApp já está cadastrado por outra conta.', 'warning');
+            }
+        }
+
         // E-mail não é editável por aqui — só a clínica pode alterar
         $pdo->prepare('UPDATE Usuarios SET Nome = :nome, Telefone = :tel WHERE IDUsuario = :id')
             ->execute([':nome' => $nome, ':tel' => $telefoneFmt, ':id' => $uid]);

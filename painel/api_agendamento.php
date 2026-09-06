@@ -91,8 +91,14 @@ try {
         exit;
     }
 
-    $pdo->prepare('UPDATE Agendamentos SET Status = :status WHERE IDAgendamento = :id')
-        ->execute([':status' => $transicoes[$acao]['para'], ':id' => $id]);
+    // "Reabrir" sai de concluído sem passar pelo "concluir" de novo — sem
+    // limpar valor/pagamento aqui, esses dados ficavam presos num
+    // agendamento que voltou a ser "vai acontecer", contando faturamento de
+    // algo que deixou de estar concluído (mesmo raciocínio do "remarcar").
+    $sql = $acao === 'reabrir'
+        ? 'UPDATE Agendamentos SET Status = :status, Valor = NULL, StatusPagamento = NULL WHERE IDAgendamento = :id'
+        : 'UPDATE Agendamentos SET Status = :status WHERE IDAgendamento = :id';
+    $pdo->prepare($sql)->execute([':status' => $transicoes[$acao]['para'], ':id' => $id]);
     registrarEventoAgendamento($pdo, $id, $eventoTipos[$acao]);
 
     // Avisa o cliente quando a clínica cancela — as outras transições

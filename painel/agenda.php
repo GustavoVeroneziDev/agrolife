@@ -127,6 +127,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$ag) {
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento não encontrado.', 'warning');
             }
+            // Sem essa trava, um duplo clique (ou reenvio do form) processava
+            // "concluir" de novo em cima de um agendamento já concluído ou
+            // cancelado — duplicando retorno/WhatsApp e sobrescrevendo dados
+            // de um estado que devia ser definitivo.
+            if (!in_array($ag['Status'], ['pendente', 'confirmado'], true)) {
+                redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse agendamento não está num estado que permite concluir (já foi concluído, cancelado ou marcado como falta).', 'warning');
+            }
 
             $fkRegistroClinico = null;
             if ($criarRc) {
@@ -199,32 +206,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $retornoFim      = date('Y-m-d H:i:s', strtotime($retornoInicio) + $duracaoSegundos);
                 $retornoId       = gerarUuid();
 
-                $pdo->prepare(
-                    'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim)
-                     VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim)'
-                )->execute([
-                    ':id'     => $retornoId,
-                    ':animal' => $ag['FKAnimal'],
-                    ':vet'    => $ag['FKVeterinario'],
-                    ':origem' => $id,
-                    ':tipo'   => $ag['Tipo'],
-                    ':titulo' => $retornoTitulo,
-                    ':inicio' => $retornoInicio,
-                    ':fim'    => $retornoFim,
-                ]);
-                registrarEventoAgendamento($pdo, $retornoId, 'criado', 'Retorno de ' . formatarDataHora($ag['DataHoraInicio']));
+                // Mesmo horário reaproveitado do agendamento original pode
+                // colidir com outro compromisso já marcado nesse meio-tempo —
+                // sem checar, o retorno entrava sobrepondo, furando a mesma
+                // regra que "novo agendamento" e "remarcar" sempre respeitam.
+                if ($ag['FKVeterinario'] && agendamentoConflita($pdo, $ag['FKVeterinario'], $retornoInicio, $retornoFim)) {
+                    $mensagemFinal = 'Agendamento concluído com sucesso! O retorno NÃO foi marcado — '
+                        . 'esse veterinário já tem outro compromisso em ' . formatarDataHora($retornoInicio) . '. '
+                        . 'Agende manualmente num horário livre.';
+                } else {
+                    $pdo->prepare(
+                        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim)
+                         VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim)'
+                    )->execute([
+                        ':id'     => $retornoId,
+                        ':animal' => $ag['FKAnimal'],
+                        ':vet'    => $ag['FKVeterinario'],
+                        ':origem' => $id,
+                        ':tipo'   => $ag['Tipo'],
+                        ':titulo' => $retornoTitulo,
+                        ':inicio' => $retornoInicio,
+                        ':fim'    => $retornoFim,
+                    ]);
+                    registrarEventoAgendamento($pdo, $retornoId, 'criado', 'Retorno de ' . formatarDataHora($ag['DataHoraInicio']));
 
-                $donoStmt = $pdo->prepare(
-                    'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
-                );
-                $donoStmt->execute([':id' => $ag['FKAnimal']]);
-                $dono = $donoStmt->fetch();
-                if ($dono && $dono['Telefone']) {
-                    $msg = montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
-                    enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+                    $donoStmt = $pdo->prepare(
+                        'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+                    );
+                    $donoStmt->execute([':id' => $ag['FKAnimal']]);
+                    $dono = $donoStmt->fetch();
+                    if ($dono && $dono['Telefone']) {
+                        $msg = montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
+                        enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+                    }
+
+                    $mensagemFinal = 'Agendamento concluído com sucesso! Retorno marcado para ' . formatarData($retornoInicio) . '.';
                 }
-
-                $mensagemFinal = 'Agendamento concluído com sucesso! Retorno marcado para ' . formatarData($retornoInicio) . '.';
             }
 
             redirecionarComMensagem(BASE . '/painel/agenda.php', $mensagemFinal, 'success');
@@ -274,9 +291,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Remarcar volta pro estado inicial de um agendamento novo —
             // precisa ser confirmado de novo, mesmo que já tivesse sido
-            // confirmado antes de faltar/cancelar/remarcar.
+            // confirmado antes de faltar/cancelar/remarcar. Isso inclui
+            // limpar valor/pagamento/observações/vínculo clínico de uma
+            // conclusão anterior — sem isso, remarcar um agendamento já
+            // concluído deixava esses dados "grudados" na nova data, contando
+            // faturamento de um atendimento que na prática ainda nem
+            // aconteceu de novo (o relatório já ignora isso pelo Status, mas
+            // a própria Agenda mostrava um badge de "Pago" enganoso).
             $pdo->prepare(
-                "UPDATE Agendamentos SET DataHoraInicio = :inicio, DataHoraFim = :fim, Status = 'pendente' WHERE IDAgendamento = :id"
+                "UPDATE Agendamentos
+                 SET DataHoraInicio = :inicio, DataHoraFim = :fim, Status = 'pendente',
+                     Valor = NULL, StatusPagamento = NULL, FKRegistroClinico = NULL, ObservacoesPos = NULL
+                 WHERE IDAgendamento = :id"
             )->execute([':inicio' => $novoInicio, ':fim' => $novoFim, ':id' => $id]);
             registrarEventoAgendamento($pdo, $id, 'remarcado',
                 'De ' . formatarDataHora($ag['DataHoraInicio']) . ' para ' . formatarDataHora($novoInicio));
@@ -613,7 +639,7 @@ require_once __DIR__ . '/../geral/header.php';
                                             <span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>
                                         <?php endif ?>
                                         <?= labelStatusAgendamento($ag['Status']) ?>
-                                        <?php if ($ag['Valor'] !== null): ?>
+                                        <?php if ($ag['Valor'] !== null && $ag['Status'] === 'concluido'): ?>
                                             <button type="button"
                                                 class="badge border-0 btn-alternar-pagamento bg-<?= $ag['StatusPagamento'] === 'pago' ? 'success' : 'warning' ?>"
                                                 data-id="<?= h($ag['IDAgendamento']) ?>" style="cursor:pointer;" title="Clique pra alternar pago/pendente">

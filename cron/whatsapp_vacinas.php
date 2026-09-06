@@ -96,6 +96,13 @@ try {
         echo "[CICLICA] {$totalAvancadas} renovação(ões) de vacina cíclica avançada(s) automaticamente." . PHP_EOL;
     }
 
+    // Igualdade exata (ProximaData = tal dia) significava que um cron que não
+    // rodasse num dia específico (host fora do ar, deploy, etc.) ou um envio
+    // que falhasse perdia aquele lembrete pra sempre — no dia seguinte a data
+    // já não bate mais com "=" e a flag NotificacaoXEnviada nunca chega a
+    // barrar reenvio porque nunca foi marcada. Uma janela pequena de
+    // recuperação (passado próximo pra "dia", 0-7 dias pra "semana") resolve
+    // isso sem reabrir aviso pra vacina que já está vencida há muito tempo.
     $sqlSemana = "
         SELECT rv.IDRegistro, rv.ProximaData, a.Nome AS NomeAnimal,
                u.Nome AS NomeDono, u.Telefone, tv.Nome AS NomeVacina
@@ -103,7 +110,7 @@ try {
         JOIN Animais a  ON a.IDAnimal  = rv.FKAnimal
         JOIN Usuarios u ON u.IDUsuario = a.FKDono
         JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
-        WHERE rv.ProximaData = DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+        WHERE rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
           AND rv.NotificacaoSemanaEnviada = 0
           AND a.Ativo = 1
     ";
@@ -116,7 +123,7 @@ try {
         JOIN Animais a  ON a.IDAnimal  = rv.FKAnimal
         JOIN Usuarios u ON u.IDUsuario = a.FKDono
         JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
-        WHERE rv.ProximaData = CURDATE()
+        WHERE rv.ProximaData BETWEEN DATE_SUB(CURDATE(), INTERVAL 3 DAY) AND CURDATE()
           AND rv.NotificacaoDiaEnviada = 0
           AND a.Ativo = 1
     ";

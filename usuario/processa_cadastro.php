@@ -52,6 +52,15 @@ try {
         redirecionarComMensagem($voltarCadastro, 'E-mail já cadastrado.', 'warning');
     }
 
+    // Sem isso, dois cadastros com o mesmo WhatsApp ficavam ambíguos no
+    // login (que também aceita telefone) — mesma checagem que o resto do
+    // sistema já faz ao criar/editar qualquer Usuario.
+    $checkTel = $pdo->prepare('SELECT IDUsuario FROM Usuarios WHERE Telefone = :tel LIMIT 1');
+    $checkTel->execute([':tel' => $telefoneFmt]);
+    if ($checkTel->fetch()) {
+        redirecionarComMensagem($voltarCadastro, 'Esse WhatsApp já está cadastrado.', 'warning');
+    }
+
     $id   = gerarUuid();
     $hash = password_hash($senha, PASSWORD_DEFAULT);
 
