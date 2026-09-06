@@ -31,6 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($fkAnimal === '' || $titulo === '' || $dataReg === '' || !isset($tiposClinico[$tipo])) {
         redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Animal, tipo, título e data são obrigatórios.', 'warning');
     }
+    // Mesma validação que registrar_vacina.php já faz — sem isso, um valor
+    // mal-formado ou um ano digitado errado (ex: "2006" por engano) só ia
+    // estourar mais na frente de um jeito confuso, dependendo do que o MySQL
+    // decidisse fazer com a string.
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataReg)) {
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data inválida.', 'warning');
+    }
+    if ($dataReg < '2000-01-01' || $dataReg > date('Y-m-d')) {
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no futuro (confira o ano).', 'warning');
+    }
 
     try {
         $idRegistro = gerarUuid();

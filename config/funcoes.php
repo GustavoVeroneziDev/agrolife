@@ -346,18 +346,32 @@ function registrarEventoAgendamento(PDO $pdo, string $fkAgendamento, string $tip
 // listas e pickers. Cancela junto os agendamentos futuros que ainda
 // estavam pendentes/confirmados, senão ficavam "fantasmas" na agenda pra
 // um animal que não aparece em lugar nenhum.
+// $pdo->inTransaction() decide se essa chamada abre a própria transação ou
+// só participa de uma já em andamento (caso de desativarCliente chamando
+// isso pra cada animal) — sem isso, um erro no meio (ex: conexão cair entre
+// desativar o animal e cancelar o segundo de três agendamentos) podia deixar
+// o animal já inativo com agendamento futuro ainda pendente, exatamente o
+// "fantasma na agenda" que essa função existe pra evitar.
 function desativarAnimal(PDO $pdo, string $idAnimal): void
 {
-    $pdo->prepare('UPDATE Animais SET Ativo = 0 WHERE IDAnimal = :id')->execute([':id' => $idAnimal]);
+    $transacaoPropria = !$pdo->inTransaction();
+    if ($transacaoPropria) $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE Animais SET Ativo = 0 WHERE IDAnimal = :id')->execute([':id' => $idAnimal]);
 
-    $stmt = $pdo->prepare(
-        "SELECT IDAgendamento FROM Agendamentos WHERE FKAnimal = :id AND Status IN ('pendente', 'confirmado')"
-    );
-    $stmt->execute([':id' => $idAnimal]);
-    foreach ($stmt->fetchAll() as $ag) {
-        $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :id")
-            ->execute([':id' => $ag['IDAgendamento']]);
-        registrarEventoAgendamento($pdo, $ag['IDAgendamento'], 'cancelado', 'Cancelado — animal excluído.');
+        $stmt = $pdo->prepare(
+            "SELECT IDAgendamento FROM Agendamentos WHERE FKAnimal = :id AND Status IN ('pendente', 'confirmado')"
+        );
+        $stmt->execute([':id' => $idAnimal]);
+        foreach ($stmt->fetchAll() as $ag) {
+            $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :id")
+                ->execute([':id' => $ag['IDAgendamento']]);
+            registrarEventoAgendamento($pdo, $ag['IDAgendamento'], 'cancelado', 'Cancelado — animal excluído.');
+        }
+        if ($transacaoPropria) $pdo->commit();
+    } catch (Throwable $e) {
+        if ($transacaoPropria) $pdo->rollBack();
+        throw $e;
     }
 }
 
@@ -367,12 +381,20 @@ function desativarAnimal(PDO $pdo, string $idAnimal): void
 // Animais, órfãos de dono "ativo".
 function desativarCliente(PDO $pdo, string $idCliente): void
 {
-    $pdo->prepare('UPDATE Usuarios SET Ativo = 0 WHERE IDUsuario = :id')->execute([':id' => $idCliente]);
+    $transacaoPropria = !$pdo->inTransaction();
+    if ($transacaoPropria) $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE Usuarios SET Ativo = 0 WHERE IDUsuario = :id')->execute([':id' => $idCliente]);
 
-    $stmt = $pdo->prepare('SELECT IDAnimal FROM Animais WHERE FKDono = :id AND Ativo = 1');
-    $stmt->execute([':id' => $idCliente]);
-    foreach ($stmt->fetchAll() as $a) {
-        desativarAnimal($pdo, $a['IDAnimal']);
+        $stmt = $pdo->prepare('SELECT IDAnimal FROM Animais WHERE FKDono = :id AND Ativo = 1');
+        $stmt->execute([':id' => $idCliente]);
+        foreach ($stmt->fetchAll() as $a) {
+            desativarAnimal($pdo, $a['IDAnimal']);
+        }
+        if ($transacaoPropria) $pdo->commit();
+    } catch (Throwable $e) {
+        if ($transacaoPropria) $pdo->rollBack();
+        throw $e;
     }
 }
 
@@ -696,9 +718,21 @@ function flashMsg(): void
     }
 }
 
-function getConfig(PDO $pdo, string $chave, string $padrao = ''): string
+// Cache isolado numa referência compartilhada (em vez de um static direto
+// dentro de getConfig()) pra setConfig() também poder atualizá-lo — sem
+// isso, ler a mesma chave logo depois de escrevê-la no mesmo request
+// devolvia o valor antigo. Hoje nenhum chamador faz isso (configuracoes.php
+// sempre redireciona depois de salvar), mas era uma armadilha esperando
+// alguém tropeçar nela no futuro.
+function &configCacheRef(): array
 {
     static $cache = [];
+    return $cache;
+}
+
+function getConfig(PDO $pdo, string $chave, string $padrao = ''): string
+{
+    $cache = &configCacheRef();
     if (array_key_exists($chave, $cache)) return $cache[$chave];
     try {
         $stmt = $pdo->prepare('SELECT Valor FROM ConfiguracoesSistema WHERE Chave = :chave LIMIT 1');
@@ -723,6 +757,8 @@ function setConfig(PDO $pdo, string $chave, string $valor): void
         ':valor'  => $valor,
         ':valor2' => $valor,
     ]);
+    $cache = &configCacheRef();
+    $cache[$chave] = $valor;
 }
 
 function formatarData(?string $date): string

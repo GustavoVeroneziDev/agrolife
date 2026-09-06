@@ -139,7 +139,16 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             // clique pode ser QUALQUER ancestral (o navegador redireciona
             // pra onde estiver visível), então não dá pra filtrar pelo
             // alvo — só pela proximidade no tempo com a última seleção.
-            if (performance.now() - ultimaSelecaoPickerEm < 200) return;
+            //
+            // Isso só faz sentido pra um picker que abriu ENCADEADO logo
+            // depois dessa seleção (ex: sexo → raça) — exige também que O
+            // PRÓPRIO picker tenha aberto perto da hora da seleção. Sem essa
+            // segunda condição, selecionar algo no picker A suprimia por
+            // 200ms um clique-fora legítimo em qualquer OUTRO picker B já
+            // aberto há muito tempo na mesma tela, mesmo sem relação
+            // nenhuma entre os dois.
+            if (performance.now() - ultimaSelecaoPickerEm < 200
+                && Math.abs(abertoEm - ultimaSelecaoPickerEm) < 250) return;
             if (e.timeStamp < abertoEm) return;
             if (!picker.contains(e.target)) fechar();
         }

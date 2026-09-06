@@ -15,8 +15,10 @@ try {
         "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'pendente'"
     )->fetchColumn();
 
+    // CURDATE() já é hoje — subtrair 7 dias incluía hoje + os 7 anteriores
+    // (8 dias corridos). 6 dias atrás + hoje fecha os 7 dias certos.
     $faltasSemana = (int) $pdo->query(
-        "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'faltou' AND DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+        "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'faltou' AND DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)"
     )->fetchColumn();
 
     $atrasadas = (int) $pdo->query(

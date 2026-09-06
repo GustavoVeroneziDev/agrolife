@@ -26,6 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($categoria, ['vacina', 'medicamento'], true)) {
             $categoria = 'vacina';
         }
+        // "0" digitado explicitamente já era tratado como "sem intervalo" em
+        // todo o resto do sistema (PHP trata 0 como falsy) — normaliza aqui
+        // pra não guardar um "0" que parece um valor de verdade mas na
+        // prática sempre virou "Dose única" silenciosamente.
+        if ($intervalo === '0') {
+            $intervalo = '';
+        }
 
         try {
             if ($id) {
@@ -179,7 +186,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">Intervalo de reforço (meses)</label>
-                            <input type="number" name="intervalo" id="fIntervalo" class="form-control" min="0" placeholder="Deixe em branco p/ dose única">
+                            <input type="number" name="intervalo" id="fIntervalo" class="form-control" min="1" placeholder="Deixe em branco p/ dose única">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Espécie</label>

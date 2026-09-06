@@ -134,9 +134,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Vírgula ou ponto, tanto faz — o campo já vem mascarado tipo dinheiro
         // (mesmo padrão de peso), mas aceita os dois formatos por segurança.
+        // Se tiver vírgula, é formato BR ("1.500,00") — tira o ponto de
+        // milhar antes de trocar a vírgula por ponto decimal; sem vírgula
+        // (o <input type="number"> nativo manda assim hoje), o ponto já É o
+        // decimal e não pode ser removido, senão "200.00" viraria "20000".
         $valor = null;
         if ($valorStr !== '') {
-            $valorNum = (float) str_replace(',', '.', $valorStr);
+            if (str_contains($valorStr, ',')) {
+                $valorStr = str_replace('.', '', $valorStr);
+                $valorStr = str_replace(',', '.', $valorStr);
+            }
+            $valorNum = (float) $valorStr;
             if ($valorNum > 0) {
                 $valor = $valorNum;
             }

@@ -5,14 +5,14 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 exigirLogin('admin');
 
-$entidadeF = in_array($_GET['entidade'] ?? '', ['cliente', 'animal', 'funcionario'], true) ? $_GET['entidade'] : '';
+$entidadeF = in_array($_GET['entidade'] ?? '', ['cliente', 'animal', 'funcionario', 'registro_clinico'], true) ? $_GET['entidade'] : '';
 $de        = trim($_GET['de'] ?? '');
 $ate       = trim($_GET['ate'] ?? '');
 $pag       = max(1, (int) ($_GET['pag'] ?? 1));
 $por       = 40;
 $off       = ($pag - 1) * $por;
 
-$entidadeLabels = ['cliente' => 'Cliente', 'animal' => 'Animal', 'funcionario' => 'Funcionário'];
+$entidadeLabels = ['cliente' => 'Cliente', 'animal' => 'Animal', 'funcionario' => 'Funcionário', 'registro_clinico' => 'Registro clínico'];
 $acaoLabels     = ['criado' => 'Criado', 'editado' => 'Editado', 'excluido' => 'Excluído', 'reativado' => 'Reativado'];
 $acaoCores      = ['criado' => 'info', 'editado' => 'secondary', 'excluido' => 'danger', 'reativado' => 'success'];
 
@@ -57,7 +57,9 @@ try {
     // (Usuarios pra cliente/funcionario, Animais pra animal).
     $idsClientesFunc = array_column(array_filter($logs, fn($l) => in_array($l['Entidade'], ['cliente', 'funcionario'], true)), 'FKEntidade');
     $idsAnimais      = array_column(array_filter($logs, fn($l) => $l['Entidade'] === 'animal'), 'FKEntidade');
+    $idsClinico      = array_column(array_filter($logs, fn($l) => $l['Entidade'] === 'registro_clinico'), 'FKEntidade');
     $nomesPorId = [];
+    $animalPorClinico = [];
     if ($idsClientesFunc) {
         $ph = implode(',', array_fill(0, count($idsClientesFunc), '?'));
         $r = $pdo->prepare("SELECT IDUsuario, Nome FROM Usuarios WHERE IDUsuario IN ({$ph})");
@@ -69,6 +71,18 @@ try {
         $r = $pdo->prepare("SELECT IDAnimal, Nome FROM Animais WHERE IDAnimal IN ({$ph})");
         $r->execute(array_values($idsAnimais));
         foreach ($r->fetchAll() as $row) { $nomesPorId[$row['IDAnimal']] = $row['Nome']; }
+    }
+    if ($idsClinico) {
+        // Título do registro + nome do animal — e o link "Alvo" vai pra
+        // ficha do ANIMAL (registro clínico não tem página própria), com
+        // clinico=todos pra abrir mesmo se o registro já estiver excluído.
+        $ph = implode(',', array_fill(0, count($idsClinico), '?'));
+        $r = $pdo->prepare("SELECT IDRegistro, Titulo, FKAnimal FROM RegistrosClinicos WHERE IDRegistro IN ({$ph})");
+        $r->execute(array_values($idsClinico));
+        foreach ($r->fetchAll() as $row) {
+            $nomesPorId[$row['IDRegistro']] = $row['Titulo'];
+            $animalPorClinico[$row['IDRegistro']] = $row['FKAnimal'];
+        }
     }
 } catch (PDOException $e) {
     error_log('[Auditoria] ' . $e->getMessage());
@@ -135,10 +149,13 @@ require_once __DIR__ . '/../geral/header.php';
                             <?php
                                 $nomeAlvo = $nomesPorId[$l['FKEntidade']] ?? null;
                                 $linkAlvo = match ($l['Entidade']) {
-                                    'cliente'     => BASE . '/painel/cliente_detalhe.php?id=' . $l['FKEntidade'],
-                                    'animal'      => BASE . '/painel/animal_detalhe.php?id=' . $l['FKEntidade'],
-                                    'funcionario' => BASE . '/painel/equipe.php',
-                                    default       => null,
+                                    'cliente'          => BASE . '/painel/cliente_detalhe.php?id=' . $l['FKEntidade'],
+                                    'animal'           => BASE . '/painel/animal_detalhe.php?id=' . $l['FKEntidade'],
+                                    'funcionario'      => BASE . '/painel/equipe.php',
+                                    'registro_clinico' => isset($animalPorClinico[$l['FKEntidade']])
+                                        ? BASE . '/painel/animal_detalhe.php?id=' . $animalPorClinico[$l['FKEntidade']] . '&clinico=todos#historico-clinico'
+                                        : null,
+                                    default            => null,
                                 };
                             ?>
                             <tr>

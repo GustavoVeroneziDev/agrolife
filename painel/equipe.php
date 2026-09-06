@@ -192,7 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['acao'] ?? '', ['de
     $ligar  = ($_POST['acao'] ?? '') === 'reativar_membro';
 
     if ($idAlvo === $_SESSION['usuario_id']) {
-        redirecionarComMensagem(BASE . '/painel/equipe.php', 'Você não pode excluir sua própria conta.', 'warning');
+        $msgAutoAcao = $ligar ? 'Você não pode reativar sua própria conta.' : 'Você não pode excluir sua própria conta.';
+        redirecionarComMensagem(BASE . '/painel/equipe.php', $msgAutoAcao, 'warning');
     }
 
     try {

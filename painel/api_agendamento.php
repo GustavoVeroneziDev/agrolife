@@ -101,6 +101,15 @@ try {
     $pdo->prepare($sql)->execute([':status' => $transicoes[$acao]['para'], ':id' => $id]);
     registrarEventoAgendamento($pdo, $id, $eventoTipos[$acao]);
 
+    // Se esse agendamento cancelado era o vínculo "próximo evento" de uma
+    // vacina, limpa o vínculo — senão FKAgendamento ficava apontando pra um
+    // agendamento cancelado (o vet cancelando direto pela Agenda, em vez de
+    // pelo fluxo dedicado de vacina, que já cuida disso sozinho).
+    if ($acao === 'cancelar') {
+        $pdo->prepare('UPDATE RegistrosVacinas SET FKAgendamento = NULL WHERE FKAgendamento = :id')
+            ->execute([':id' => $id]);
+    }
+
     // Avisa o cliente quando a clínica cancela — as outras transições
     // (confirmar, marcar_falta, reabrir) ficam sem notificação automática
     // por ora, são ajustes mais internos.
