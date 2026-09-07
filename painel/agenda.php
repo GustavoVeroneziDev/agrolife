@@ -69,6 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($fkAnimal === '' || $titulo === '' || $data === '' || $hora === '' || !isset($tiposAgenda[$tipo])) {
             redirecionarComMensagem($voltarNovoAg, 'Animal, tipo, título, data e hora são obrigatórios.', 'warning');
         }
+        if (!veterinarioValido($pdo, $fkVet)) {
+            redirecionarComMensagem($voltarNovoAg, 'Veterinário responsável inválido.', 'warning');
+        }
 
         $inicio = $data . ' ' . $hora . ':00';
         $ts     = strtotime($inicio);

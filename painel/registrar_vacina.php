@@ -47,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($dataAp < $limitePassado || $dataAp > $limiteFuturo) {
         redirecionarComMensagem($voltar, 'Data de aplicação fora do intervalo permitido (confira o ano).', 'warning');
     }
+    if (!veterinarioValido($pdo, $vet)) {
+        redirecionarComMensagem($voltar, 'Veterinário responsável inválido.', 'warning');
+    }
 
     // Trava o intervalo entre 1 e 120 (mesmo limite do campo na tela) — sem
     // isso um valor absurdo vindo fora da tela normal estouraria o DATE_ADD.

@@ -10,6 +10,23 @@ function gerarUuid(): string
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+// O picker de "veterinário responsável" (registrar_vacina.php,
+// registrar_clinico.php, agenda.php) já só lista quem tem Cargo=veterinario
+// e Ativo=1 — mas isso é só filtro de tela. Sem essa mesma checagem no
+// servidor, uma requisição manual conseguia gravar qualquer Usuario
+// (inclusive um cliente) como "veterinário responsável" num registro, o
+// que é justamente o dado que a identificação do profissional (CFMV) devia
+// garantir. $fkVet vazio é sempre válido — o campo é opcional.
+function veterinarioValido(PDO $pdo, string $fkVet): bool
+{
+    if ($fkVet === '') {
+        return true;
+    }
+    $stmt = $pdo->prepare("SELECT 1 FROM Usuarios WHERE IDUsuario = :id AND Cargo = 'veterinario' AND Ativo = 1 LIMIT 1");
+    $stmt->execute([':id' => $fkVet]);
+    return (bool) $stmt->fetchColumn();
+}
+
 // Valida, move e renomeia um upload de imagem (item de $_FILES) pra dentro de
 // uploads/{$subpasta}/. Retorna o caminho web (a partir da raiz do app, sem
 // BASE) ou null se não veio arquivo válido — quem chama decide se isso é erro.

@@ -43,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($dataReg < date('Y-m-d') || $dataReg > date('Y-m-d', strtotime('+10 years'))) {
         redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no passado (confira o ano).', 'warning');
     }
+    if (!veterinarioValido($pdo, $vet)) {
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Veterinário responsável inválido.', 'warning');
+    }
 
     try {
         $idRegistro = gerarUuid();
