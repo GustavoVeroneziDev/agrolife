@@ -38,10 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataReg)) {
         redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data inválida.', 'warning');
     }
-    // A partir de hoje pra frente — não pra trás. Registro clínico aqui é
-    // pra marcar o que vai ser feito/atendido, não pra registrar retroativo.
-    if ($dataReg < date('Y-m-d') || $dataReg > date('Y-m-d', strtotime('+10 years'))) {
-        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no passado (confira o ano).', 'warning');
+    // Hoje pra trás — não pra frente. Registro clínico é prontuário: documenta
+    // um atendimento que JÁ aconteceu (exame feito, cirurgia realizada,
+    // diagnóstico dado), igual o CFMV exige. Marcar algo pra acontecer no
+    // futuro é papel da Agenda ("Novo agendamento"), não daqui.
+    if ($dataReg < '2000-01-01' || $dataReg > date('Y-m-d')) {
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no futuro (confira o ano).', 'warning');
     }
     if (!veterinarioValido($pdo, $vet)) {
         redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Veterinário responsável inválido.', 'warning');
@@ -61,11 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':anot'   => $anot ?: null,
             ':data'   => $dataReg,
         ]);
-
-        // Data aqui é sempre hoje pra frente — "o que vai ser atendido" —
-        // então precisa aparecer na Agenda igual qualquer outro compromisso,
-        // não só ficar guardado no histórico clínico.
-        criarAgendamentoClinico($pdo, $fkAnimal, $tipo, $titulo, $vet ?: null, $dataReg, $idRegistro);
 
         foreach ($_FILES['imagens']['tmp_name'] ?? [] as $i => $tmp) {
             $arquivo = [
@@ -129,12 +126,17 @@ $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<div class="d-flex align-items-center gap-2 mb-4">
+<div class="d-flex align-items-center gap-2 mb-1">
     <a href="<?= BASE ?>/painel/animais.php" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
     <h4 class="fw-bold mb-0"><i class="bi bi-journal-medical me-2 text-accent"></i>Registrar Clínico</h4>
 </div>
+<p class="text-secondary small mb-4">
+    <i class="bi bi-info-circle me-1"></i>
+    Documente aqui um atendimento que <strong>já aconteceu</strong> — exame, cirurgia, consulta, diagnóstico. Não é pra marcar um horário futuro:
+    pra agendar algo que ainda vai acontecer, use <a href="<?= BASE ?>/painel/agenda.php?acao=novo<?= $animalPreId ? '&animal=' . urlencode($animalPreId) : '' ?>">Agenda → Novo agendamento</a>.
+</p>
 
 <div class="row justify-content-center">
     <div class="col-lg-7">
@@ -168,8 +170,9 @@ require_once __DIR__ . '/../geral/header.php';
                         <?= campoPicker('rcTipo', 'tipo', '—', '', 'cirurgia', 'Cirurgia', obrigatorio: true, comBusca: false) ?>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">Data *</label>
-                        <input type="date" name="data_registro" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
+                        <label class="form-label">Data do atendimento *</label>
+                        <input type="date" name="data_registro" class="form-control" required max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
+                        <div class="form-text">Quando aconteceu de verdade — não pode ser no futuro.</div>
                     </div>
                 </div>
 

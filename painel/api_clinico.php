@@ -42,7 +42,6 @@ if ($acao === 'excluir' && $id) {
         $stmt = $pdo->prepare('UPDATE RegistrosClinicos SET Ativo = 0 WHERE IDRegistro = :id AND Ativo = 1');
         $stmt->execute([':id' => $id]);
         if ($stmt->rowCount() > 0) {
-            cancelarAgendamentoPorRegistroClinico($pdo, $id);
             registrarAuditoria($pdo, 'registro_clinico', $id, 'excluido');
         }
 
