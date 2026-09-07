@@ -470,6 +470,61 @@ function cancelarAgendamentoVacina(PDO $pdo, ?string $fkAgendamento): void
     registrarEventoAgendamento($pdo, $fkAgendamento, 'cancelado', 'Vacina replanejada ou removida.');
 }
 
+// Cria o compromisso na Agenda pro registro clínico cadastrado direto (sem
+// passar pela Agenda) — a partir de quando esse formulário passou a exigir
+// data de hoje pra frente, "o que vai ser atendido" precisa aparecer na
+// Agenda igual qualquer outro compromisso, senão fica invisível pra quem
+// olha só o calendário. Duração vem do catálogo de procedimentos (casando
+// pelo título) quando existe, senão 30min por padrão — mesma ideia do
+// intervalo/preço sugeridos.
+function criarAgendamentoClinico(PDO $pdo, string $fkAnimal, string $tipo, string $titulo, ?string $fkVet, string $data, string $fkRegistroClinico): string
+{
+    $duracaoStmt = $pdo->prepare('SELECT DuracaoPadraoMinutos FROM TiposProcedimento WHERE Nome = :nome AND Ativo = 1 LIMIT 1');
+    $duracaoStmt->execute([':nome' => $titulo]);
+    $duracaoMin = (int) ($duracaoStmt->fetchColumn() ?: 30);
+
+    $inicio = $data . ' 09:00:00';
+    $fim    = date('Y-m-d H:i:s', strtotime($inicio) + $duracaoMin * 60);
+    $agId   = gerarUuid();
+
+    $pdo->prepare(
+        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKRegistroClinico, Tipo, Titulo, DataHoraInicio, DataHoraFim)
+         VALUES (:id, :animal, :vet, :reg, :tipo, :titulo, :inicio, :fim)'
+    )->execute([
+        ':id' => $agId, ':animal' => $fkAnimal, ':vet' => $fkVet ?: null, ':reg' => $fkRegistroClinico,
+        ':tipo' => $tipo, ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,
+    ]);
+    registrarEventoAgendamento($pdo, $agId, 'criado', 'Planejado a partir de registro clínico.');
+
+    $donoStmt = $pdo->prepare(
+        'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
+    );
+    $donoStmt->execute([':id' => $fkAnimal]);
+    $dono = $donoStmt->fetch();
+    if ($dono && $dono['Telefone']) {
+        $msg = montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $tipo, $titulo, $inicio);
+        enviarWhatsApp(waNumero($dono['Telefone']), $msg);
+    }
+
+    return $agId;
+}
+
+// Cancela o compromisso vinculado a um registro clínico (se existir e ainda
+// estiver aberto) — usado ao excluir o registro, pra não deixar um horário
+// órfão marcado na Agenda pra um atendimento que não existe mais.
+function cancelarAgendamentoPorRegistroClinico(PDO $pdo, string $fkRegistroClinico): void
+{
+    $stmt = $pdo->prepare(
+        "SELECT IDAgendamento FROM Agendamentos WHERE FKRegistroClinico = :reg AND Status NOT IN ('concluido', 'cancelado') LIMIT 1"
+    );
+    $stmt->execute([':reg' => $fkRegistroClinico]);
+    $agId = $stmt->fetchColumn();
+    if ($agId) {
+        $pdo->prepare("UPDATE Agendamentos SET Status = 'cancelado' WHERE IDAgendamento = :id")->execute([':id' => $agId]);
+        registrarEventoAgendamento($pdo, $agId, 'cancelado', 'Registro clínico excluído.');
+    }
+}
+
 function redirecionarComMensagem(string $url, string $msg, string $tipo): never
 {
     if (session_status() === PHP_SESSION_NONE) {

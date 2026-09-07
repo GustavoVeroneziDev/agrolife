@@ -168,8 +168,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse agendamento não está num estado que permite concluir (já foi concluído, cancelado ou marcado como falta).', 'warning');
             }
 
-            $fkRegistroClinico = null;
-            if ($criarRc) {
+            // Preserva o vínculo já existente por padrão — esse agendamento
+            // pode ter nascido de "Registrar Clínico" (já vem com
+            // FKRegistroClinico preenchido); sem isso, concluir com a
+            // checkbox desmarcada apagava esse vínculo à toa.
+            $fkRegistroClinico = $ag['FKRegistroClinico'];
+            if ($criarRc && $fkRegistroClinico) {
+                // Já existe um registro clínico vinculado (nasceu direto do
+                // "Registrar Clínico", não da Agenda) — concluir aqui é esse
+                // atendimento acontecendo de verdade, então atualiza o
+                // registro existente em vez de criar um duplicado do mesmo
+                // evento.
+                if ($obsPos !== '') {
+                    $pdo->prepare(
+                        "UPDATE RegistrosClinicos
+                         SET Anotacoes = CASE WHEN Anotacoes IS NULL OR Anotacoes = '' THEN :obs1 ELSE CONCAT(Anotacoes, '\n\n', :obs2) END,
+                             DataRegistro = :data
+                         WHERE IDRegistro = :id"
+                    )->execute([':obs1' => $obsPos, ':obs2' => $obsPos, ':data' => date('Y-m-d'), ':id' => $fkRegistroClinico]);
+                }
+            } elseif ($criarRc) {
                 $fkRegistroClinico = gerarUuid();
                 $pdo->prepare(
                     'INSERT INTO RegistrosClinicos (IDRegistro, FKAnimal, FKVeterinario, Tipo, Titulo, Anotacoes, DataRegistro)
@@ -183,7 +201,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':anot'   => $obsPos ?: null,
                     ':data'   => date('Y-m-d'),
                 ]);
+            }
 
+            if ($criarRc) {
                 foreach ($_FILES['imagens']['tmp_name'] ?? [] as $i => $tmp) {
                     $arquivo = [
                         'tmp_name' => $tmp,

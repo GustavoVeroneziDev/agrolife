@@ -62,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':data'   => $dataReg,
         ]);
 
+        // Data aqui é sempre hoje pra frente — "o que vai ser atendido" —
+        // então precisa aparecer na Agenda igual qualquer outro compromisso,
+        // não só ficar guardado no histórico clínico.
+        criarAgendamentoClinico($pdo, $fkAnimal, $tipo, $titulo, $vet ?: null, $dataReg, $idRegistro);
+
         foreach ($_FILES['imagens']['tmp_name'] ?? [] as $i => $tmp) {
             $arquivo = [
                 'tmp_name' => $tmp,
