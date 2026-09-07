@@ -38,8 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataReg)) {
         redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data inválida.', 'warning');
     }
-    if ($dataReg < '2000-01-01' || $dataReg > date('Y-m-d')) {
-        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no futuro (confira o ano).', 'warning');
+    // A partir de hoje pra frente — não pra trás. Registro clínico aqui é
+    // pra marcar o que vai ser feito/atendido, não pra registrar retroativo.
+    if ($dataReg < date('Y-m-d') || $dataReg > date('Y-m-d', strtotime('+10 years'))) {
+        redirecionarComMensagem(BASE . '/painel/registrar_clinico.php?animal=' . $fkAnimal, 'Data fora do intervalo permitido — não pode ser no passado (confira o ano).', 'warning');
     }
 
     try {
@@ -159,7 +161,7 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                     <div class="col-6">
                         <label class="form-label">Data *</label>
-                        <input type="date" name="data_registro" class="form-control" required max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
+                        <input type="date" name="data_registro" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
                     </div>
                 </div>
 

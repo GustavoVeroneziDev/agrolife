@@ -259,6 +259,12 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ── Formulários ──────────────────────────────────────────────── */
 .form-label { font-weight: 500; }
+/* Mesma altura de .btn-accent/.btn-outline-accent (44px) — sem isso,
+   input/select ficavam no padrão menor do Bootstrap (~38px) e destoavam
+   de um botão ao lado na mesma linha (ex: busca + "Ativos", filtro +
+   "Filtrar"). -sm continua menor de propósito, alinhado a .btn-sm. */
+.form-control, .form-select { min-height: 44px; }
+.form-control-sm, .form-select-sm { min-height: 36px; }
 .form-control:focus, .form-select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 .2rem var(--accent-light);
@@ -281,7 +287,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   background: var(--bg-card);
   cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
-  min-height: 42px;
+  min-height: 44px;
   user-select: none;
   gap: .5rem;
 }
