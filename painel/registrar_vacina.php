@@ -53,11 +53,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $intervaloValor = max(1, min(120, $intervaloValor));
 
     try {
-        $tipoStmt = $pdo->prepare('SELECT Nome, IntervaloMeses FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
+        $tipoStmt = $pdo->prepare('SELECT Nome, IntervaloMeses, FKEspecie FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
         $tipoStmt->execute([':id' => $fkTipo]);
         $tipo = $tipoStmt->fetch();
+        if (!$tipo) {
+            redirecionarComMensagem($voltar, 'Vacina/medicamento não encontrado — pode ter sido removido do catálogo nesse meio-tempo.', 'warning');
+        }
 
-        $nomeVacina = $tipo['Nome'] ?? 'aplicação';
+        // O picker do formulário já filtra por espécie — essa é a mesma
+        // regra só que no backend, pra uma requisição manual (ou o
+        // catálogo mudando de espécie depois do form carregado) não
+        // conseguir gravar, por exemplo, uma vacina equina num gato.
+        if ($tipo['FKEspecie']) {
+            $especieAnimalStmt = $pdo->prepare('SELECT FKEspecie FROM Animais WHERE IDAnimal = :id LIMIT 1');
+            $especieAnimalStmt->execute([':id' => $fkAnimal]);
+            $especieAnimal = $especieAnimalStmt->fetchColumn();
+            if ($especieAnimal !== $tipo['FKEspecie']) {
+                redirecionarComMensagem($voltar, 'Essa vacina/medicamento não é da espécie desse animal.', 'warning');
+            }
+        }
+
+        $nomeVacina = $tipo['Nome'];
 
         // Cíclica não depende mais do intervalo do catálogo — a pessoa
         // escolhe livremente "a cada X semanas/meses/anos" na hora.
