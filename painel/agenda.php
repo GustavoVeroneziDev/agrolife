@@ -1262,7 +1262,15 @@ function mostrarDiaMes(data, diaNum) {
 </script>
 
 <?php if ($souAdmin && (($_GET['acao'] ?? '') === 'novo' || $animalPre)): ?>
-<script>new bootstrap.Modal(document.getElementById('modalNovoAgendamento')).show();</script>
+<script>
+// bootstrap.bundle.min.js só carrega lá no footer.php, incluído DEPOIS
+// daqui — chamar bootstrap.Modal direto nesse ponto do documento falha
+// silencioso (bootstrap ainda é undefined). DOMContentLoaded espera todo
+// script síncrono da página (o do Bootstrap incluído) já ter rodado.
+document.addEventListener('DOMContentLoaded', function () {
+    new bootstrap.Modal(document.getElementById('modalNovoAgendamento')).show();
+});
+</script>
 <?php endif ?>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>
