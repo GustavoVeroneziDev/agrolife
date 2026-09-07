@@ -121,7 +121,7 @@ try {
     $animalPre = null;
 }
 
-$paginaTitulo = 'Registrar Clínico';
+$paginaTitulo = 'Registrar Atendimento Realizado';
 $areaAtual    = 'painel';
 require_once __DIR__ . '/../geral/header.php';
 ?>
@@ -130,7 +130,7 @@ require_once __DIR__ . '/../geral/header.php';
     <a href="<?= BASE ?>/painel/animais.php" onclick="voltarInteligente(event)" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <h4 class="fw-bold mb-0"><i class="bi bi-journal-medical me-2 text-accent"></i>Registrar Clínico</h4>
+    <h4 class="fw-bold mb-0"><i class="bi bi-journal-medical me-2 text-accent"></i>Registrar Atendimento Realizado</h4>
 </div>
 <p class="text-secondary small mb-4">
     <i class="bi bi-info-circle me-1"></i>

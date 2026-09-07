@@ -295,7 +295,7 @@ require_once __DIR__ . '/../geral/header.php';
                         <i class="bi bi-shield-plus me-2"></i>Aplicar vacina
                     </a>
                     <a href="<?= BASE ?>/painel/registrar_clinico.php" class="btn btn-outline-accent">
-                        <i class="bi bi-journal-medical me-2"></i>Registrar clínico
+                        <i class="bi bi-journal-medical me-2"></i>Registrar atendimento realizado
                     </a>
                     <a href="<?= BASE ?>/painel/animais.php?acao=novo" class="btn btn-outline-accent">
                         <i class="bi bi-clipboard2-plus me-2"></i>Cadastrar animal

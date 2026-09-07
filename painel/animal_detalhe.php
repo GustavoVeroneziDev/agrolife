@@ -282,7 +282,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <i class="bi bi-shield-plus me-1"></i> Registrar vacina
                 </a>
                 <a href="<?= BASE ?>/painel/registrar_clinico.php?animal=<?= h($animal['IDAnimal']) ?>" class="btn btn-outline-accent w-100 mb-2">
-                    <i class="bi bi-journal-medical me-1"></i> Registrar clínico
+                    <i class="bi bi-journal-medical me-1"></i> Registrar atendimento realizado
                 </a>
                 <?php if ($animal['Ativo']): ?>
                     <form method="POST" data-confirm="Excluir <?= h($animal['Nome']) ?>? Fica oculto das listas e os agendamentos futuros são cancelados, mas o histórico é mantido — dá pra reativar depois.">
