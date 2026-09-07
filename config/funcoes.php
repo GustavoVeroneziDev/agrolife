@@ -46,6 +46,63 @@ function veterinarioValido(PDO $pdo, string $fkVet): bool
     return (bool) $stmt->fetchColumn();
 }
 
+// Lista pro picker de "veterinário responsável" — mesma query era copiada
+// em agenda.php, registrar_clinico.php e registrar_vacina.php.
+function listarVeterinariosAtivos(PDO $pdo): array
+{
+    return $pdo->query(
+        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
+    )->fetchAll();
+}
+
+// Lista pro picker de "animal" (agenda.php, registrar_clinico.php,
+// registrar_vacina.php) — mesma query nos 3, dono e espécie inclusos pra
+// já montar o subtítulo/ícone do item sem outra consulta.
+function listarAnimaisParaPicker(PDO $pdo): array
+{
+    return $pdo->query(
+        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
+         FROM Animais a
+         JOIN Usuarios u ON u.IDUsuario = a.FKDono
+         JOIN Especies e ON e.IDEspecie = a.FKEspecie
+         WHERE a.Ativo = 1 ORDER BY a.Nome ASC"
+    )->fetchAll();
+}
+
+// Dono (nome+telefone) e nome do animal — usado só pra montar mensagem de
+// WhatsApp depois de criar/concluir um agendamento. Repetido em 4 lugares
+// antes disso (aqui mesmo, agenda.php x2, registrar_vacina.php).
+function buscarDonoAnimal(PDO $pdo, string $fkAnimal): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal
+         FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono
+         WHERE a.IDAnimal = :id'
+    );
+    $stmt->execute([':id' => $fkAnimal]);
+    return $stmt->fetch() ?: null;
+}
+
+// Vírgula ou ponto, tanto faz — campo de dinheiro (Valor de agendamento,
+// Preço de vacina/procedimento) vem mascarado feito o de peso, mas aceita
+// os dois formatos por segurança. Vírgula = formato BR ("1.500,00"): tira
+// o ponto de milhar antes de trocar a vírgula por ponto decimal; sem
+// vírgula (o <input type="number"> nativo manda assim), o ponto já É o
+// decimal e não pode ser removido, senão "200.00" viraria "20000".
+// Retorna null pra string vazia ou valor <= 0 (campo opcional, "sem preço").
+function parseValorMonetario(string $str): ?float
+{
+    $str = trim($str);
+    if ($str === '') {
+        return null;
+    }
+    if (str_contains($str, ',')) {
+        $str = str_replace(',', '.', str_replace('.', '', $str));
+    }
+    $valor = (float) $str;
+    return $valor > 0 ? $valor : null;
+}
+
 // Valida, move e renomeia um upload de imagem (item de $_FILES) pra dentro de
 // uploads/{$subpasta}/. Retorna o caminho web (a partir da raiz do app, sem
 // BASE) ou null se não veio arquivo válido — quem chama decide se isso é erro.
@@ -460,11 +517,7 @@ function criarAgendamentoVacina(PDO $pdo, string $fkAnimal, string $nomeVacina, 
     registrarEventoAgendamento($pdo, $agId, 'criado', 'Planejado a partir do registro de vacina.');
 
     if ($notificar) {
-        $donoStmt = $pdo->prepare(
-            'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
-        );
-        $donoStmt->execute([':id' => $fkAnimal]);
-        $dono = $donoStmt->fetch();
+        $dono = buscarDonoAnimal($pdo, $fkAnimal);
         if ($dono && $dono['Telefone']) {
             $msg = $retorno
                 ? montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], 'procedimento', $titulo, $inicio)
@@ -516,6 +569,39 @@ function validarTokenCSRF(?string $token): bool
     return !empty($token)
         && !empty($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+// Bootstrap comum aos endpoints JSON só-admin (api_agendamento.php,
+// api_clinico.php, api_vacina.php) — as mesmas ~20 linhas de "confere
+// admin, confere POST, decodifica body, confere CSRF" estavam copiadas
+// idênticas nos 3. Cada endpoint continua chamando session_start() +
+// require conexao.php antes disso — são pontos de entrada de verdade
+// (Apache aponta direto pra eles), não passos de um fluxo único.
+// Em qualquer falha já responde o JSON de erro padrão e encerra — quem
+// chama nunca recebe o retorno nesse caso, só no caminho de sucesso.
+function iniciarApiAdminJson(): array
+{
+    header('Content-Type: application/json; charset=utf-8');
+
+    if (($_SESSION['nivel_acesso'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'msg' => 'Acesso não permitido.']);
+        exit;
+    }
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['ok' => false, 'msg' => 'Método não permitido.']);
+        exit;
+    }
+
+    $dados = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    if (!validarTokenCSRF($dados['csrf_token'] ?? '')) {
+        echo json_encode(['ok' => false, 'msg' => 'Token inválido.']);
+        exit;
+    }
+
+    return $dados;
 }
 
 function estaLogado(): bool

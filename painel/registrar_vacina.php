@@ -170,11 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // compromissos — uma linha por data quando são vários, ou o mesmo
         // texto de sempre quando é só um.
         if ($eventosCriados) {
-            $donoStmt = $pdo->prepare(
-                'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
-            );
-            $donoStmt->execute([':id' => $fkAnimal]);
-            $dono = $donoStmt->fetch();
+            $dono = buscarDonoAnimal($pdo, $fkAnimal);
             if ($dono && $dono['Telefone']) {
                 if (count($eventosCriados) === 1) {
                     $ev     = $eventosCriados[0];
@@ -202,21 +198,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 try {
-    $animais = $pdo->query(
-        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
-         FROM Animais a
-         JOIN Usuarios u ON u.IDUsuario = a.FKDono
-         JOIN Especies e ON e.IDEspecie = a.FKEspecie
-         WHERE a.Ativo = 1 ORDER BY a.Nome ASC"
-    )->fetchAll();
+    $animais = listarAnimaisParaPicker($pdo);
 
     $tipos = $pdo->query(
         "SELECT IDTipo, Nome, IntervaloMeses, FKEspecie FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 
-    $vets = $pdo->query(
-        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
-    )->fetchAll();
+    $vets = listarVeterinariosAtivos($pdo);
 
     // $animais já carrega todo mundo ativo (Nome/NomeDono/FKEspecie inclusos)
     // — acha o pré-selecionado ali em vez de rodar a mesma consulta de novo.

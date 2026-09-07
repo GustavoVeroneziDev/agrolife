@@ -40,7 +40,7 @@ function processarLote(PDO $pdo, string $sql, string $tipoConfig, string $tipoLo
 
         $msg = str_replace(
             ['{nome_cliente}', '{nome_dono}', '{nome_animal}', '{vacina}', '{data}'],
-            [$reg['NomeDono'], $reg['NomeDono'], $reg['NomeAnimal'], $reg['NomeVacina'], date('d/m/Y', strtotime($reg['ProximaData']))],
+            [$reg['NomeDono'], $reg['NomeDono'], $reg['NomeAnimal'], $reg['NomeVacina'], formatarData($reg['ProximaData'])],
             $msgTpl
         );
 

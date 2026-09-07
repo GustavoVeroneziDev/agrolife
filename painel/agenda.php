@@ -107,11 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Avisa o dono do animal pelo WhatsApp — sem isso, ele só ficava
             // sabendo do agendamento se entrasse no site por conta própria.
-            $donoStmt = $pdo->prepare(
-                'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
-            );
-            $donoStmt->execute([':id' => $fkAnimal]);
-            $dono = $donoStmt->fetch();
+            $dono = buscarDonoAnimal($pdo, $fkAnimal);
             if ($dono && $dono['Telefone']) {
                 $msg = montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $tipo, $titulo, $inicio);
                 enviarWhatsApp(waNumero($dono['Telefone']), $msg);
@@ -128,30 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id      = trim($_POST['id'] ?? '');
         $obsPos  = trim($_POST['observacoes_pos'] ?? '');
         $criarRc = !empty($_POST['criar_clinico']);
-        $valorStr = trim($_POST['valor'] ?? '');
         $pago     = !empty($_POST['pago']);
 
         if ($id === '') {
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento não encontrado.', 'warning');
         }
 
-        // Vírgula ou ponto, tanto faz — o campo já vem mascarado tipo dinheiro
-        // (mesmo padrão de peso), mas aceita os dois formatos por segurança.
-        // Se tiver vírgula, é formato BR ("1.500,00") — tira o ponto de
-        // milhar antes de trocar a vírgula por ponto decimal; sem vírgula
-        // (o <input type="number"> nativo manda assim hoje), o ponto já É o
-        // decimal e não pode ser removido, senão "200.00" viraria "20000".
-        $valor = null;
-        if ($valorStr !== '') {
-            if (str_contains($valorStr, ',')) {
-                $valorStr = str_replace('.', '', $valorStr);
-                $valorStr = str_replace(',', '.', $valorStr);
-            }
-            $valorNum = (float) $valorStr;
-            if ($valorNum > 0) {
-                $valor = $valorNum;
-            }
-        }
+        $valor = parseValorMonetario($_POST['valor'] ?? '');
 
         // Trava por agendamento ANTES de ler o Status — sem isso, um duplo
         // clique (ou reenvio do form) processava "concluir" de novo em cima
@@ -271,11 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     destravarAgendaVet($pdo, $ag['FKVeterinario']);
                     registrarEventoAgendamento($pdo, $retornoId, 'criado', 'Retorno de ' . formatarDataHora($ag['DataHoraInicio']));
 
-                    $donoStmt = $pdo->prepare(
-                        'SELECT u.Nome AS NomeCliente, u.Telefone, a.Nome AS NomeAnimal FROM Animais a JOIN Usuarios u ON u.IDUsuario = a.FKDono WHERE a.IDAnimal = :id'
-                    );
-                    $donoStmt->execute([':id' => $ag['FKAnimal']]);
-                    $dono = $donoStmt->fetch();
+                    $dono = buscarDonoAnimal($pdo, $ag['FKAnimal']);
                     if ($dono && $dono['Telefone']) {
                         $msg = montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], $ag['Tipo'], $retornoTitulo, $retornoInicio);
                         enviarWhatsApp(waNumero($dono['Telefone']), $msg);
@@ -447,17 +422,8 @@ try {
         $precosVacina[mb_strtolower($v['Nome'])] = (float) $v['Preco'];
     }
 
-    $animais = $pdo->query(
-        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
-         FROM Animais a
-         JOIN Usuarios u ON u.IDUsuario = a.FKDono
-         JOIN Especies e ON e.IDEspecie = a.FKEspecie
-         WHERE a.Ativo = 1 ORDER BY a.Nome ASC"
-    )->fetchAll();
-
-    $vets = $pdo->query(
-        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
-    )->fetchAll();
+    $animais = listarAnimaisParaPicker($pdo);
+    $vets    = listarVeterinariosAtivos($pdo);
 
     $porDia   = [];
     $mesGrade = [];
@@ -1142,12 +1108,7 @@ document.addEventListener('click', function (e) {
 
     var btnPagamento = e.target.closest('.btn-alternar-pagamento');
     if (btnPagamento) {
-        fetch(BASE + '/painel/api_agendamento.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ acao: 'alternar_pagamento', id: btnPagamento.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
-        })
-        .then(function (r) { return r.json(); })
+        vsApiPost(BASE + '/painel/api_agendamento.php', { acao: 'alternar_pagamento', id: btnPagamento.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
         .then(function (d) {
             if (d.ok) {
                 vsRecarregarPreservandoScroll();
@@ -1176,12 +1137,7 @@ document.addEventListener('click', function (e) {
         e.stopImmediatePropagation();
         function executar() {
             btnAcao.disabled = true;
-            fetch(BASE + '/painel/api_agendamento.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: btnAcao.dataset.acao, id: btnAcao.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
-            })
-            .then(function (r) { return r.json(); })
+            vsApiPost(BASE + '/painel/api_agendamento.php', { acao: btnAcao.dataset.acao, id: btnAcao.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
             .then(function (d) {
                 if (d.ok) {
                     // Se a ação veio de dentro do painel de dia (vista mensal),

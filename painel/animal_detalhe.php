@@ -647,20 +647,15 @@ document.getElementById('pvSalvar').addEventListener('click', function () {
         vsToast('Escolha uma data.', 'warning');
         return;
     }
-    fetch(BASE + '/painel/api_vacina.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            acao: 'editar_proxima',
-            id: pvIdAtual,
-            proxima_data: data,
-            ciclica: document.getElementById('pvCiclica').checked,
-            intervalo_valor: parseInt(document.getElementById('pvIntervaloValor').value, 10) || 0,
-            intervalo_unidade: document.getElementById('pvIntervaloUnidade').value,
-            csrf_token: '<?= gerarTokenCSRF() ?>',
-        }),
+    vsApiPost(BASE + '/painel/api_vacina.php', {
+        acao: 'editar_proxima',
+        id: pvIdAtual,
+        proxima_data: data,
+        ciclica: document.getElementById('pvCiclica').checked,
+        intervalo_valor: parseInt(document.getElementById('pvIntervaloValor').value, 10) || 0,
+        intervalo_unidade: document.getElementById('pvIntervaloUnidade').value,
+        csrf_token: '<?= gerarTokenCSRF() ?>',
     })
-    .then(function (r) { return r.json(); })
     .then(function (d) {
         if (d.ok) {
             vsRecarregarPreservandoScroll();
@@ -676,12 +671,7 @@ document.querySelectorAll('.btn-excluir-vacina').forEach(function (btn) {
         e.preventDefault();
         e.stopPropagation();
         vsConfirm(btn.dataset.confirm, function () {
-            fetch(BASE + '/painel/api_vacina.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: 'excluir', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
-            })
-            .then(function (r) { return r.json(); })
+            vsApiPost(BASE + '/painel/api_vacina.php', { acao: 'excluir', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
             .then(function (d) {
                 if (d.ok) {
                     document.querySelector('tr[data-id="' + btn.dataset.id + '"]')?.remove();
@@ -700,12 +690,7 @@ document.querySelectorAll('.btn-excluir-clinico').forEach(function (btn) {
         e.preventDefault();
         e.stopPropagation();
         vsConfirm(btn.dataset.confirm, function () {
-            fetch(BASE + '/painel/api_clinico.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: 'excluir', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
-            })
-            .then(function (r) { return r.json(); })
+            vsApiPost(BASE + '/painel/api_clinico.php', { acao: 'excluir', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
             .then(function (d) {
                 if (d.ok) {
                     document.querySelector('[data-id-clinico="' + btn.dataset.id + '"]')?.remove();
@@ -724,12 +709,7 @@ document.querySelectorAll('.btn-reativar-clinico').forEach(function (btn) {
         e.preventDefault();
         e.stopPropagation();
         vsConfirm(btn.dataset.confirm, function () {
-            fetch(BASE + '/painel/api_clinico.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: 'reativar', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' }),
-            })
-            .then(function (r) { return r.json(); })
+            vsApiPost(BASE + '/painel/api_clinico.php', { acao: 'reativar', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
             .then(function (d) {
                 if (d.ok) {
                     vsToast('Registro reativado.', 'success');

@@ -119,6 +119,19 @@ function vsToast(msg, tipo) {
     bootstrap.Toast.getOrCreateInstance(el, { delay: 2000 }).show();
 }
 
+// ── POST JSON pros endpoints api_*.php ─────────────────────────
+// Mesmas 4 linhas de fetch() (method/headers/body) estavam copiadas em
+// cada chamada (agenda.php, animal_detalhe.php) — resolve já com o JSON
+// decodificado, quem chama só trata o resultado (.then) e a falha de rede
+// (.catch), igual antes.
+function vsApiPost(url, dados) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+    }).then(function (r) { return r.json(); });
+}
+
 // ── Botão "voltar" que usa o histórico de verdade em vez de sempre
 // mandar pra uma página fixa — só intercepta se a página anterior for
 // deste mesmo app (senão, o href normal do link continua valendo).

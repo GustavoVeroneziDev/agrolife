@@ -58,7 +58,7 @@ switch ($cenario) {
             ?: 'Olá, {nome_cliente}! A vacina {vacina} de {nome_animal} vence em {data}. Vamos agendar o reforço?';
         $msg = str_replace(
             ['{nome_cliente}', '{nome_dono}', '{nome_animal}', '{vacina}', '{data}'],
-            [$clienteDemo, $clienteDemo, $animalDemo, 'Antirrábica', date('d/m/Y', strtotime($horarioDemo))],
+            [$clienteDemo, $clienteDemo, $animalDemo, 'Antirrábica', formatarData($horarioDemo)],
             $template
         );
         break;

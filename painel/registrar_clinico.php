@@ -92,17 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 try {
-    $animais = $pdo->query(
-        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
-         FROM Animais a
-         JOIN Usuarios u ON u.IDUsuario = a.FKDono
-         JOIN Especies e ON e.IDEspecie = a.FKEspecie
-         WHERE a.Ativo = 1 ORDER BY a.Nome ASC"
-    )->fetchAll();
-
-    $vets = $pdo->query(
-        "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
-    )->fetchAll();
+    $animais = listarAnimaisParaPicker($pdo);
+    $vets    = listarVeterinariosAtivos($pdo);
 
     // $animais já carrega todo mundo ativo (Nome/NomeDono inclusos) — acha o
     // pré-selecionado ali em vez de rodar a mesma consulta de novo.

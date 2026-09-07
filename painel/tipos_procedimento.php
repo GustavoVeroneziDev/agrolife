@@ -26,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $categoria = trim($_POST['categoria'] ?? '');
         $nome      = trim($_POST['nome'] ?? '');
         $duracao   = (int) ($_POST['duracao'] ?? 30);
-        $precoStr  = trim($_POST['preco'] ?? '');
 
         if ($nome === '' || !isset($categorias[$categoria])) {
             redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Categoria e nome são obrigatórios.', 'warning');
@@ -36,16 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         // Preço é opcional — quem varia por porte/caso (ex: cirurgia) deixa
         // em branco e continua digitando o valor na hora de concluir.
-        $preco = null;
-        if ($precoStr !== '') {
-            if (str_contains($precoStr, ',')) {
-                $precoStr = str_replace(',', '.', str_replace('.', '', $precoStr));
-            }
-            $precoNum = (float) $precoStr;
-            if ($precoNum > 0) {
-                $preco = $precoNum;
-            }
-        }
+        $preco = parseValorMonetario($_POST['preco'] ?? '');
 
         try {
             if ($id) {
