@@ -10,6 +10,25 @@ function gerarUuid(): string
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+// Serializa qualquer transição de estado de UM agendamento específico
+// (concluir, remarcar, cancelar/confirmar/marcar_falta/reabrir) — sem isso,
+// duas requisições quase simultâneas pro MESMO agendamento (duplo clique,
+// reenvio de formulário, duas abas) liam o Status ainda antigo antes de
+// qualquer uma das duas gravar, passavam as duas pela checagem de "estado
+// permite essa ação" e executavam a ação (e o WhatsApp que vem junto) duas
+// vezes. Namespace de lock separado do de veterinário (travarAgendaVet em
+// agenda.php) — são recursos diferentes sendo protegidos. Igual lá, se o
+// request morrer antes de destravar, o MySQL libera sozinho ao fechar a
+// conexão no fim do script.
+function travarAgendamento(PDO $pdo, string $fkAgendamento): void
+{
+    $pdo->query('SELECT GET_LOCK(' . $pdo->quote('vetsul_ag_reg_' . $fkAgendamento) . ', 5)');
+}
+function destravarAgendamento(PDO $pdo, string $fkAgendamento): void
+{
+    $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote('vetsul_ag_reg_' . $fkAgendamento) . ')');
+}
+
 // O picker de "veterinário responsável" (registrar_vacina.php,
 // registrar_clinico.php, agenda.php) já só lista quem tem Cargo=veterinario
 // e Ativo=1 — mas isso é só filtro de tela. Sem essa mesma checagem no

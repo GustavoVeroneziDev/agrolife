@@ -71,6 +71,7 @@ if (!$id || !isset($transicoes[$acao])) {
     exit;
 }
 
+travarAgendamento($pdo, $id);
 try {
     $stmt = $pdo->prepare(
         "SELECT ag.Status, ag.Tipo, ag.Titulo, ag.DataHoraInicio, a.Nome AS NomeAnimal, u.Telefone
@@ -83,10 +84,12 @@ try {
     $ag = $stmt->fetch();
 
     if (!$ag) {
+        destravarAgendamento($pdo, $id);
         echo json_encode(['ok' => false, 'msg' => 'Agendamento não encontrado.']);
         exit;
     }
     if (!in_array($ag['Status'], $transicoes[$acao]['de'], true)) {
+        destravarAgendamento($pdo, $id);
         echo json_encode(['ok' => false, 'msg' => 'Esse agendamento não está num estado que permite essa ação.']);
         exit;
     }
@@ -122,4 +125,6 @@ try {
 } catch (PDOException $e) {
     error_log('[ApiAgendamento] ' . $e->getMessage());
     echo json_encode(['ok' => false, 'msg' => 'Erro ao atualizar agendamento.']);
+} finally {
+    destravarAgendamento($pdo, $id);
 }

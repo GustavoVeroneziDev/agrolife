@@ -22,6 +22,11 @@ if ($acao !== 'cancelar' || $id === '') {
 
 $tiposAgenda = tiposAgendaMap();
 
+// Trava por agendamento ANTES de ler o Status — mesmo raciocínio do painel
+// (ver api_agendamento.php): sem isso, um duplo clique do cliente no botão
+// de cancelar processava os dois cliques antes do primeiro UPDATE terminar,
+// e os dois avisavam a clínica pelo WhatsApp do mesmo cancelamento.
+travarAgendamento($pdo, $id);
 try {
     // Confere que o agendamento é de um animal desse cliente antes de
     // deixar cancelar — sem isso, dava pra cancelar o ID de qualquer
@@ -39,12 +44,15 @@ try {
     $ag = $stmt->fetch();
 
     if (!$ag) {
+        destravarAgendamento($pdo, $id);
         redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Agendamento não encontrado.', 'warning');
     }
     if (!in_array($ag['Status'], ['pendente', 'confirmado'], true)) {
+        destravarAgendamento($pdo, $id);
         redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Esse agendamento não pode mais ser cancelado.', 'warning');
     }
     if ($ag['DataHoraInicio'] <= date('Y-m-d H:i:s')) {
+        destravarAgendamento($pdo, $id);
         redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Esse agendamento já passou e não pode mais ser cancelado por aqui — fale com a clínica.', 'warning');
     }
 
@@ -62,8 +70,10 @@ try {
         enviarWhatsApp(waNumero($telClinica), $msg);
     }
 
+    destravarAgendamento($pdo, $id);
     redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Agendamento cancelado.', 'success');
 } catch (PDOException $e) {
     error_log('[ProcessaAgendamento] ' . $e->getMessage());
+    destravarAgendamento($pdo, $id);
     redirecionarComMensagem(BASE . '/usuario/meus_agendamentos.php', 'Erro ao cancelar agendamento.', 'danger');
 }

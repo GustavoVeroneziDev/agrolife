@@ -103,6 +103,11 @@ try {
     // barrar reenvio porque nunca foi marcada. Uma janela pequena de
     // recuperação (passado próximo pra "dia", 0-7 dias pra "semana") resolve
     // isso sem reabrir aviso pra vacina que já está vencida há muito tempo.
+    // "Semana" começa em amanhã (não hoje) de propósito — as duas janelas
+    // precisam ser mutuamente exclusivas, senão uma vacina vencendo hoje
+    // (com as duas flags ainda zeradas, ex. depois de um cron parado por
+    // dias) batia nas duas queries no mesmo run e o dono recebia os dois
+    // avisos ("vence em breve" e "vence hoje") de uma vez.
     $sqlSemana = "
         SELECT rv.IDRegistro, rv.ProximaData, a.Nome AS NomeAnimal,
                u.Nome AS NomeDono, u.Telefone, tv.Nome AS NomeVacina
@@ -110,7 +115,7 @@ try {
         JOIN Animais a  ON a.IDAnimal  = rv.FKAnimal
         JOIN Usuarios u ON u.IDUsuario = a.FKDono
         JOIN TiposVacina tv ON tv.IDTipo = rv.FKTipoVacina
-        WHERE rv.ProximaData BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+        WHERE rv.ProximaData BETWEEN DATE_ADD(CURDATE(), INTERVAL 1 DAY) AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
           AND rv.NotificacaoSemanaEnviada = 0
           AND a.Ativo = 1
     ";

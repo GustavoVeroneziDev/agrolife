@@ -153,18 +153,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Trava por agendamento ANTES de ler o Status — sem isso, um duplo
+        // clique (ou reenvio do form) processava "concluir" de novo em cima
+        // do mesmo agendamento antes da primeira gravação terminar, e as
+        // duas passavam pela checagem abaixo, duplicando retorno/WhatsApp.
+        // Se o processo sair por redirecionarComMensagem (exit), o MySQL
+        // libera sozinho ao fechar a conexão — sem vazar preso.
+        travarAgendamento($pdo, $id);
         try {
             $stmt = $pdo->prepare('SELECT * FROM Agendamentos WHERE IDAgendamento = :id LIMIT 1');
             $stmt->execute([':id' => $id]);
             $ag = $stmt->fetch();
             if (!$ag) {
+                destravarAgendamento($pdo, $id);
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento não encontrado.', 'warning');
             }
-            // Sem essa trava, um duplo clique (ou reenvio do form) processava
-            // "concluir" de novo em cima de um agendamento já concluído ou
-            // cancelado — duplicando retorno/WhatsApp e sobrescrevendo dados
-            // de um estado que devia ser definitivo.
             if (!in_array($ag['Status'], ['pendente', 'confirmado'], true)) {
+                destravarAgendamento($pdo, $id);
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse agendamento não está num estado que permite concluir (já foi concluído, cancelado ou marcado como falta).', 'warning');
             }
 
@@ -280,9 +285,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            destravarAgendamento($pdo, $id);
             redirecionarComMensagem(BASE . '/painel/agenda.php', $mensagemFinal, 'success');
         } catch (PDOException $e) {
             error_log('[ConcluirAgendamento] ' . $e->getMessage());
+            destravarAgendamento($pdo, $id);
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao concluir agendamento.', 'danger');
         }
     }
@@ -302,6 +309,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Data/hora inválida.', 'warning');
         }
 
+        // Trava por agendamento ANTES de ler os dados atuais — mesmo raciocínio
+        // do "concluir": sem isso, um duplo clique no mesmo formulário processa
+        // "remarcar" duas vezes em cima do mesmo agendamento antes da primeira
+        // gravação terminar.
+        travarAgendamento($pdo, $id);
         try {
             $stmt = $pdo->prepare(
                 'SELECT ag.*, a.Nome AS NomeAnimal, u.Nome AS NomeCliente, u.Telefone
@@ -313,7 +325,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([':id' => $id]);
             $ag = $stmt->fetch();
             if (!$ag) {
+                destravarAgendamento($pdo, $id);
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento não encontrado.', 'warning');
+            }
+
+            // Reenvio idêntico (duplo clique no botão de remarcar) — a segunda
+            // requisição só é liberada pela trava depois que a primeira já
+            // gravou essa mesma data/hora; sem essa checagem ela repetia toda
+            // a lógica de novo, inclusive o WhatsApp de remarcação, mesmo sem
+            // nada ter mudado de fato.
+            if ($ag['DataHoraInicio'] === $novoInicio) {
+                destravarAgendamento($pdo, $id);
+                redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento remarcado com sucesso!', 'success');
             }
 
             // Preserva a duração original — só muda quando vai acontecer, não
@@ -324,6 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             travarAgendaVet($pdo, $ag['FKVeterinario']);
             if ($ag['FKVeterinario'] && agendamentoConflita($pdo, $ag['FKVeterinario'], $novoInicio, $novoFim, $id)) {
                 destravarAgendaVet($pdo, $ag['FKVeterinario']);
+                destravarAgendamento($pdo, $id);
                 redirecionarComMensagem(BASE . '/painel/agenda.php', 'Esse veterinário já tem outro agendamento nesse horário.', 'warning');
             }
 
@@ -362,9 +386,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 enviarWhatsApp(waNumero($ag['Telefone']), $msg);
             }
 
+            destravarAgendamento($pdo, $id);
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Agendamento remarcado com sucesso!', 'success');
         } catch (PDOException $e) {
             error_log('[RemarcarAgendamento] ' . $e->getMessage());
+            destravarAgendamento($pdo, $id);
             redirecionarComMensagem(BASE . '/painel/agenda.php', 'Erro ao remarcar agendamento.', 'danger');
         }
     }
