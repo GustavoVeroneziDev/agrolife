@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $intervaloValor = max(1, min(120, $intervaloValor));
 
     try {
-        $tipoStmt = $pdo->prepare('SELECT Nome, IntervaloMeses, FKEspecie FROM TiposVacina WHERE IDTipo = :id LIMIT 1');
+        $tipoStmt = $pdo->prepare('SELECT Nome, IntervaloMeses, FKEspecie FROM TiposVacina WHERE IDTipo = :id AND Ativo = 1 LIMIT 1');
         $tipoStmt->execute([':id' => $fkTipo]);
         $tipo = $tipoStmt->fetch();
         if (!$tipo) {
