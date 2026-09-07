@@ -638,12 +638,18 @@ require_once __DIR__ . '/../geral/header.php';
                          onkeydown="if(event.key==='Enter')mostrarDiaMes('<?= $cel['data'] ?>', <?= $cel['dia'] ?>)">
                         <span class="calendario-dia-numero"><?= $cel['dia'] ?></span>
                         <?php if ($temAgs): ?>
-                            <div class="cal-dots">
-                                <?php foreach (array_slice($cel['ags'], 0, 4) as $ag): ?>
-                                    <span class="cal-dot cal-dot-<?= h($ag['Status']) ?>"></span>
+                            <?php $totalAgs = count($cel['ags']); $ticketsMostrados = array_slice($cel['ags'], 0, 2); ?>
+                            <div class="cal-tickets">
+                                <?php foreach ($ticketsMostrados as $ag): ?>
+                                    <span class="cal-ticket cal-ticket-<?= h($ag['Status']) ?>" title="<?= h($ag['Titulo'] . ' — ' . $ag['NomeAnimal']) ?>">
+                                        <?= h($ag['Titulo']) ?> — <?= h($ag['NomeAnimal']) ?>
+                                    </span>
                                 <?php endforeach ?>
+                                <?php if ($totalAgs > count($ticketsMostrados)): ?>
+                                    <span class="cal-tickets-mais">+<?= $totalAgs - count($ticketsMostrados) ?> mais</span>
+                                <?php endif ?>
                             </div>
-                            <span class="calendario-dia-badge"><?= count($cel['ags']) ?></span>
+                            <span class="calendario-dia-badge"><?= $totalAgs ?></span>
                         <?php endif ?>
                     </div>
                 <?php endif ?>
