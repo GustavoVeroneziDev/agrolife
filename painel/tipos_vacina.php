@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc      = trim($_POST['descricao'] ?? '');
         $intervalo = trim($_POST['intervalo'] ?? '');
         $especie   = trim($_POST['especie'] ?? '');
+        $precoStr  = trim($_POST['preco'] ?? '');
 
         if ($nome === '') {
             redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Nome é obrigatório.', 'warning');
@@ -33,24 +34,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($intervalo === '0') {
             $intervalo = '';
         }
+        // Preço é opcional — quem varia por porte/caso (ex: cirurgia) deixa
+        // em branco e continua digitando o valor na hora de concluir.
+        $preco = null;
+        if ($precoStr !== '') {
+            if (str_contains($precoStr, ',')) {
+                $precoStr = str_replace(',', '.', str_replace('.', '', $precoStr));
+            }
+            $precoNum = (float) $precoStr;
+            if ($precoNum > 0) {
+                $preco = $precoNum;
+            }
+        }
 
         try {
             if ($id) {
                 $pdo->prepare(
-                    'UPDATE TiposVacina SET Nome=:nome, Categoria=:cat, Descricao=:desc, IntervaloMeses=:int, FKEspecie=:esp WHERE IDTipo=:id'
+                    'UPDATE TiposVacina SET Nome=:nome, Categoria=:cat, Descricao=:desc, IntervaloMeses=:int, FKEspecie=:esp, Preco=:preco WHERE IDTipo=:id'
                 )->execute([
                     ':nome' => $nome, ':cat' => $categoria, ':desc' => $desc ?: null,
                     ':int'  => $intervalo !== '' ? $intervalo : null,
-                    ':esp'  => $especie ?: null, ':id' => $id,
+                    ':esp'  => $especie ?: null, ':preco' => $preco, ':id' => $id,
                 ]);
                 redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Item atualizado com sucesso!', 'success');
             } else {
                 $pdo->prepare(
-                    'INSERT INTO TiposVacina (IDTipo, Nome, Categoria, Descricao, IntervaloMeses, FKEspecie)
-                     VALUES (:id, :nome, :cat, :desc, :int, :esp)'
+                    'INSERT INTO TiposVacina (IDTipo, Nome, Categoria, Descricao, IntervaloMeses, FKEspecie, Preco)
+                     VALUES (:id, :nome, :cat, :desc, :int, :esp, :preco)'
                 )->execute([
                     ':id' => gerarUuid(), ':nome' => $nome, ':cat' => $categoria, ':desc' => $desc ?: null,
-                    ':int' => $intervalo !== '' ? $intervalo : null, ':esp' => $especie ?: null,
+                    ':int' => $intervalo !== '' ? $intervalo : null, ':esp' => $especie ?: null, ':preco' => $preco,
                 ]);
                 redirecionarComMensagem(BASE . '/painel/tipos_vacina.php', 'Item cadastrado com sucesso!', 'success');
             }
@@ -117,6 +130,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <th class="px-4 py-3">Vacina</th>
                             <th class="d-none d-md-table-cell">Espécie</th>
                             <th>Reforço</th>
+                            <th class="d-none d-md-table-cell">Preço</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -136,6 +150,9 @@ require_once __DIR__ . '/../geral/header.php';
                                     <?= $t['NomeEspecie'] ? especieIconeHtml($t['IconeEspecie']) . ' ' . h($t['NomeEspecie']) : 'Todas' ?>
                                 </td>
                                 <td class="small"><?= $t['IntervaloMeses'] ? $t['IntervaloMeses'] . ' meses' : 'Dose única' ?></td>
+                                <td class="d-none d-md-table-cell small">
+                                    <?= $t['Preco'] !== null ? 'R$ ' . number_format((float) $t['Preco'], 2, ',', '.') : '<span class="text-secondary">—</span>' ?>
+                                </td>
                                 <td class="text-end">
                                     <?php if ($souAdmin): ?>
                                         <button class="btn btn-sm btn-outline-accent"
@@ -193,6 +210,14 @@ require_once __DIR__ . '/../geral/header.php';
                             <?= campoPicker('fEsp', 'especie', 'Todas as espécies', '', obrigatorio: false, comBusca: false) ?>
                         </div>
                     </div>
+                    <div class="mb-1 mt-2">
+                        <label class="form-label">Preço padrão <span class="text-secondary">(opcional)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" name="preco" id="fPreco" class="form-control" step="0.01" min="0" placeholder="0,00">
+                        </div>
+                        <div class="form-text">Sugere esse valor sozinho ao concluir um atendimento com esse item — sempre editável na hora. Deixe em branco se o preço variar.</div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -240,6 +265,7 @@ function abrirModalVacina(dados) {
     document.getElementById('fNome').value      = dados ? dados.Nome : '';
     document.getElementById('fDescricao').value = dados ? (dados.Descricao || '') : '';
     document.getElementById('fIntervalo').value = dados ? (dados.IntervaloMeses || '') : '';
+    document.getElementById('fPreco').value     = dados ? (dados.Preco || '') : '';
     var esp = dados ? (dados.FKEspecie || '') : '';
     fEspPk.selecionar(ESPECIES_TV.filter(function (e) { return e.id === esp; })[0] || ESPECIES_TV[0]);
     new bootstrap.Modal(document.getElementById('modalVacina')).show();

@@ -408,9 +408,18 @@ if ($vista === 'semana' && !empty($_GET['dia']) && preg_match('/^\d{4}-\d{2}-\d{
 
 try {
     $procedimentos = $pdo->query(
-        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos FROM TiposProcedimento
+        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco FROM TiposProcedimento
          WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
     )->fetchAll();
+
+    // Nome (minúsculo) -> Preço das vacinas/cuidados com preço padrão
+    // definido — usado só pra sugerir o "Valor" ao concluir um agendamento
+    // de vacina (o título é "Vacina: {nome}" ou "Vacina: {nome} (retorno)"),
+    // igual PROCEDIMENTOS já faz pra duração.
+    $precosVacina = [];
+    foreach ($pdo->query("SELECT Nome, Preco FROM TiposVacina WHERE Ativo = 1 AND Preco IS NOT NULL")->fetchAll() as $v) {
+        $precosVacina[mb_strtolower($v['Nome'])] = (float) $v['Preco'];
+    }
 
     $animais = $pdo->query(
         "SELECT a.IDAnimal, a.Nome, a.FKEspecie, u.Nome AS NomeDono, e.Icone AS IconeEspecie
@@ -932,7 +941,11 @@ var VETS = <?= json_encode(array_map(fn($v) => [
 ], $vets), JSON_UNESCAPED_UNICODE) ?>;
 var PROCEDIMENTOS = <?= json_encode(array_map(fn($p) => [
     'id' => $p['IDTipo'], 'categoria' => $p['Categoria'], 'nome' => $p['Nome'], 'duracao' => (int) $p['DuracaoPadraoMinutos'],
+    'preco' => $p['Preco'] !== null ? (float) $p['Preco'] : null,
 ], $procedimentos), JSON_UNESCAPED_UNICODE) ?>;
+// Nome (minúsculo) -> preço padrão da vacina/cuidado — só pra sugerir
+// "Valor" ao concluir (ver precoSugerido() mais abaixo).
+var PRECOS_VACINA = <?= json_encode($precosVacina, JSON_UNESCAPED_UNICODE) ?>;
 
 // Tipo -> filtra os procedimentos disponíveis; escolher um procedimento
 // preenche duração e título automaticamente (mas continuam editáveis).
@@ -1040,6 +1053,25 @@ initPicker({
     vazioMsg: 'Nenhum veterinário encontrado.',
 });
 
+// Sugere o "Valor" a partir do preço padrão do catálogo, casando pelo
+// título do agendamento — mesma lógica de "sugestão, sempre editável" já
+// usada pra duração/intervalo. Sem correspondência, fica em branco igual
+// sempre foi (nunca bloqueia digitar na mão).
+function precoSugerido(titulo) {
+    var t = (titulo || '').trim().toLowerCase();
+    for (var i = 0; i < PROCEDIMENTOS.length; i++) {
+        if (PROCEDIMENTOS[i].nome.toLowerCase() === t && PROCEDIMENTOS[i].preco !== null) {
+            return PROCEDIMENTOS[i].preco;
+        }
+    }
+    // "Vacina: {nome}" ou "Vacina: {nome} (retorno)"
+    var m = t.match(/^vacina:\s*(.+?)(\s*\(retorno\))?$/);
+    if (m && PRECOS_VACINA.hasOwnProperty(m[1].trim())) {
+        return PRECOS_VACINA[m[1].trim()];
+    }
+    return null;
+}
+
 // Delegação no document (em vez de listener por botão) — assim funciona tanto
 // pros botões já na página quanto pros que o painel de dia da vista mensal
 // injeta dinamicamente via mostrarDiaMes().
@@ -1054,7 +1086,8 @@ document.addEventListener('click', function (e) {
         document.getElementById('concluirRetornoCampos').style.display = 'none';
         document.getElementById('concluirRetornoDias').value = 10;
         document.getElementById('concluirRetornoTitulo').value = 'Retorno — ' + btnConcluir.dataset.titulo;
-        document.getElementById('concluirValor').value = '';
+        var sugestao = precoSugerido(btnConcluir.dataset.titulo);
+        document.getElementById('concluirValor').value = sugestao !== null ? sugestao.toFixed(2) : '';
         document.getElementById('concluirPago').checked = false;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConcluir')).show();
         return;

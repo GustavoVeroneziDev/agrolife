@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $categoria = trim($_POST['categoria'] ?? '');
         $nome      = trim($_POST['nome'] ?? '');
         $duracao   = (int) ($_POST['duracao'] ?? 30);
+        $precoStr  = trim($_POST['preco'] ?? '');
 
         if ($nome === '' || !isset($categorias[$categoria])) {
             redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Categoria e nome são obrigatórios.', 'warning');
@@ -33,18 +34,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($duracao < 5 || $duracao > 480) {
             redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Duração deve estar entre 5 e 480 minutos.', 'warning');
         }
+        // Preço é opcional — quem varia por porte/caso (ex: cirurgia) deixa
+        // em branco e continua digitando o valor na hora de concluir.
+        $preco = null;
+        if ($precoStr !== '') {
+            if (str_contains($precoStr, ',')) {
+                $precoStr = str_replace(',', '.', str_replace('.', '', $precoStr));
+            }
+            $precoNum = (float) $precoStr;
+            if ($precoNum > 0) {
+                $preco = $precoNum;
+            }
+        }
 
         try {
             if ($id) {
                 $pdo->prepare(
-                    'UPDATE TiposProcedimento SET Categoria=:cat, Nome=:nome, DuracaoPadraoMinutos=:dur WHERE IDTipo=:id'
-                )->execute([':cat' => $categoria, ':nome' => $nome, ':dur' => $duracao, ':id' => $id]);
+                    'UPDATE TiposProcedimento SET Categoria=:cat, Nome=:nome, DuracaoPadraoMinutos=:dur, Preco=:preco WHERE IDTipo=:id'
+                )->execute([':cat' => $categoria, ':nome' => $nome, ':dur' => $duracao, ':preco' => $preco, ':id' => $id]);
                 redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Procedimento atualizado com sucesso!', 'success');
             } else {
                 $pdo->prepare(
-                    'INSERT INTO TiposProcedimento (IDTipo, Categoria, Nome, DuracaoPadraoMinutos)
-                     VALUES (:id, :cat, :nome, :dur)'
-                )->execute([':id' => gerarUuid(), ':cat' => $categoria, ':nome' => $nome, ':dur' => $duracao]);
+                    'INSERT INTO TiposProcedimento (IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco)
+                     VALUES (:id, :cat, :nome, :dur, :preco)'
+                )->execute([':id' => gerarUuid(), ':cat' => $categoria, ':nome' => $nome, ':dur' => $duracao, ':preco' => $preco]);
                 redirecionarComMensagem(BASE . '/painel/tipos_procedimento.php', 'Procedimento cadastrado com sucesso!', 'success');
             }
         } catch (PDOException $e) {
@@ -110,6 +123,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <th class="px-4 py-3">Categoria</th>
                             <th>Nome</th>
                             <th>Duração padrão</th>
+                            <th class="d-none d-md-table-cell">Preço</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -121,6 +135,9 @@ require_once __DIR__ . '/../geral/header.php';
                                 </td>
                                 <td class="fw-medium"><?= h($p['Nome']) ?></td>
                                 <td class="small"><?= (int) $p['DuracaoPadraoMinutos'] ?> min</td>
+                                <td class="d-none d-md-table-cell small">
+                                    <?= $p['Preco'] !== null ? 'R$ ' . number_format((float) $p['Preco'], 2, ',', '.') : '<span class="text-secondary">—</span>' ?>
+                                </td>
                                 <td class="text-end">
                                     <?php if ($souAdmin): ?>
                                         <button class="btn btn-sm btn-outline-accent"
@@ -164,9 +181,17 @@ require_once __DIR__ . '/../geral/header.php';
                         <label class="form-label">Nome *</label>
                         <input type="text" name="nome" id="fNome" class="form-control" required maxlength="100" placeholder="Ex: Castração, Consulta de rotina…">
                     </div>
-                    <div class="mb-1">
+                    <div class="mb-3">
                         <label class="form-label">Duração padrão (minutos) *</label>
                         <input type="number" name="duracao" id="fDuracao" class="form-control" required min="5" max="480" step="5">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Preço padrão <span class="text-secondary">(opcional)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" name="preco" id="fPreco" class="form-control" step="0.01" min="0" placeholder="0,00">
+                        </div>
+                        <div class="form-text">Sugere esse valor sozinho ao concluir um atendimento com esse item — sempre editável na hora. Deixe em branco se o preço variar.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -200,6 +225,7 @@ function abrirModalProcedimento(dados) {
     fCatPk.selecionar(CATEGORIAS_TP.filter(function (c) { return c.id === cat; })[0] || CATEGORIAS_TP[0]);
     document.getElementById('fNome').value      = dados ? dados.Nome : '';
     document.getElementById('fDuracao').value   = dados ? dados.DuracaoPadraoMinutos : 30;
+    document.getElementById('fPreco').value     = dados ? (dados.Preco || '') : '';
     new bootstrap.Modal(document.getElementById('modalProcedimento')).show();
 }
 </script>
