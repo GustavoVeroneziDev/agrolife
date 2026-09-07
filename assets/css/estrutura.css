@@ -472,12 +472,12 @@ button, a, [role="button"] { touch-action: manipulation; }
 .cal-ticket {
   font-size: .62rem; font-weight: 600; line-height: 1.5; padding: 0 .3rem;
   border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: #fff;
+  color: var(--accent-text);
 }
 .cal-ticket-pendente   { background: var(--bs-secondary); }
-.cal-ticket-confirmado { background: var(--bs-info); color: #063a4a; }
+.cal-ticket-confirmado { background: var(--bs-info); color: var(--texto-sobre-info); }
 .cal-ticket-concluido  { background: var(--bs-success); }
-.cal-ticket-faltou     { background: var(--bs-warning); color: #4a3800; }
+.cal-ticket-faltou     { background: var(--bs-warning); color: var(--texto-sobre-atencao); }
 .cal-tickets-mais { font-size: .6rem; font-weight: 600; color: var(--text-muted); padding: 0 .3rem; }
 
 /* ── Ícone de espécie (PNG recolorido via CSS mask) ───────────── */

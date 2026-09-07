@@ -41,4 +41,9 @@
   --cor-atencao-bg: rgba(217, 119, 6, .12);
   --cor-info:       #2563eb;
   --cor-info-bg:    rgba(37, 99, 235, .12);
+
+  /* ── Texto escuro sobre fundo claro do Bootstrap (bs-info/bs-warning) —
+     o branco padrão não tem contraste suficiente em cima desses dois ── */
+  --texto-sobre-info:    #063a4a;
+  --texto-sobre-atencao: #4a3800;
 }
