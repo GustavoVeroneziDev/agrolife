@@ -736,7 +736,7 @@ require_once __DIR__ . '/../geral/header.php';
                                             <?php if ($ag['Status'] === 'concluido' && $ag['Valor'] !== null): ?>
                                                 <button type="button" class="btn btn-sm btn-<?= $ag['StatusPagamento'] === 'pago' ? '' : 'outline-' ?>success btn-alternar-pagamento"
                                                     data-id="<?= h($ag['IDAgendamento']) ?>" title="Clique pra alternar pago/pendente">
-                                                    R$ <?= number_format((float) $ag['Valor'], 2, ',', '.') ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                                                    <?= formatarMoeda((float) $ag['Valor']) ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
                                                 </button>
                                             <?php endif ?>
                                             <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>

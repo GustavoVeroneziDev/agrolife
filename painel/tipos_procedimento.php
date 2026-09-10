@@ -126,7 +126,7 @@ require_once __DIR__ . '/../geral/header.php';
                                 <td class="fw-medium"><?= h($p['Nome']) ?></td>
                                 <td class="small"><?= (int) $p['DuracaoPadraoMinutos'] ?> min</td>
                                 <td class="d-none d-md-table-cell small">
-                                    <?= $p['Preco'] !== null ? 'R$ ' . number_format((float) $p['Preco'], 2, ',', '.') : '<span class="text-secondary">—</span>' ?>
+                                    <?= $p['Preco'] !== null ? formatarMoeda((float) $p['Preco']) : '<span class="text-secondary">—</span>' ?>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($souAdmin): ?>

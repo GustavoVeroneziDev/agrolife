@@ -141,7 +141,7 @@ require_once __DIR__ . '/../geral/header.php';
                                 </td>
                                 <td class="small"><?= $t['IntervaloMeses'] ? $t['IntervaloMeses'] . ' meses' : 'Dose única' ?></td>
                                 <td class="d-none d-md-table-cell small">
-                                    <?= $t['Preco'] !== null ? 'R$ ' . number_format((float) $t['Preco'], 2, ',', '.') : '<span class="text-secondary">—</span>' ?>
+                                    <?= $t['Preco'] !== null ? formatarMoeda((float) $t['Preco']) : '<span class="text-secondary">—</span>' ?>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($souAdmin): ?>

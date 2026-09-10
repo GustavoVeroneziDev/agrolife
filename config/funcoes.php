@@ -888,6 +888,14 @@ function formatarData(?string $date): string
     return $date ? date('d/m/Y', strtotime($date)) : '—';
 }
 
+// "R$ " . number_format($v, 2, ',', '.') estava repetido em vários lugares
+// (agenda.php, relatorios.php, tipos_vacina.php, tipos_procedimento.php,
+// renderCardAgendamento) — mesma formatação, um lugar só.
+function formatarMoeda(float $valor): string
+{
+    return 'R$ ' . number_format($valor, 2, ',', '.');
+}
+
 function formatarDataHora(string $datetime): string
 {
     return date('d/m/Y \à\s H:i', strtotime($datetime));
@@ -1084,7 +1092,7 @@ function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCanc
                             // acessa o perfil de outro cliente pra consulta.
                             ?>
                             <span class="badge bg-<?= $ag['StatusPagamento'] === 'pago' ? 'success' : 'warning' ?>">
-                                R$ <?= number_format((float) $ag['Valor'], 2, ',', '.') ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                                <?= formatarMoeda((float) $ag['Valor']) ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
                             </span>
                         <?php endif ?>
                     </div>

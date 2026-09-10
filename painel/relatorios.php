@@ -57,9 +57,12 @@ try {
 
     // Procedimentos mais comuns — pelo Tipo (categoria), não pelo Título
     // livre, senão "Consulta de rotina" e "consulta de rotina" viravam
-    // linhas separadas.
+    // linhas separadas. Receita só soma o que já foi pago — senão um tipo
+    // caro com muita cobrança pendente pareceria "o mais lucrativo" antes
+    // do dinheiro ter entrado de verdade.
     $porTipo = $pdo->prepare(
-        "SELECT Tipo, COUNT(*) AS Total
+        "SELECT Tipo, COUNT(*) AS Total,
+                SUM(CASE WHEN StatusPagamento = 'pago' THEN Valor ELSE 0 END) AS Receita
          FROM Agendamentos
          WHERE DataHoraInicio BETWEEN :de AND :ate AND Status = 'concluido'
          GROUP BY Tipo
@@ -68,6 +71,25 @@ try {
     $porTipo->execute([':de' => $deInicio, ':ate' => $ateFim]);
     $porTipo = $porTipo->fetchAll();
     $maxTipo = $porTipo ? (int) $porTipo[0]['Total'] : 0;
+
+    // Pagamentos pendentes — de propósito SEM o filtro de data do resto do
+    // relatório. Dinheiro que ainda falta receber é um saldo de agora, não
+    // um evento de um período específico; se filtrasse pela mesma janela
+    // "De/Até", uma cobrança de 2 meses atrás sumiria da lista assim que
+    // alguém trocasse o filtro pra ver só o mês corrente — mas ela continua
+    // pendente de verdade, então continua aparecendo até alguém marcar como
+    // paga (ou cancelar/estornar o agendamento).
+    $pendentesPagamento = $pdo->query(
+        "SELECT ag.IDAgendamento, ag.DataHoraInicio, ag.Titulo, ag.Valor,
+                a.Nome AS NomeAnimal, u.Nome AS NomeDono
+         FROM Agendamentos ag
+         JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
+         JOIN Usuarios u ON u.IDUsuario = a.FKDono
+         WHERE ag.Status = 'concluido' AND ag.StatusPagamento = 'pendente'
+         ORDER BY ag.DataHoraInicio ASC
+         LIMIT 50"
+    )->fetchAll();
+    $totalPendentesPagamento = array_sum(array_column($pendentesPagamento, 'Valor'));
 
     // Vacinas realmente aplicadas no período (não "planejadas") — conta pela
     // DataAplicacao de verdade, não pela ProximaData.
@@ -91,6 +113,8 @@ try {
     $maxTipo = 0;
     $porVacina = [];
     $totalVacinas = 0;
+    $pendentesPagamento = [];
+    $totalPendentesPagamento = 0;
 }
 
 $paginaTitulo = 'Relatórios';
@@ -132,14 +156,14 @@ require_once __DIR__ . '/../geral/header.php';
     </div>
     <div class="col-6 col-lg-3">
         <div class="card p-3 h-100">
-            <div class="small text-secondary">Faturado (pago)</div>
-            <div class="fs-3 fw-bold text-success">R$ <?= number_format((float) $resumo['Faturado'], 2, ',', '.') ?></div>
+            <div class="small text-secondary">Faturado (pago) — no período</div>
+            <div class="fs-3 fw-bold text-success"><?= formatarMoeda((float) $resumo['Faturado']) ?></div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="card p-3 h-100">
-            <div class="small text-secondary">A receber</div>
-            <div class="fs-3 fw-bold text-warning">R$ <?= number_format((float) $resumo['AReceber'], 2, ',', '.') ?></div>
+            <div class="small text-secondary">A receber — no período</div>
+            <div class="fs-3 fw-bold text-warning"><?= formatarMoeda((float) $resumo['AReceber']) ?></div>
         </div>
     </div>
 </div>
@@ -194,7 +218,7 @@ require_once __DIR__ . '/../geral/header.php';
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small mb-1">
                             <span><?= h($tiposAgenda[$t['Tipo']] ?? $t['Tipo']) ?></span>
-                            <span class="fw-medium"><?= (int) $t['Total'] ?></span>
+                            <span class="fw-medium"><?= (int) $t['Total'] ?>x · <?= formatarMoeda((float) $t['Receita']) ?></span>
                         </div>
                         <div class="progress" style="height:6px;">
                             <div class="progress-bar" style="width:<?= $maxTipo > 0 ? round((int) $t['Total'] / $maxTipo * 100) : 0 ?>%;background:var(--accent);"></div>
@@ -205,5 +229,66 @@ require_once __DIR__ . '/../geral/header.php';
         </div>
     </div>
 </div>
+
+<div class="card p-4 mb-4" id="pagamentos-pendentes">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-hourglass-split me-2 text-warning"></i>Pagamentos pendentes</h6>
+        <span class="small text-secondary">
+            Todos em aberto, sem filtro de data — <?= count($pendentesPagamento) ?> item<?= count($pendentesPagamento) === 1 ? '' : 's' ?>,
+            <strong class="text-warning"><?= formatarMoeda((float) $totalPendentesPagamento) ?></strong>
+        </span>
+    </div>
+    <?php if (empty($pendentesPagamento)): ?>
+        <div class="text-center py-4 text-secondary">
+            <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success opacity-50"></i>
+            <p class="mb-0">Nenhum pagamento pendente!</p>
+        </div>
+    <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr><th>Data</th><th>Animal</th><th>Dono</th><th>Atendimento</th><th class="text-end">Valor</th><th></th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($pendentesPagamento as $p): ?>
+                        <tr data-id-pagamento="<?= h($p['IDAgendamento']) ?>">
+                            <td class="small text-nowrap"><?= formatarData($p['DataHoraInicio']) ?></td>
+                            <td class="small"><?= h($p['NomeAnimal']) ?></td>
+                            <td class="small"><?= h($p['NomeDono']) ?></td>
+                            <td class="small"><?= h($p['Titulo']) ?></td>
+                            <td class="small text-end fw-medium"><?= formatarMoeda((float) $p['Valor']) ?></td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-success btn-marcar-pago-relatorio" data-id="<?= h($p['IDAgendamento']) ?>">
+                                    <i class="bi bi-check-lg"></i> Marcar pago
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif ?>
+</div>
+
+<script>
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-marcar-pago-relatorio');
+    if (!btn) return;
+    btn.disabled = true;
+    // Recarrega em vez de só tirar a linha da tabela — os cards de resumo
+    // no topo (Faturado/A receber do período) e o total desta lista ficariam
+    // desatualizados se só a linha sumisse, mesmo a ação tendo funcionado.
+    vsApiPost(BASE + '/painel/api_agendamento.php', { acao: 'alternar_pagamento', id: btn.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
+        .then(function (d) {
+            if (d.ok) {
+                vsRecarregarPreservandoScroll();
+            } else {
+                btn.disabled = false;
+                vsToast(d.msg || 'Erro ao atualizar.', 'danger');
+            }
+        })
+        .catch(function () { btn.disabled = false; vsToast('Falha na conexão.', 'danger'); });
+});
+</script>
 
 <?php require_once __DIR__ . '/../geral/footer.php' ?>

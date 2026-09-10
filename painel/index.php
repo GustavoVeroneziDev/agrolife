@@ -21,6 +21,14 @@ try {
         "SELECT COUNT(*) FROM Agendamentos WHERE Status = 'faltou' AND DataHoraInicio >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)"
     )->fetchColumn();
 
+    // Saldo em aberto de verdade, sem filtro de data — mesmo raciocínio do
+    // "Pagamentos pendentes" em relatorios.php (pra onde esse card leva):
+    // dinheiro que falta receber é um saldo de agora, não um evento de um
+    // período específico.
+    $totalAReceber = (float) $pdo->query(
+        "SELECT COALESCE(SUM(Valor), 0) FROM Agendamentos WHERE Status = 'concluido' AND StatusPagamento = 'pendente'"
+    )->fetchColumn();
+
     $atrasadas = (int) $pdo->query(
         "SELECT COUNT(*) FROM RegistrosVacinas rv
          JOIN Animais a ON a.IDAnimal = rv.FKAnimal
@@ -109,6 +117,7 @@ try {
 } catch (PDOException $e) {
     error_log('[PainelDash] ' . $e->getMessage());
     $agendamentosPendentes = $faltasSemana = $vencendo = $atrasadas = 0;
+    $totalAReceber = 0;
     $filtroVac = '';
     $souVeterinario = false;
     $proximas = $agendamentosHoje = $proximosAgendamentos = $recentes = [];
@@ -128,12 +137,13 @@ require_once __DIR__ . '/../geral/header.php';
     // do ponto, âmbar = precisa agir logo), em vez de vacina ter alerta e
     // atendimento só ter contagem neutra.
     $stats = [
-        ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,             BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas'],
-        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias',  $vencendo,              BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo'],
-        ['bi-hourglass-split',           'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Aguardando confirmação', $agendamentosPendentes, BASE . '/painel/agenda.php',  false],
-        ['bi-calendar-x-fill',           'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Faltas essa semana',  $faltasSemana,          BASE . '/painel/agenda.php',  false],
+        ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,             BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas', false],
+        ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias',  $vencendo,              BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo', false],
+        ['bi-hourglass-split',           'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Aguardando confirmação', $agendamentosPendentes, BASE . '/painel/agenda.php',  false, false],
+        ['bi-calendar-x-fill',           'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Faltas essa semana',  $faltasSemana,          BASE . '/painel/agenda.php',  false, false],
+        ['bi-cash-coin',                 'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'A receber',           $totalAReceber,         BASE . '/painel/relatorios.php#pagamentos-pendentes', false, true],
     ];
-    foreach ($stats as [$icon, $color, $bg, $label, $valor, $link, $ativo]):
+    foreach ($stats as [$icon, $color, $bg, $label, $valor, $link, $ativo, $moeda]):
     ?>
         <div class="col-6 col-xl-3">
             <a href="<?= h($link) ?>" class="card stat-card stat-card-link h-100 <?= $ativo ? 'stat-card-active' : '' ?>">
@@ -143,7 +153,7 @@ require_once __DIR__ . '/../geral/header.php';
                         <i class="bi <?= $icon ?>"></i>
                     </div>
                 </div>
-                <div class="stat-card-valor"><?= number_format($valor) ?></div>
+                <div class="stat-card-valor"><?= $moeda ? formatarMoeda((float) $valor) : number_format($valor) ?></div>
             </a>
         </div>
     <?php endforeach ?>
