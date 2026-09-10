@@ -704,13 +704,6 @@ require_once __DIR__ . '/../geral/header.php';
                                             <span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>
                                         <?php endif ?>
                                         <?= labelStatusAgendamento($ag['Status']) ?>
-                                        <?php if ($ag['Valor'] !== null && $ag['Status'] === 'concluido'): ?>
-                                            <button type="button"
-                                                class="badge border-0 btn-alternar-pagamento bg-<?= $ag['StatusPagamento'] === 'pago' ? 'success' : 'warning' ?>"
-                                                data-id="<?= h($ag['IDAgendamento']) ?>" style="cursor:pointer;" title="Clique pra alternar pago/pendente">
-                                                R$ <?= number_format((float) $ag['Valor'], 2, ',', '.') ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
-                                            </button>
-                                        <?php endif ?>
                                         <span class="fw-medium"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
                                         <span class="text-secondary small">— <?= h($ag['NomeDono']) ?></span>
                                     </div>
@@ -740,6 +733,12 @@ require_once __DIR__ . '/../geral/header.php';
                                             <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>
                                             <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
                                         <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
+                                            <?php if ($ag['Status'] === 'concluido' && $ag['Valor'] !== null): ?>
+                                                <button type="button" class="btn btn-sm btn-<?= $ag['StatusPagamento'] === 'pago' ? '' : 'outline-' ?>success btn-alternar-pagamento"
+                                                    data-id="<?= h($ag['IDAgendamento']) ?>" title="Clique pra alternar pago/pendente">
+                                                    R$ <?= number_format((float) $ag['Valor'], 2, ',', '.') ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                                                </button>
+                                            <?php endif ?>
                                             <button class="btn btn-sm btn-outline-secondary btn-remarcar" data-id="<?= h($ag['IDAgendamento']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-data="<?= h($remarcarData) ?>" data-hora="<?= h($remarcarHora) ?>">Remarcar</button>
                                             <button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Reabrir esse agendamento?">Reabrir</button>
                                         <?php endif ?>
@@ -1235,14 +1234,15 @@ function mostrarDiaMes(data, diaNum) {
                       + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
             } else {
-                acoes = btnRemarcar
+                var btnPagamento = '';
+                if (ag.status === 'concluido' && ag.valor !== null) {
+                    btnPagamento = '<button type="button" class="btn btn-sm btn-' + (ag.statusPag === 'pago' ? '' : 'outline-') + 'success btn-alternar-pagamento"'
+                        + ' data-id="' + ag.id + '" title="Clique pra alternar pago/pendente">'
+                        + formatarMoedaBR(ag.valor) + ' · ' + (ag.statusPag === 'pago' ? 'Pago' : 'Pendente') + '</button>';
+                }
+                acoes = btnPagamento
+                      + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="' + ag.id + '" data-confirm="Reabrir esse agendamento?">Reabrir</button>';
-            }
-            var badgePagamento = '';
-            if (ag.status === 'concluido' && ag.valor !== null) {
-                badgePagamento = '<button type="button" class="badge border-0 btn-alternar-pagamento bg-' + (ag.statusPag === 'pago' ? 'success' : 'warning')
-                    + '" data-id="' + ag.id + '" style="cursor:pointer;" title="Clique pra alternar pago/pendente">'
-                    + formatarMoedaBR(ag.valor) + ' · ' + (ag.statusPag === 'pago' ? 'Pago' : 'Pendente') + '</button>';
             }
             var obsPos = (ag.status === 'concluido' && ag.obsPos)
                 ? '<span class="text-secondary small d-block mt-1"><strong>Pós-consulta:</strong> ' + escHtmlPicker(ag.obsPos).replace(/\n/g, '<br>') + '</span>'
@@ -1255,7 +1255,6 @@ function mostrarDiaMes(data, diaNum) {
                  + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
                  + (ag.origem ? '<span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>' : '')
                  + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
-                 + badgePagamento
                  + '<span class="fw-medium">' + iconeHtmlPicker(ag.icone) + escHtmlPicker(ag.animal) + '</span>'
                  + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'
                  + '</div>'
