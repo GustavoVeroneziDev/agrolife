@@ -734,7 +734,7 @@ require_once __DIR__ . '/../geral/header.php';
                                             <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
                                         <?php elseif (in_array($ag['Status'], ['concluido', 'cancelado', 'faltou'], true)): ?>
                                             <?php if ($ag['Status'] === 'concluido' && $ag['Valor'] !== null): ?>
-                                                <button type="button" class="btn btn-sm btn-<?= $ag['StatusPagamento'] === 'pago' ? '' : 'outline-' ?>success btn-alternar-pagamento"
+                                                <button type="button" class="btn btn-sm btn-<?= $ag['StatusPagamento'] === 'pago' ? 'success' : 'outline-warning' ?> btn-alternar-pagamento"
                                                     data-id="<?= h($ag['IDAgendamento']) ?>" title="Clique pra alternar pago/pendente">
                                                     <?= formatarMoeda((float) $ag['Valor']) ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
                                                 </button>
@@ -1236,7 +1236,7 @@ function mostrarDiaMes(data, diaNum) {
             } else {
                 var btnPagamento = '';
                 if (ag.status === 'concluido' && ag.valor !== null) {
-                    btnPagamento = '<button type="button" class="btn btn-sm btn-' + (ag.statusPag === 'pago' ? '' : 'outline-') + 'success btn-alternar-pagamento"'
+                    btnPagamento = '<button type="button" class="btn btn-sm btn-' + (ag.statusPag === 'pago' ? 'success' : 'outline-warning') + ' btn-alternar-pagamento"'
                         + ' data-id="' + ag.id + '" title="Clique pra alternar pago/pendente">'
                         + formatarMoedaBR(ag.valor) + ' · ' + (ag.statusPag === 'pago' ? 'Pago' : 'Pendente') + '</button>';
                 }
