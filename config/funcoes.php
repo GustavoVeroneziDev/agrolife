@@ -1075,6 +1075,18 @@ function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCanc
                     <div>
                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
                         <?= labelStatusAgendamento($ag['Status']) ?>
+                        <?php if ($ag['Status'] === 'concluido' && $ag['Valor'] !== null): ?>
+                            <?php
+                            // Só informativo aqui (nunca clicável) — alternar
+                            // pago/pendente é ação de quem recebe o pagamento
+                            // (equipe/admin, só pela Agenda), não do próprio
+                            // cliente vendo o próprio card, nem de quem
+                            // acessa o perfil de outro cliente pra consulta.
+                            ?>
+                            <span class="badge bg-<?= $ag['StatusPagamento'] === 'pago' ? 'success' : 'warning' ?>">
+                                R$ <?= number_format((float) $ag['Valor'], 2, ',', '.') ?> · <?= $ag['StatusPagamento'] === 'pago' ? 'Pago' : 'Pendente' ?>
+                            </span>
+                        <?php endif ?>
                     </div>
                     <div class="fw-medium mt-1"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?> — <?= h($ag['Titulo']) ?></div>
                     <?php if ($ag['NomeVeterinario']): ?>

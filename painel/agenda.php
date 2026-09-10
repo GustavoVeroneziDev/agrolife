@@ -472,6 +472,7 @@ try {
 
         $stmt = $pdo->prepare(
             "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.FKAgendamentoOrigem,
+                    ag.Valor, ag.StatusPagamento, ag.ObservacoesPos,
                     a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
                     u.Nome AS NomeDono, v.Nome AS NomeVeterinario
              FROM Agendamentos ag
@@ -501,6 +502,13 @@ try {
                 'vet'    => $ag['NomeVeterinario'],
                 'status' => $ag['Status'],
                 'origem' => !empty($ag['FKAgendamentoOrigem']),
+                // Preço/observação pós-consulta só existem depois de concluído
+                // (ver acao=concluir) — mesmos dados que o card da vista
+                // semanal já mostra, pra não faltar informação só por ter
+                // aberto pelo painel de dia da vista mensal em vez da semanal.
+                'valor'      => $ag['Valor'] !== null ? (float) $ag['Valor'] : null,
+                'statusPag'  => $ag['StatusPagamento'],
+                'obsPos'     => $ag['ObservacoesPos'],
             ];
         }
 
@@ -898,7 +906,7 @@ require_once __DIR__ . '/../geral/header.php';
 <div class="modal fade" id="modalRemarcar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST">
+            <form method="POST" id="formRemarcar">
                 <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
                 <input type="hidden" name="acao" value="remarcar">
                 <input type="hidden" name="id" id="remarcarId">
@@ -1111,6 +1119,18 @@ document.addEventListener('click', function (e) {
         vsApiPost(BASE + '/painel/api_agendamento.php', { acao: 'alternar_pagamento', id: btnPagamento.dataset.id, csrf_token: '<?= gerarTokenCSRF() ?>' })
         .then(function (d) {
             if (d.ok) {
+                // Mesmo raciocínio do bloco .btn-acao-agendamento logo abaixo:
+                // se o clique veio de dentro do painel de dia (vista mensal),
+                // guarda qual dia tava aberto antes de recarregar — senão
+                // alternar pago/pendente ali dentro fechava o painel a cada
+                // clique, parecendo que a ação "voltou pro calendário"
+                // sozinha. Só grava depois de confirmar sucesso (d.ok) — se
+                // gravasse antes da resposta, uma falha de rede deixava esse
+                // valor preso no sessionStorage pra reabrir errado num
+                // carregamento de página futuro sem relação nenhuma.
+                if (btnPagamento.closest('#painelDiaMes') && diaMesAbertoData) {
+                    try { sessionStorage.setItem('vsDiaMesAberto', diaMesAbertoData); } catch (e) {}
+                }
                 vsRecarregarPreservandoScroll();
             } else {
                 vsToast(d.msg || 'Erro ao atualizar.', 'danger');
@@ -1174,6 +1194,13 @@ var STATUS_COR = {
     cancelado: 'danger', faltou: 'warning',
 };
 
+// Mesmo formato "R$ 1.234,56" que number_format($v, 2, ',', '.') gera no PHP
+// (vista semanal, PHP puro) — repetido aqui em JS só porque o painel de dia
+// da vista mensal monta o HTML no cliente, não no servidor.
+function formatarMoedaBR(valor) {
+    return 'R$ ' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d)(?=,))/g, '.');
+}
+
 var diaMesAbertoData = null;
 
 function mostrarDiaMes(data, diaNum) {
@@ -1211,6 +1238,15 @@ function mostrarDiaMes(data, diaNum) {
                 acoes = btnRemarcar
                       + '<button class="btn btn-sm btn-outline-secondary btn-acao-agendamento" data-acao="reabrir" data-id="' + ag.id + '" data-confirm="Reabrir esse agendamento?">Reabrir</button>';
             }
+            var badgePagamento = '';
+            if (ag.status === 'concluido' && ag.valor !== null) {
+                badgePagamento = '<button type="button" class="badge border-0 btn-alternar-pagamento bg-' + (ag.statusPag === 'pago' ? 'success' : 'warning')
+                    + '" data-id="' + ag.id + '" style="cursor:pointer;" title="Clique pra alternar pago/pendente">'
+                    + formatarMoedaBR(ag.valor) + ' · ' + (ag.statusPag === 'pago' ? 'Pago' : 'Pendente') + '</button>';
+            }
+            var obsPos = (ag.status === 'concluido' && ag.obsPos)
+                ? '<span class="text-secondary small d-block mt-1"><strong>Pós-consulta:</strong> ' + escHtmlPicker(ag.obsPos).replace(/\n/g, '<br>') + '</span>'
+                : '';
             return '<li class="list-group-item px-3 py-2">'
                  + '<div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">'
                  + '<span class="fw-bold text-accent" style="min-width:42px;">' + ag.hora + '</span>'
@@ -1219,10 +1255,12 @@ function mostrarDiaMes(data, diaNum) {
                  + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
                  + (ag.origem ? '<span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>' : '')
                  + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
+                 + badgePagamento
                  + '<span class="fw-medium">' + iconeHtmlPicker(ag.icone) + escHtmlPicker(ag.animal) + '</span>'
                  + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'
                  + '</div>'
                  + '<span class="text-secondary small d-block">' + escHtmlPicker(ag.titulo) + (ag.vet ? ' · ' + escHtmlPicker(ag.vet) : ' · sem veterinário definido') + '</span>'
+                 + obsPos
                  + '</div>'
                  + '<div class="d-flex gap-1 flex-wrap flex-shrink-0">' + acoes + '</div>'
                  + '</div></li>';
@@ -1234,6 +1272,18 @@ function mostrarDiaMes(data, diaNum) {
     painel.style.display = '';
     painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// "Remarcar" é um <form> de verdade (POST com reload de página cheio, não
+// vsApiPost) — os outros botões do painel de dia (confirmar/cancelar/pagamento)
+// guardam qual dia tava aberto antes de recarregar via JS, mas esse submit
+// nunca passava por ali, então remarcar de dentro do painel de dia sempre
+// fechava o painel depois do redirect, mesmo os outros botões já tendo sido
+// corrigidos pra não fazer isso.
+document.getElementById('formRemarcar').addEventListener('submit', function () {
+    if (diaMesAbertoData) {
+        try { sessionStorage.setItem('vsDiaMesAberto', diaMesAbertoData); } catch (e) {}
+    }
+});
 
 // Reabre o painel do dia depois de recarregar, se uma ação (Faltou,
 // Cancelar...) tiver sido feita de dentro dele — sem isso o reload fecha
