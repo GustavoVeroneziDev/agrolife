@@ -481,12 +481,30 @@ button, a, [role="button"] { touch-action: manipulation; }
 .cal-tickets-mais { font-size: .6rem; font-weight: 600; color: var(--text-muted); padding: 0 .3rem; }
 
 /* Ícone de pagamento dentro do ticket "Concluído" — dá pra ver se já foi
-   pago sem precisar clicar no dia pra abrir o painel de detalhe. Âmbar
+   pago sem precisar clicar no dia pra abrir o painel de detalhe. Mesma
+   técnica do ícone de espécie (PNG de silhueta única, recolorido via CSS
+   mask) — um arquivo só (money-bag.png) serve pras duas cores. Âmbar
    (pendente) contrasta bem com o fundo verde do ticket; "pago" usa um
    verde mais claro que o próprio fundo (ver --cal-ticket-pago-icone em
    paleta.css), senão um verde igual ao --bs-success de fundo some. */
-.cal-ticket-icone-pago     { color: var(--cal-ticket-pago-icone); margin-right: 2px; }
-.cal-ticket-icone-pendente { color: var(--bs-warning); margin-right: 2px; }
+.cal-ticket-icone-pagamento {
+  display: inline-block;
+  width: .62rem;
+  height: .62rem;
+  margin-right: 2px;
+  vertical-align: -1px;
+  flex-shrink: 0;
+  -webkit-mask-image: url('../img/money-bag.png');
+  mask-image: url('../img/money-bag.png');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.cal-ticket-icone-pago     { background-color: var(--cal-ticket-pago-icone); }
+.cal-ticket-icone-pendente { background-color: var(--bs-warning); }
 
 /* ── Ícone de espécie (PNG recolorido via CSS mask) ───────────── */
 .especie-icone {

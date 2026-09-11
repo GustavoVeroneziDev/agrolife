@@ -650,7 +650,7 @@ require_once __DIR__ . '/../geral/header.php';
                                     ?>
                                     <span class="cal-ticket cal-ticket-<?= h($ag['Status']) ?>" title="<?= h($tituloTicket) ?>">
                                         <?php if ($temPagamento): ?>
-                                            <i class="bi <?= $ag['StatusPagamento'] === 'pago' ? 'bi-check-circle-fill cal-ticket-icone-pago' : 'bi-exclamation-circle-fill cal-ticket-icone-pendente' ?>"></i>
+                                            <span class="cal-ticket-icone-pagamento <?= $ag['StatusPagamento'] === 'pago' ? 'cal-ticket-icone-pago' : 'cal-ticket-icone-pendente' ?>"></span>
                                         <?php endif ?>
                                         <?= h($ag['Titulo']) ?> — <?= h($ag['NomeAnimal']) ?>
                                     </span>
