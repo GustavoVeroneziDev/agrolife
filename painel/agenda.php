@@ -643,7 +643,15 @@ require_once __DIR__ . '/../geral/header.php';
                             <?php $totalAgs = count($cel['ags']); $ticketsMostrados = array_slice($cel['ags'], 0, 2); ?>
                             <div class="cal-tickets">
                                 <?php foreach ($ticketsMostrados as $ag): ?>
-                                    <span class="cal-ticket cal-ticket-<?= h($ag['Status']) ?>" title="<?= h($ag['Titulo'] . ' — ' . $ag['NomeAnimal']) ?>">
+                                    <?php
+                                        $temPagamento = $ag['Status'] === 'concluido' && $ag['Valor'] !== null;
+                                        $tituloTicket = $ag['Titulo'] . ' — ' . $ag['NomeAnimal']
+                                            . ($temPagamento ? ' (' . ($ag['StatusPagamento'] === 'pago' ? 'pago' : 'pagamento pendente') . ')' : '');
+                                    ?>
+                                    <span class="cal-ticket cal-ticket-<?= h($ag['Status']) ?>" title="<?= h($tituloTicket) ?>">
+                                        <?php if ($temPagamento): ?>
+                                            <i class="bi <?= $ag['StatusPagamento'] === 'pago' ? 'bi-check-circle-fill cal-ticket-icone-pago' : 'bi-exclamation-circle-fill cal-ticket-icone-pendente' ?>"></i>
+                                        <?php endif ?>
                                         <?= h($ag['Titulo']) ?> — <?= h($ag['NomeAnimal']) ?>
                                     </span>
                                 <?php endforeach ?>

@@ -46,4 +46,10 @@
      o branco padrão não tem contraste suficiente em cima desses dois ── */
   --texto-sobre-info:    #063a4a;
   --texto-sobre-atencao: #4a3800;
+
+  /* ── Ícone de pagamento no ticket do calendário mensal — o ticket
+     "Concluído" já usa --bs-success (verde) de fundo, então um ícone
+     verde-puro (--bs-success de novo) fica invisível em cima do próprio
+     fundo. Um verde mais claro resolve sem deixar de ser "verde". ── */
+  --cal-ticket-pago-icone: #8affc1;
 }

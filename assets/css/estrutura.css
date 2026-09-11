@@ -480,6 +480,14 @@ button, a, [role="button"] { touch-action: manipulation; }
 .cal-ticket-faltou     { background: var(--bs-warning); color: var(--texto-sobre-atencao); }
 .cal-tickets-mais { font-size: .6rem; font-weight: 600; color: var(--text-muted); padding: 0 .3rem; }
 
+/* Ícone de pagamento dentro do ticket "Concluído" — dá pra ver se já foi
+   pago sem precisar clicar no dia pra abrir o painel de detalhe. Âmbar
+   (pendente) contrasta bem com o fundo verde do ticket; "pago" usa um
+   verde mais claro que o próprio fundo (ver --cal-ticket-pago-icone em
+   paleta.css), senão um verde igual ao --bs-success de fundo some. */
+.cal-ticket-icone-pago     { color: var(--cal-ticket-pago-icone); margin-right: 2px; }
+.cal-ticket-icone-pendente { color: var(--bs-warning); margin-right: 2px; }
+
 /* ── Ícone de espécie (PNG recolorido via CSS mask) ───────────── */
 .especie-icone {
   display: inline-block;
