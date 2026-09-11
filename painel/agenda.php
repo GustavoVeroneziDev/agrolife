@@ -59,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hora     = trim($_POST['hora'] ?? '');
         $duracao  = (int) ($_POST['duracao'] ?? 30);
         $obs      = trim($_POST['observacoes'] ?? '');
+        $valor    = parseValorMonetario($_POST['valor'] ?? '');
 
         // Volta reabrindo o mesmo modal, com o mesmo animal pré-selecionado
         // se veio de um — sem isso, um erro (conflito de horário, campo
@@ -89,8 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $novoAgId = gerarUuid();
             $pdo->prepare(
-                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes)
-                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs)'
+                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Valor)
+                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, :valor)'
             )->execute([
                 ':id'     => $novoAgId,
                 ':animal' => $fkAnimal,
@@ -100,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':inicio' => $inicio,
                 ':fim'    => $fim,
                 ':obs'    => $obs ?: null,
+                ':valor'  => $valor,
             ]);
             destravarAgendaVet($pdo, $fkVet ?: null);
 
@@ -726,7 +728,7 @@ require_once __DIR__ . '/../geral/header.php';
                                             <button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Cancelar esse agendamento?">Cancelar</button>
                                         <?php elseif ($ag['Status'] === 'confirmado'): ?>
                                             <button class="btn btn-sm btn-accent btn-concluir"
-                                                data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>">
+                                                data-id="<?= h($ag['IDAgendamento']) ?>" data-tipo="<?= h($ag['Tipo']) ?>" data-titulo="<?= h($ag['Titulo']) ?>" data-valor="<?= $ag['Valor'] !== null ? h($ag['Valor']) : '' ?>">
                                                 Concluir
                                             </button>
                                             <button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="<?= h($ag['IDAgendamento']) ?>" data-confirm="Marcar falta nesse agendamento?">Faltou</button>
@@ -797,11 +799,20 @@ require_once __DIR__ . '/../geral/header.php';
                         <label class="form-label">Título *</label>
                         <input type="text" name="titulo" id="inpTituloAgendamento" class="form-control" placeholder="Ex: Consulta de rotina, Castração…" required maxlength="150">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Duração</label>
-                        <?= campoPicker('agDur', 'duracao', '30 min', '', '30', '30 min', obrigatorio: true, comBusca: false) ?>
-                        <div class="form-text">Escolher um procedimento acima já preenche isso — pode ajustar se precisar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
+                    <div class="row g-2 mb-1">
+                        <div class="col-6">
+                            <label class="form-label">Duração</label>
+                            <?= campoPicker('agDur', 'duracao', '30 min', '', '30', '30 min', obrigatorio: true, comBusca: false) ?>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Valor estimado <span class="text-secondary">(opcional)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" name="valor" id="inpValorAgendamento" class="form-control" step="0.01" min="0" placeholder="0,00">
+                            </div>
+                        </div>
                     </div>
+                    <div class="form-text mb-3">Escolher um procedimento acima já preenche os dois — pode ajustar se precisar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label">Data *</label>
@@ -988,6 +999,11 @@ function selecionarProcedimento(item) {
     // opção pré-cadastrada na lista.
     agDurPk.selecionar({ id: item.duracao, nome: labelDuracao(item.duracao) });
     inpTituloAgendamento.value = item.nome;
+    // Preço padrão do catálogo — mesma ideia de "sugestão, sempre editável"
+    // da duração. Sem preço cadastrado pro procedimento, deixa em branco (não
+    // sobrescreve um valor que a pessoa já tivesse digitado antes de trocar
+    // de procedimento — troca de ideia limpa o campo de novo, igual duração).
+    document.getElementById('inpValorAgendamento').value = item.preco !== null ? item.preco.toFixed(2) : '';
 }
 
 var agProcPk = initPicker({
@@ -1091,8 +1107,18 @@ document.addEventListener('click', function (e) {
         document.getElementById('concluirRetornoCampos').style.display = 'none';
         document.getElementById('concluirRetornoDias').value = 10;
         document.getElementById('concluirRetornoTitulo').value = 'Retorno — ' + btnConcluir.dataset.titulo;
-        var sugestao = precoSugerido(btnConcluir.dataset.titulo);
-        document.getElementById('concluirValor').value = sugestao !== null ? sugestao.toFixed(2) : '';
+        // Prioriza o valor que já tinha sido definido ao criar/editar o
+        // agendamento (pode ter sido ajustado na mão pra esse caso
+        // específico) — só cai pra sugestão do catálogo quando não existe
+        // nenhum valor gravado ainda (agendamento antigo de antes desse
+        // campo existir, ou criado sem preencher).
+        var valorExistente = btnConcluir.dataset.valor;
+        if (valorExistente) {
+            document.getElementById('concluirValor').value = parseFloat(valorExistente).toFixed(2);
+        } else {
+            var sugestao = precoSugerido(btnConcluir.dataset.titulo);
+            document.getElementById('concluirValor').value = sugestao !== null ? sugestao.toFixed(2) : '';
+        }
         document.getElementById('concluirPago').checked = false;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConcluir')).show();
         return;
@@ -1229,7 +1255,7 @@ function mostrarDiaMes(data, diaNum) {
                       + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
             } else if (ag.status === 'confirmado') {
-                acoes = '<button class="btn btn-sm btn-accent btn-concluir" data-id="' + ag.id + '" data-titulo="' + escHtmlPicker(ag.titulo) + '">Concluir</button>'
+                acoes = '<button class="btn btn-sm btn-accent btn-concluir" data-id="' + ag.id + '" data-titulo="' + escHtmlPicker(ag.titulo) + '" data-valor="' + (ag.valor !== null ? ag.valor : '') + '">Concluir</button>'
                       + '<button class="btn btn-sm btn-outline-warning btn-acao-agendamento" data-acao="marcar_falta" data-id="' + ag.id + '" data-confirm="Marcar falta nesse agendamento?">Faltou</button>'
                       + btnRemarcar
                       + '<button class="btn btn-sm btn-outline-danger btn-acao-agendamento" data-acao="cancelar" data-id="' + ag.id + '" data-confirm="Cancelar esse agendamento?">Cancelar</button>';
