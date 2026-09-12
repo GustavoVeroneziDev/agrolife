@@ -337,10 +337,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // faturamento de um atendimento que na prática ainda nem
             // aconteceu de novo (o relatório já ignora isso pelo Status, mas
             // a própria Agenda mostrava um badge de "Pago" enganoso).
+            // NotificacaoLembreteEnviada também zera aqui — remarcar muda a data,
+            // então o lembrete (cron/whatsapp_agendamentos.php) precisa valer pra
+            // data NOVA; sem isso, um agendamento já lembrado e depois remarcado
+            // pra outro dia nunca mais recebia lembrete nenhum.
             $pdo->prepare(
                 "UPDATE Agendamentos
                  SET DataHoraInicio = :inicio, DataHoraFim = :fim, Status = 'pendente',
-                     Valor = NULL, StatusPagamento = NULL, FKRegistroClinico = NULL, ObservacoesPos = NULL
+                     Valor = NULL, StatusPagamento = NULL, FKRegistroClinico = NULL, ObservacoesPos = NULL,
+                     NotificacaoLembreteEnviada = 0
                  WHERE IDAgendamento = :id"
             )->execute([':inicio' => $novoInicio, ':fim' => $novoFim, ':id' => $id]);
             registrarEventoAgendamento($pdo, $id, 'remarcado',

@@ -40,6 +40,7 @@ $campos = [
     'endereco_rua', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf', 'endereco_cep',
     ...array_keys($diasSemana),
     'msg_vacina_semana', 'msg_vacina_dia', 'msg_agendamento_criado', 'msg_cancelamento', 'msg_remarcacao', 'msg_retorno',
+    'msg_lembrete_atendimento',
     'whatsapp_modo_teste', 'whatsapp_numero_teste',
 ];
 
@@ -255,6 +256,15 @@ require_once __DIR__ . '/../geral/header.php';
                     Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
                 </p>
                 <textarea name="msg_retorno" class="form-control" rows="3"><?= h($valores['msg_retorno']) ?></textarea>
+            </div>
+
+            <div class="mb-3 pb-3 border-bottom">
+                <label class="form-label mb-1">Lembrete de atendimento — véspera</label>
+                <p class="small text-secondary mb-2">
+                    Enviado automaticamente (cron) até 1 dia antes do horário, pra agendamentos ainda pendentes/confirmados.
+                    Variáveis: <code>{nome_cliente}</code> <code>{nome_animal}</code> <code>{tipo}</code> <code>{titulo}</code> <code>{data}</code> <code>{hora}</code>
+                </p>
+                <textarea name="msg_lembrete_atendimento" class="form-control" rows="3"><?= h($valores['msg_lembrete_atendimento']) ?></textarea>
             </div>
 
             <div class="mb-3 pb-3 border-bottom">

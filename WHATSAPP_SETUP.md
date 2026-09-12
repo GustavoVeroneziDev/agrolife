@@ -57,12 +57,32 @@ Testado de ponta a ponta (mensagem chegando de verdade no celular):
 - **`usuario/processa_agendamento.php`** — cliente cancela o próprio
   agendamento (novidade: antes só a clínica podia cancelar) → avisa a
   clínica, no número de `telefone_clinica` (Configurações).
-- **`cron/whatsapp_vacinas.php`** — lembrete de vacina (já existia).
+- **`cron/whatsapp_vacinas.php`** — lembrete de vacina, 7 dias antes do
+  vencimento + no dia (já existia).
+- **`cron/whatsapp_agendamentos.php`** — lembrete de atendimento (consulta,
+  cirurgia, exame, procedimento...) até 1 dia antes do horário marcado.
+  Roda 1x por dia, janela móvel de 24h a partir da execução (não por data
+  de calendário — ver comentário no topo do arquivo pra entender por que:
+  evita que um cron atrasado mande "amanhã" sobre algo que já passou).
+  Só considera agendamento ainda `pendente`/`confirmado`; `NotificacaoLembreteEnviada`
+  (coluna em `Agendamentos`) evita reenvio, e é zerada de novo sempre que o
+  agendamento é remarcado pra outra data.
 
 **De propósito sem notificação automática ainda**: confirmar, marcar
 falta, concluir, reabrir agendamento. São ajustes mais internos do dia
 a dia da clínica — não decidi mandar mensagem sozinho pra esses sem
 confirmar antes.
+
+## Crontab sugerido (produção)
+
+```crontab
+0 9 * * * php /home/USUARIO/public_html/cron/whatsapp_vacinas.php >> /home/USUARIO/logs/wa_vacinas.log 2>&1
+0 9 * * * php /home/USUARIO/public_html/cron/whatsapp_agendamentos.php >> /home/USUARIO/logs/wa_agendamentos.log 2>&1
+```
+
+Mesmo horário pros dois de propósito — cada um cobre seu próprio domínio
+(vacina vencendo vs. atendimento chegando) e não competem por dado nem se
+duplicam. Ajustar `USUARIO`/caminho conforme o cPanel real da hospedagem.
 
 ## Pendente
 

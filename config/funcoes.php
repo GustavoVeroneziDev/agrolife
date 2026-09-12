@@ -261,16 +261,18 @@ function registrarLogWhatsApp(
     string $mensagem,
     string $tipo,
     string $status,
-    ?string $fkRegistroVacina = null
+    ?string $fkRegistroVacina = null,
+    ?string $fkAgendamento = null
 ): void {
     try {
         $stmt = $pdo->prepare(
-            'INSERT INTO LogsWhatsApp (IDLog, FKRegistroVacina, Numero, Mensagem, TipoMensagem, StatusEnvio)
-             VALUES (:id, :fkr, :num, :msg, :tipo, :status)'
+            'INSERT INTO LogsWhatsApp (IDLog, FKRegistroVacina, FKAgendamento, Numero, Mensagem, TipoMensagem, StatusEnvio)
+             VALUES (:id, :fkr, :fka, :num, :msg, :tipo, :status)'
         );
         $stmt->execute([
             ':id'     => gerarUuid(),
             ':fkr'    => $fkRegistroVacina,
+            ':fka'    => $fkAgendamento,
             ':num'    => $numero,
             ':msg'    => $mensagem,
             ':tipo'   => $tipo,
@@ -314,6 +316,8 @@ function templatesWhatsAppPadrao(): array
             . "vence em uma semana, no dia *{data}*.\n\nAgende um horário com antecedência para não perder a data!",
         'msg_vacina_dia' => "Olá, {nome_dono}! 🐾 Hoje, *{data}*, vence a vacina *{vacina}* d(a) *{nome_animal}*.\n\n"
             . "Entre em contato para agendar a aplicação o quanto antes.",
+        'msg_lembrete_atendimento' => 'Olá, {nome_cliente}! 🐾 Passando para lembrar do atendimento de *{nome_animal}* '
+            . '({tipo}) marcado para *{data}* às *{hora}*. Te esperamos!',
     ];
 }
 
@@ -379,6 +383,25 @@ function montarMensagemCancelamento(PDO $pdo, string $nomeAnimal, string $tipo, 
 function montarMensagemRemarcacao(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
 {
     $tpl = getConfig($pdo, 'msg_remarcacao', '') ?: templatesWhatsAppPadrao()['msg_remarcacao'];
+
+    return strtr($tpl, [
+        '{nome_cliente}' => $nomeCliente,
+        '{nome_animal}'  => $nomeAnimal,
+        '{tipo}'         => tiposAgendaMap()[$tipo] ?? $tipo,
+        '{titulo}'       => $titulo,
+        '{data}'         => formatarData($dataHoraInicio),
+        '{hora}'         => date('H:i', strtotime($dataHoraInicio)),
+    ]);
+}
+
+// Usada só pelo cron/whatsapp_agendamentos.php. De propósito sempre cita a
+// data/hora por extenso ({data}/{hora}) em vez de uma palavra relativa tipo
+// "amanhã" — o cron roda 1x por dia e pode atrasar (host fora do ar, deploy
+// etc.); um texto fixo com a data real nunca fica errado, enquanto "amanhã"
+// escrito na mensagem podia virar mentira se o envio saísse com atraso.
+function montarMensagemLembreteAtendimento(PDO $pdo, string $nomeCliente, string $nomeAnimal, string $tipo, string $titulo, string $dataHoraInicio): string
+{
+    $tpl = getConfig($pdo, 'msg_lembrete_atendimento', '') ?: templatesWhatsAppPadrao()['msg_lembrete_atendimento'];
 
     return strtr($tpl, [
         '{nome_cliente}' => $nomeCliente,
