@@ -70,7 +70,12 @@ try {
     );
     $porTipo->execute([':de' => $deInicio, ':ate' => $ateFim]);
     $porTipo = $porTipo->fetchAll();
-    $maxTipo = $porTipo ? (int) $porTipo[0]['Total'] : 0;
+    // Barra é % do total de atendimentos concluídos no período (soma de
+    // todos os tipos), não relativo ao tipo mais comum — senão o mais
+    // frequente sempre aparecia com a barra 100% cheia mesmo representando
+    // uma fração pequena do total, o que não bate com o que a barra parece
+    // prometer visualmente ("cheio" = tudo).
+    $totalTipos = array_sum(array_column($porTipo, 'Total'));
 
     // Pagamentos pendentes — de propósito SEM o filtro de data do resto do
     // relatório. Dinheiro que ainda falta receber é um saldo de agora, não
@@ -110,7 +115,7 @@ try {
     $taxaFalta = null;
     $porVet = [];
     $porTipo = [];
-    $maxTipo = 0;
+    $totalTipos = 0;
     $porVacina = [];
     $totalVacinas = 0;
     $pendentesPagamento = [];
@@ -221,7 +226,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <span class="fw-medium"><?= (int) $t['Total'] ?>x · <?= formatarMoeda((float) $t['Receita']) ?></span>
                         </div>
                         <div class="progress" style="height:6px;">
-                            <div class="progress-bar" style="width:<?= $maxTipo > 0 ? round((int) $t['Total'] / $maxTipo * 100) : 0 ?>%;background:var(--accent);"></div>
+                            <div class="progress-bar" style="width:<?= $totalTipos > 0 ? round((int) $t['Total'] / $totalTipos * 100) : 0 ?>%;background:var(--accent);"></div>
                         </div>
                     </div>
                 <?php endforeach ?>
