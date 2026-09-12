@@ -147,19 +147,11 @@ require_once __DIR__ . '/../geral/header.php';
 <?php $souAdmin = ($_SESSION['nivel_acesso'] ?? '') === 'admin'; ?>
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h4 class="fw-bold mb-0">Animais <span class="text-secondary small">(<?= number_format($total) ?>)</span></h4>
-    <?php if ($souAdmin): ?>
+    <?php if ($souAdmin && $totalGeral > 0): ?>
         <div class="d-flex flex-wrap gap-2">
-            <?php if ($totalGeral > 0): ?>
-                <button class="btn btn-outline-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
-                    <i class="bi bi-plus-lg me-1"></i> Novo animal
-                </button>
-            <?php endif ?>
-            <a href="<?= BASE ?>/painel/registrar_vacina.php" class="btn btn-outline-accent btn-sm">
-                <i class="bi bi-shield-plus me-1"></i> Aplicar vacina
-            </a>
-            <a href="<?= BASE ?>/painel/registrar_clinico.php" class="btn btn-outline-accent btn-sm">
-                <i class="bi bi-journal-medical me-1"></i> Registrar atendimento realizado
-            </a>
+            <button class="btn btn-outline-accent btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoAnimal">
+                <i class="bi bi-plus-lg me-1"></i> Novo animal
+            </button>
         </div>
     <?php endif ?>
 </div>
