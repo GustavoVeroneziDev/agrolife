@@ -59,10 +59,13 @@ try {
     // livre, senão "Consulta de rotina" e "consulta de rotina" viravam
     // linhas separadas. Receita só soma o que já foi pago — senão um tipo
     // caro com muita cobrança pendente pareceria "o mais lucrativo" antes
-    // do dinheiro ter entrado de verdade.
+    // do dinheiro ter entrado de verdade. QtdPaga acompanha Receita (não usa
+    // Total) pro ticket médio não ficar artificialmente baixo diluído por
+    // atendimento do mesmo tipo que ainda está com pagamento pendente.
     $porTipo = $pdo->prepare(
         "SELECT Tipo, COUNT(*) AS Total,
-                SUM(CASE WHEN StatusPagamento = 'pago' THEN Valor ELSE 0 END) AS Receita
+                SUM(CASE WHEN StatusPagamento = 'pago' THEN Valor ELSE 0 END) AS Receita,
+                SUM(CASE WHEN StatusPagamento = 'pago' THEN 1 ELSE 0 END) AS QtdPaga
          FROM Agendamentos
          WHERE DataHoraInicio BETWEEN :de AND :ate AND Status = 'concluido'
          GROUP BY Tipo
@@ -70,12 +73,6 @@ try {
     );
     $porTipo->execute([':de' => $deInicio, ':ate' => $ateFim]);
     $porTipo = $porTipo->fetchAll();
-    // Barra é % do total de atendimentos concluídos no período (soma de
-    // todos os tipos), não relativo ao tipo mais comum — senão o mais
-    // frequente sempre aparecia com a barra 100% cheia mesmo representando
-    // uma fração pequena do total, o que não bate com o que a barra parece
-    // prometer visualmente ("cheio" = tudo).
-    $totalTipos = array_sum(array_column($porTipo, 'Total'));
 
     // Pagamentos pendentes — de propósito SEM o filtro de data do resto do
     // relatório. Dinheiro que ainda falta receber é um saldo de agora, não
@@ -115,7 +112,6 @@ try {
     $taxaFalta = null;
     $porVet = [];
     $porTipo = [];
-    $totalTipos = 0;
     $porVacina = [];
     $totalVacinas = 0;
     $pendentesPagamento = [];
@@ -215,21 +211,27 @@ require_once __DIR__ . '/../geral/header.php';
 
     <div class="col-lg-6">
         <div class="card p-4 mb-4">
-            <h6 class="fw-semibold mb-3"><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Procedimentos mais comuns</h6>
+            <h6 class="fw-semibold mb-1"><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Procedimentos mais comuns</h6>
             <?php if (empty($porTipo)): ?>
                 <p class="text-secondary small mb-0">Nenhum atendimento concluído nesse período.</p>
             <?php else: ?>
-                <?php foreach ($porTipo as $t): ?>
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span><?= h($tiposAgenda[$t['Tipo']] ?? $t['Tipo']) ?></span>
-                            <span class="fw-medium"><?= (int) $t['Total'] ?>x · <?= formatarMoeda((float) $t['Receita']) ?></span>
-                        </div>
-                        <div class="progress" style="height:6px;">
-                            <div class="progress-bar" style="width:<?= $totalTipos > 0 ? round((int) $t['Total'] / $totalTipos * 100) : 0 ?>%;background:var(--accent);"></div>
-                        </div>
-                    </div>
-                <?php endforeach ?>
+                <p class="small text-secondary mb-2">Receita e ticket médio consideram só o que já foi pago.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Tipo</th><th class="text-end">Qtd.</th><th class="text-end">Receita</th><th class="text-end">Ticket médio</th></tr></thead>
+                        <tbody>
+                            <?php foreach ($porTipo as $t): ?>
+                                <?php $qtd = (int) $t['Total']; $qtdPaga = (int) $t['QtdPaga']; $receita = (float) $t['Receita']; ?>
+                                <tr>
+                                    <td><?= h($tiposAgenda[$t['Tipo']] ?? $t['Tipo']) ?></td>
+                                    <td class="text-end"><?= $qtd ?></td>
+                                    <td class="text-end"><?= formatarMoeda($receita) ?></td>
+                                    <td class="text-end text-secondary"><?= formatarMoeda($qtdPaga > 0 ? $receita / $qtdPaga : 0) ?></td>
+                                </tr>
+                            <?php endforeach ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif ?>
         </div>
     </div>
