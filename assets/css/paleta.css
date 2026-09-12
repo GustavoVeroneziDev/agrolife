@@ -52,4 +52,11 @@
      verde-puro (--bs-success de novo) fica invisível em cima do próprio
      fundo. Um verde mais claro resolve sem deixar de ser "verde". ── */
   --cal-ticket-pago-icone: #8affc1;
+
+  /* ── Categoria "Vacina" no catálogo (tipos_vacina.php) — cor sólida
+     própria (roxo), mesmo peso visual do badge de "Medicamento / cuidado
+     periódico" (bg-info). Antes usava fundo claro + texto na cor de
+     accent, o que fazia parecer um texto secundário qualquer em vez de
+     uma categoria de verdade, tão "real" quanto a outra. ── */
+  --cor-categoria-vacina: #7c3aed;
 }

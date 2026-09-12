@@ -129,7 +129,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <tr>
                                 <td class="px-4">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge <?= $t['Categoria'] === 'medicamento' ? 'bg-info' : '' ?>" style="<?= $t['Categoria'] === 'medicamento' ? '' : 'background:var(--accent-light);color:var(--accent);' ?>">
+                                        <span class="badge <?= $t['Categoria'] === 'medicamento' ? 'bg-info' : '' ?>" style="<?= $t['Categoria'] === 'medicamento' ? '' : 'background:var(--cor-categoria-vacina);' ?>">
                                             <?= $t['Categoria'] === 'medicamento' ? 'Medicamento / cuidado periódico' : 'Vacina' ?>
                                         </span>
                                         <span class="fw-medium"><?= h($t['Nome']) ?></span>
