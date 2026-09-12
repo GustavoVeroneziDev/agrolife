@@ -5,12 +5,25 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/conexao.php';
 exigirLogin('admin', 'funcionario');
 
-// Período padrão: últimos 30 dias — cobre "esse mês" e "mês passado" na
-// prática sem a pessoa precisar mexer no filtro na primeira visita.
-$de  = trim($_GET['de']  ?? '') ?: date('Y-m-d', strtotime('-30 days'));
-$ate = trim($_GET['ate'] ?? '') ?: date('Y-m-d');
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $de))  { $de  = date('Y-m-d', strtotime('-30 days')); }
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ate)) { $ate = date('Y-m-d'); }
+// Período por botões predefinidos (em vez de dois campos de data soltos) —
+// mais rápido de usar no dia a dia e não deixa escolher sem querer um
+// intervalo invertido ou vazio. "tudo" usa uma data-sentinela bem no
+// passado em vez de consultar o agendamento mais antigo — mais simples e
+// o resultado é idêntico (nenhum registro real é anterior a isso mesmo).
+$periodosValidos = ['1m' => '1 mês', '3m' => '3 meses', '6m' => '6 meses', '1a' => '1 ano', 'tudo' => 'Todo período'];
+$periodo = $_GET['periodo'] ?? '1m';
+if (!isset($periodosValidos[$periodo])) {
+    $periodo = '1m';
+}
+
+$ate = date('Y-m-d');
+$de = match ($periodo) {
+    '1m'    => date('Y-m-d', strtotime('-1 month')),
+    '3m'    => date('Y-m-d', strtotime('-3 months')),
+    '6m'    => date('Y-m-d', strtotime('-6 months')),
+    '1a'    => date('Y-m-d', strtotime('-1 year')),
+    'tudo'  => '2000-01-01',
+};
 $deInicio = $de . ' 00:00:00';
 $ateFim   = $ate . ' 23:59:59';
 
@@ -125,19 +138,11 @@ require_once __DIR__ . '/../geral/header.php';
 
 <h4 class="fw-bold mb-4"><i class="bi bi-bar-chart-line me-2 text-accent"></i>Relatórios</h4>
 
-<form class="row g-2 mb-4" method="GET">
-    <div class="col-sm-4 col-md-3">
-        <label class="form-label small mb-1">De</label>
-        <input type="date" name="de" class="form-control" value="<?= h($de) ?>" max="<?= date('Y-m-d') ?>">
-    </div>
-    <div class="col-sm-4 col-md-3">
-        <label class="form-label small mb-1">Até</label>
-        <input type="date" name="ate" class="form-control" value="<?= h($ate) ?>" max="<?= date('Y-m-d') ?>">
-    </div>
-    <div class="col-sm-4 col-md-2 d-flex align-items-end">
-        <button class="btn btn-accent w-100" type="submit">Filtrar</button>
-    </div>
-</form>
+<div class="btn-group flex-wrap mb-4" role="group" aria-label="Período do relatório">
+    <?php foreach ($periodosValidos as $chave => $rotulo): ?>
+        <a href="?periodo=<?= h($chave) ?>" class="btn btn-sm <?= $periodo === $chave ? 'btn-accent' : 'btn-outline-accent' ?>"><?= h($rotulo) ?></a>
+    <?php endforeach ?>
+</div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
