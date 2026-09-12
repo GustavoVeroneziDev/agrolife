@@ -15,6 +15,26 @@ $diasSemana = [
     'horario_sabado'    => 'Sábado',
 ];
 
+// O valor gravado continua sendo um texto único ("07:30 - 18:00",
+// "Fechado" ou vazio) — só a TELA passa a usar campo de hora de verdade
+// em vez de digitar isso à mão. Decompõe esse texto em abre/fecha/fechado
+// pra preencher os 3 campos; a composição inversa (na hora de salvar) está
+// logo abaixo, antes do loop que grava cada config.
+function decomporHorario(string $valor): array
+{
+    if ($valor === '') {
+        return ['abre' => '', 'fecha' => '', 'fechado' => false];
+    }
+    if (preg_match('/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/', $valor, $m)) {
+        return ['abre' => $m[1], 'fecha' => $m[2], 'fechado' => false];
+    }
+    // Qualquer outro texto não vazio (ex.: "Fechado", ou algo digitado à
+    // mão antes desse campo virar estruturado, tipo "8h às 18h") não dá
+    // pra decompor com segurança em abre/fecha — cai como "Fechado"
+    // marcado, e quem administra corrige na hora se não for bem isso.
+    return ['abre' => '', 'fecha' => '', 'fechado' => true];
+}
+
 $campos = [
     'nome_clinica', 'telefone_clinica', 'email_clinica', 'instagram_clinica',
     'endereco_rua', 'endereco_numero', 'endereco_complemento', 'endereco_bairro', 'endereco_cidade', 'endereco_uf', 'endereco_cep',
@@ -31,6 +51,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailClinica = trim($_POST['email_clinica'] ?? '');
     if ($emailClinica !== '' && !filter_var($emailClinica, FILTER_VALIDATE_EMAIL)) {
         redirecionarComMensagem(BASE . '/painel/configuracoes.php', 'E-mail da clínica inválido.', 'warning');
+    }
+
+    // O form manda 3 campos por dia (_abre, _fecha, _fechado) — recompõe
+    // no texto único de sempre ANTES do loop genérico abaixo, que continua
+    // gravando só pela chave "horario_X" original sem precisar saber que
+    // isso mudou de forma na tela. "Fechado" marcado vence mesmo que sobre
+    // algum horário preenchido (campo desabilitado no HTML não é enviado
+    // de qualquer forma, mas não custa checar aqui também); só grava um
+    // intervalo quando as DUAS pontas vierem preenchidas — só uma metade
+    // preenchida vira "não mostrar esse dia", não um horário incompleto.
+    foreach ($diasSemana as $chave => $rotulo) {
+        if (!empty($_POST[$chave . '_fechado'])) {
+            $_POST[$chave] = 'Fechado';
+            continue;
+        }
+        $abre  = trim($_POST[$chave . '_abre'] ?? '');
+        $fecha = trim($_POST[$chave . '_fecha'] ?? '');
+        $_POST[$chave] = ($abre !== '' && $fecha !== '') ? "{$abre} - {$fecha}" : '';
     }
 
     try {
@@ -160,12 +198,19 @@ require_once __DIR__ . '/../geral/header.php';
 
         <div class="card p-4 mb-4">
             <h6 class="fw-semibold mb-3"><i class="bi bi-clock me-2 text-accent"></i>Horário de funcionamento</h6>
-            <p class="small text-secondary mb-3">Ex: "07:30 - 18:00" ou "Fechado". Deixe em branco pra não mostrar esse dia.</p>
-            <?php foreach ($diasSemana as $chave => $rotulo): ?>
-                <div class="row g-2 mb-2 align-items-center">
-                    <div class="col-5"><label class="form-label mb-0"><?= h($rotulo) ?></label></div>
-                    <div class="col-7">
-                        <input type="text" name="<?= h($chave) ?>" class="form-control form-control-sm" placeholder="07:30 - 18:00" value="<?= h($valores[$chave]) ?>">
+            <p class="small text-secondary mb-3">Deixe abre/fecha em branco (e "Fechado" desmarcado) pra não mostrar esse dia.</p>
+            <?php foreach ($diasSemana as $chave => $rotulo): $hr = decomporHorario($valores[$chave]); ?>
+                <div class="row g-2 mb-2 align-items-center campo-dia-horario" data-dia="<?= h($chave) ?>">
+                    <div class="col-4 col-sm-3"><label class="form-label mb-0"><?= h($rotulo) ?></label></div>
+                    <div class="col-3 col-sm-3">
+                        <input type="time" name="<?= h($chave) ?>_abre" class="form-control form-control-sm campo-horario-hora" value="<?= h($hr['abre']) ?>" <?= $hr['fechado'] ? 'disabled' : '' ?>>
+                    </div>
+                    <div class="col-3 col-sm-3">
+                        <input type="time" name="<?= h($chave) ?>_fecha" class="form-control form-control-sm campo-horario-hora" value="<?= h($hr['fecha']) ?>" <?= $hr['fechado'] ? 'disabled' : '' ?>>
+                    </div>
+                    <div class="col-2 col-sm-3 form-check d-flex align-items-center mb-0">
+                        <input class="form-check-input me-1 campo-horario-fechado" type="checkbox" name="<?= h($chave) ?>_fechado" id="chk<?= h($chave) ?>" value="1" <?= $hr['fechado'] ? 'checked' : '' ?>>
+                        <label class="form-check-label small" for="chk<?= h($chave) ?>">Fechado</label>
                     </div>
                 </div>
             <?php endforeach ?>
@@ -331,6 +376,19 @@ require_once __DIR__ . '/../geral/header.php';
 // gravar a posição antes de sair da página.
 document.getElementById('formConfiguracoes').addEventListener('submit', function () {
     try { sessionStorage.setItem('vsScrollY', String(window.scrollY)); } catch (e) {}
+});
+
+// Marcar "Fechado" desabilita os dois campos de hora daquele dia — evita
+// mandar um horário preenchido junto com "Fechado" marcado (o servidor já
+// prioriza "Fechado" de qualquer forma, isso aqui é só deixar claro na
+// tela que os campos não valem enquanto marcado). Um listener genérico
+// (não um por dia) — sete dias, mesma lógica.
+document.querySelectorAll('.campo-dia-horario').forEach(function (linha) {
+    var chk    = linha.querySelector('.campo-horario-fechado');
+    var campos = linha.querySelectorAll('.campo-horario-hora');
+    chk.addEventListener('change', function () {
+        campos.forEach(function (c) { c.disabled = chk.checked; });
+    });
 });
 
 // Os botões de demonstração só fazem sentido com o modo de teste ligado E
