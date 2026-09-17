@@ -56,17 +56,24 @@
 .home-hero-mark {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
-  max-width: 340px;
+  max-width: 420px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, var(--bg-card), var(--accent-light) 72%);
+  padding: 3rem 2.25rem;
+  border-radius: 28px;
+  /* Logo oficial é uma wordmark larga, não um ícone — círculo apertado
+     não serve mais; um card suave com gradiente de dois tons (verde vivo
+     da marca + o dourado decorativo) dá profundidade sem competir com a
+     própria logo. */
+  background:
+    radial-gradient(circle at 18% 15%, rgba(var(--accent-vivid-rgb), .16), transparent 55%),
+    radial-gradient(circle at 85% 90%, rgba(232, 178, 61, .14), transparent 50%),
+    var(--bg-card);
   box-shadow: var(--shadow-card);
 }
-.home-hero-mark img { width: 62%; height: 62%; object-fit: contain; filter: drop-shadow(0 8px 20px var(--shadow-color-forte)); }
+.home-hero-mark img { width: 100%; height: auto; object-fit: contain; filter: drop-shadow(0 8px 20px var(--shadow-color-forte)); }
 
 .home-trust-row {
   display: flex;

@@ -134,17 +134,17 @@ function emailHtml(string $titulo, string $corpo): string
 <!DOCTYPE html><html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{$t}</title></head>
-<body style="margin:0;padding:0;background:#f0faf9;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0faf9;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#f6fbf8;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6fbf8;padding:32px 16px;">
 <tr><td align="center">
-<table width="100%" style="max-width:520px;background:#fff;border-radius:14px;border:1px solid #b9e2dc;overflow:hidden;box-shadow:0 2px 12px rgba(13,36,32,.07);">
-  <tr><td style="background:#0d9488;padding:20px 28px;text-align:center;">
+<table width="100%" style="max-width:520px;background:#fff;border-radius:14px;border:1px solid #bfe4d4;overflow:hidden;box-shadow:0 2px 12px rgba(10,30,22,.07);">
+  <tr><td style="background:#0d7a5c;padding:20px 28px;text-align:center;">
     <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:.02em;">{$marca}</span>
   </td></tr>
-  <tr><td style="padding:28px 32px;color:#0d2420;line-height:1.6;">
+  <tr><td style="padding:28px 32px;color:#0d1f18;line-height:1.6;">
     {$corpo}
   </td></tr>
-  <tr><td style="background:#e6f7f5;padding:14px 32px;text-align:center;font-size:12px;color:#4a7b76;">
+  <tr><td style="background:#e8f5ee;padding:14px 32px;text-align:center;font-size:12px;color:#3d6656;">
     Este e-mail foi gerado automaticamente &mdash; n&atilde;o responda.
   </td></tr>
 </table>

@@ -35,7 +35,7 @@ try {
         $corpo = '<p>Olá, ' . htmlspecialchars($usuario['Nome'], ENT_QUOTES, 'UTF-8') . '!</p>'
                . '<p>Recebemos um pedido para redefinir sua senha. Clique no botão abaixo para escolher uma nova senha:</p>'
                . '<p style="text-align:center;margin:24px 0;">'
-               . '<a href="' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '" style="background:#0d9488;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Redefinir senha</a>'
+               . '<a href="' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '" style="background:#0d7a5c;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Redefinir senha</a>'
                . '</p>'
                . '<p style="font-size:13px;color:#6b7c78;">Esse link expira em 24 horas. Se você não pediu essa alteração, pode ignorar este e-mail.</p>';
 

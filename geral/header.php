@@ -35,7 +35,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
     <?php if (!empty($metaDescricao)): ?>
     <meta name="description" content="<?= h($metaDescricao) ?>">
     <?php endif ?>
-    <meta name="theme-color" content="#0d9488">
+    <meta name="theme-color" content="#0d7a5c">
 
     <link rel="icon" href="<?= BASE ?>/assets/img/icone.ico">
     <link rel="icon" type="image/png" sizes="192x192" href="<?= BASE ?>/assets/img/icon-192.png">

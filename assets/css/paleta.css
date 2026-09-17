@@ -10,31 +10,51 @@
    ================================================================ */
 
 :root {
-  /* ── Marca (teal/ciano) ── */
-  --accent:       #0f766e;
-  --accent-hover: #115e59;
-  --accent-light: rgba(15, 118, 110, .1);
-  --accent-text:  #ffffff;  /* cor do texto em cima de um fundo --accent */
-  --accent-rgb:   15, 118, 110;
+  /* ── Marca (verde oficial da logo) — dois tons de propósito, não um só.
+     --accent é o tom de USO (botão, nav, link, texto grande) — precisa de
+     contraste com texto branco E precisa continuar claramente diferente
+     de --bs-success (também verde, usado em "Concluído"/"Pago" — ver
+     comentário mais abaixo). --accent-vivid é o verde REAL, saturado,
+     tirado direto da logo oficial — só pra detalhe/gradiente/decoração,
+     nunca em botão nem em texto (contraste insuficiente pra isso). ── */
+  --accent:             #0d7a5c;
+  --accent-hover:       #0a6249;
+  --accent-vivid:       #03a851;
+  --accent-vivid-hover: #028c43;
+  --accent-light:       rgba(13, 122, 92, .1);
+  --accent-text:        #ffffff;  /* cor do texto em cima de um fundo --accent */
+  --accent-rgb:         13, 122, 92;
+  --accent-vivid-rgb:   3, 168, 81;
+
+  /* ── Tom decorativo — dourado quente (agro = sol, colheita). Só pra
+     gradiente/fundo decorativo, NUNCA em botão/badge/texto com
+     significado — fica perto demais de --cor-atencao (amarelo de
+     alerta) pra correr esse risco. ── */
+  --tom-decorativo: #e8b23d;
 
   /* ── Superfícies ── */
-  --bg-main:  #f7fcfa;
+  --bg-main:  #f6fbf8;
   --bg-card:  #ffffff;
-  --bg-hover: #e9f6f2;
+  --bg-hover: #e8f5ee;
 
   /* ── Texto ── */
-  --text-main:      #0d2420;
-  --text-secondary: #3f6b66;
-  --text-muted:     #5c8079;
+  --text-main:      #0d1f18;
+  --text-secondary: #3d6656;
+  --text-muted:     #5c7d70;
 
   /* ── Bordas / sombra / overlay — o verde escuro vive só aqui,
      nunca em fundo ── */
-  --card-border-color: #1f4d3f;
-  --shadow-color:       rgba(13, 36, 32, .06);
-  --shadow-color-forte:  rgba(13, 36, 32, .1);
-  --overlay-bg:          rgba(13, 36, 32, .45);
+  --card-border-color: #163829;
+  --shadow-color:       rgba(10, 30, 22, .06);
+  --shadow-color-forte:  rgba(10, 30, 22, .1);
+  --overlay-bg:          rgba(10, 30, 22, .45);
 
-  /* ── Semânticas — significado fixo, não mudam entre projetos ── */
+  /* ── Semânticas — significado fixo, não mudam entre projetos.
+     --bs-success (verde do Bootstrap, "Concluído"/"Pago") fica de
+     propósito SEM override aqui — e --accent acima foi escolhido pra
+     ficar claramente diferente dele (mais escuro, mais puxado pro
+     teal). Se os dois fossem o mesmo tom de verde, um botão qualquer
+     "de marca" ia parecer um status de "resolvido" mesmo sem ser. ── */
   --cor-perigo:     #dc2626;
   --cor-perigo-bg:  rgba(220, 38, 38, .12);
   --cor-atencao:    #d97706;

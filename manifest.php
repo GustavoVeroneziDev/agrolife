@@ -12,8 +12,8 @@ echo json_encode([
     'scope'            => $b . '/',
     'display'          => 'standalone',
     'orientation'      => 'portrait-primary',
-    'background_color' => '#f7fafa',
-    'theme_color'      => '#0d9488',
+    'background_color' => '#f6fbf8',
+    'theme_color'      => '#0d7a5c',
     'lang'             => 'pt-BR',
     'icons'            => [
         // 'any maskable' combinados numa entrada é inválido — entradas separadas.
