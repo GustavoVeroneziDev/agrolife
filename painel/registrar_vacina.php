@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $intervaloValor   = (int) ($_POST['intervalo_valor'] ?? 0);
     $intervaloUnidade = trim($_POST['intervalo_unidade'] ?? '');
     $vet      = trim($_POST['veterinario'] ?? '');
-    $lote     = trim($_POST['lote'] ?? '');
     $obs      = trim($_POST['observacoes'] ?? '');
 
     $unidadesValidas = ['semana' => 'weeks', 'mes' => 'months', 'ano' => 'years'];
@@ -124,8 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->prepare(
-            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, IntervaloCiclicoValor, IntervaloCiclicoUnidade, FKAgendamento, FKVeterinario, Lote, Observacoes)
-             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :intvalor, :intunidade, :agendamento, :vet, :lote, :obs)'
+            'INSERT INTO RegistrosVacinas (IDRegistro, FKAnimal, FKTipoVacina, DataAplicacao, ProximaData, Ciclica, IntervaloCiclicoValor, IntervaloCiclicoUnidade, FKAgendamento, FKVeterinario, Observacoes)
+             VALUES (:id, :animal, :tipo, :data, :proxima, :ciclica, :intvalor, :intunidade, :agendamento, :vet, :obs)'
         )->execute([
             ':id'         => gerarUuid(),
             ':animal'     => $fkAnimal,
@@ -137,7 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':intunidade' => $ciclica ? $intervaloUnidade : null,
             ':agendamento' => $fkAgendamentoPrimario,
             ':vet'        => $vet ?: null,
-            ':lote'       => $lote ?: null,
             ':obs'        => $obs ?: null,
         ]);
 
@@ -317,18 +315,12 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                 </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <label class="form-label">Veterinário</label>
-                        <?= campoPicker('vetResp', 'veterinario', 'Selecione…', 'Buscar veterinário…') ?>
-                        <?php if (empty($vets)): ?>
-                            <div class="form-text">Nenhum veterinário cadastrado — <a href="<?= BASE ?>/painel/equipe.php">cadastre um primeiro</a>.</div>
-                        <?php endif ?>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">Lote</label>
-                        <input type="text" name="lote" class="form-control">
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Veterinário</label>
+                    <?= campoPicker('vetResp', 'veterinario', 'Selecione…', 'Buscar veterinário…') ?>
+                    <?php if (empty($vets)): ?>
+                        <div class="form-text">Nenhum veterinário cadastrado — <a href="<?= BASE ?>/painel/equipe.php">cadastre um primeiro</a>.</div>
+                    <?php endif ?>
                 </div>
 
                 <div class="mb-4">
