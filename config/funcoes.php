@@ -290,6 +290,7 @@ function tiposAgendaMap(): array
         'consulta'     => 'Consulta',
         'exame'        => 'Exame',
         'procedimento' => 'Procedimento',
+        'vacina'       => 'Vacina',
         'observacao'   => 'Observação',
         'outro'        => 'Outro',
     ];
@@ -535,7 +536,7 @@ function criarAgendamentoVacina(PDO $pdo, string $fkAnimal, string $nomeVacina, 
          VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim)'
     )->execute([
         ':id' => $agId, ':animal' => $fkAnimal, ':vet' => $fkVet ?: null,
-        ':tipo' => 'procedimento', ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,
+        ':tipo' => 'vacina', ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,
     ]);
     registrarEventoAgendamento($pdo, $agId, 'criado', 'Planejado a partir do registro de vacina.');
 
@@ -543,8 +544,8 @@ function criarAgendamentoVacina(PDO $pdo, string $fkAnimal, string $nomeVacina, 
         $dono = buscarDonoAnimal($pdo, $fkAnimal);
         if ($dono && $dono['Telefone']) {
             $msg = $retorno
-                ? montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], 'procedimento', $titulo, $inicio)
-                : montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], 'procedimento', $titulo, $inicio);
+                ? montarMensagemRetorno($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], 'vacina', $titulo, $inicio)
+                : montarMensagemNovoAgendamento($pdo, $dono['NomeCliente'], $dono['NomeAnimal'], 'vacina', $titulo, $inicio);
             enviarWhatsApp(waNumero($dono['Telefone']), $msg);
         }
     }
