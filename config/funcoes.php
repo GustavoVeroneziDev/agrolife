@@ -29,6 +29,41 @@ function destravarAgendamento(PDO $pdo, string $fkAgendamento): void
     $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote('vetsul_ag_reg_' . $fkAgendamento) . ')');
 }
 
+// Trava por veterinário (não por agendamento) — usada ANTES de decidir se
+// um novo horário conflita com a agenda dele, tanto no cadastro direto
+// pelo painel quanto no pedido de agendamento feito pelo cliente. Recurso
+// diferente do travado por travarAgendamento() acima (agenda do vet vs.
+// registro específico), por isso um nome de lock diferente.
+function travarAgendaVet(PDO $pdo, ?string $fkVet): void
+{
+    if (!$fkVet) return;
+    $pdo->query('SELECT GET_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ', 5)');
+}
+function destravarAgendaVet(PDO $pdo, ?string $fkVet): void
+{
+    if (!$fkVet) return;
+    $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ')');
+}
+
+// Verifica sobreposição de horário pro mesmo veterinário — mesma checagem
+// de verdade em qualquer lugar que crie/remarque um agendamento (painel ou
+// pedido do cliente), pra nunca aceitar dois compromissos conflitantes pro
+// mesmo profissional só porque passaram por telas diferentes.
+function agendamentoConflita(PDO $pdo, string $fkVet, string $inicio, string $fim, string $ignorarId = ''): bool
+{
+    $sql = "SELECT COUNT(*) FROM Agendamentos
+            WHERE FKVeterinario = :vet AND Status != 'cancelado'
+              AND DataHoraInicio < :fim AND DataHoraFim > :inicio";
+    $params = [':vet' => $fkVet, ':inicio' => $inicio, ':fim' => $fim];
+    if ($ignorarId !== '') {
+        $sql .= ' AND IDAgendamento != :ignorar';
+        $params[':ignorar'] = $ignorarId;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return ((int) $stmt->fetchColumn()) > 0;
+}
+
 // O picker de "veterinário responsável" (registrar_vacina.php,
 // registrar_clinico.php, agenda.php) já só lista quem tem Cargo=veterinario
 // e Ativo=1 — mas isso é só filtro de tela. Sem essa mesma checagem no
@@ -532,8 +567,8 @@ function criarAgendamentoVacina(PDO $pdo, string $fkAnimal, string $nomeVacina, 
     $titulo = 'Vacina: ' . $nomeVacina . ($retorno ? ' (retorno)' : '');
 
     $pdo->prepare(
-        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim)
-         VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim)'
+        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status)
+         VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, \'confirmado\')'
     )->execute([
         ':id' => $agId, ':animal' => $fkAnimal, ':vet' => $fkVet ?: null,
         ':tipo' => 'vacina', ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,

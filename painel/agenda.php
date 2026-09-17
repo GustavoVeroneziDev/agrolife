@@ -15,34 +15,6 @@ $tiposAgenda = tiposAgendaMap();
 // em paralelo. Se o request morrer no meio (ex: exit de
 // redirecionarComMensagem sem passar pelo destravar), o MySQL libera o lock
 // sozinho quando a conexão fecha ao fim do script — não fica preso.
-function travarAgendaVet(PDO $pdo, ?string $fkVet): void
-{
-    if (!$fkVet) return;
-    $pdo->query('SELECT GET_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ', 5)');
-}
-function destravarAgendaVet(PDO $pdo, ?string $fkVet): void
-{
-    if (!$fkVet) return;
-    $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote('vetsul_agenda_' . $fkVet) . ')');
-}
-
-// Verifica sobreposição de horário pro mesmo veterinário — mesma checagem
-// de verdade tanto no cadastro quanto (se precisar) numa futura remarcação.
-function agendamentoConflita(PDO $pdo, string $fkVet, string $inicio, string $fim, string $ignorarId = ''): bool
-{
-    $sql = "SELECT COUNT(*) FROM Agendamentos
-            WHERE FKVeterinario = :vet AND Status != 'cancelado'
-              AND DataHoraInicio < :fim AND DataHoraFim > :inicio";
-    $params = [':vet' => $fkVet, ':inicio' => $inicio, ':fim' => $fim];
-    if ($ignorarId !== '') {
-        $sql .= ' AND IDAgendamento != :ignorar';
-        $params[':ignorar'] = $ignorarId;
-    }
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    return ((int) $stmt->fetchColumn()) > 0;
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
         redirecionarComMensagem(BASE . '/painel/agenda.php', 'Token inválido.', 'danger');
@@ -89,9 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $novoAgId = gerarUuid();
+            // Status = confirmado direto — quem cria pelo painel é a própria
+            // clínica escolhendo o horário, não precisa passar por uma
+            // etapa de "aguardando confirmação" própria. "pendente" fica
+            // reservado pro Pedido de Agendamento feito pelo cliente (ver
+            // usuario/agendar/), que aí sim precisa de alguém da equipe
+            // revisar antes — é o "Aguardando confirmação" do dashboard.
             $pdo->prepare(
-                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Valor)
-                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, :valor)'
+                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Valor, Status)
+                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, :valor, \'confirmado\')'
             )->execute([
                 ':id'     => $novoAgId,
                 ':animal' => $fkAnimal,
@@ -237,8 +215,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         . 'Agende manualmente num horário livre.';
                 } else {
                     $pdo->prepare(
-                        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim)
-                         VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim)'
+                        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status)
+                         VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim, \'confirmado\')'
                     )->execute([
                         ':id'     => $retornoId,
                         ':animal' => $ag['FKAnimal'],
