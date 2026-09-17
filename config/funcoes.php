@@ -961,6 +961,26 @@ function dataNascimentoValida(string $data): bool
     return $data <= $hoje && $data >= $limiteAntigo;
 }
 
+/**
+ * Deriva uma DataNascimento aproximada a partir de "X anos e/ou Y meses" —
+ * pro caso comum de dono que não sabe a data exata (filhote resgatado,
+ * adotado, etc.), mas sabe estimar a idade. Grava no MESMO campo
+ * DataNascimento de sempre (nada downstream — formatarIdade(), relatórios —
+ * precisa saber que a data é aproximada). Retorna null se os dois vierem
+ * vazios/zerados, pra quem chama decidir manter o campo em branco.
+ */
+function calcularNascimentoAproximado(string $anosStr, string $mesesStr): ?string
+{
+    $anos  = ctype_digit($anosStr) ? (int) $anosStr : 0;
+    $meses = ctype_digit($mesesStr) ? (int) $mesesStr : 0;
+    if ($anos <= 0 && $meses <= 0) {
+        return null;
+    }
+
+    $totalMeses = min($anos * 12 + $meses, 100 * 12);
+    return (new DateTimeImmutable())->sub(new DateInterval("P{$totalMeses}M"))->format('Y-m-d');
+}
+
 function formatarIdade(?string $dataNascimento): string
 {
     if (!$dataNascimento) return '';

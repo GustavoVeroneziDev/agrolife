@@ -21,6 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nome  = trim($_POST['nome'] ?? '');
         $raca  = trim($_POST['raca'] ?? '');
         $nasc  = trim($_POST['nascimento'] ?? '');
+        if ($nasc === '') {
+            $nasc = calcularNascimentoAproximado($_POST['nascimento_anos'] ?? '', $_POST['nascimento_meses'] ?? '') ?? '';
+        }
         $sexo  = trim($_POST['sexo'] ?? '');
         $cor   = trim($_POST['cor'] ?? '');
         $peso  = trim($_POST['peso'] ?? '');
@@ -525,9 +528,20 @@ require_once __DIR__ . '/../geral/header.php';
                         <input type="text" name="cor" class="form-control" placeholder="Ex: Caramelo, Preto e branco…" value="<?= h($animal['Pelagem']) ?>">
                     </div>
                     <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Nascimento</label>
-                            <input type="date" name="nascimento" class="form-control" data-validar="nascimento" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>" value="<?= h($animal['DataNascimento']) ?>">
+                        <div class="col-6" data-campo-nascimento>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label mb-1">Nascimento</label>
+                                <button type="button" class="btn btn-link btn-sm p-0 mb-1 toggle-idade-aproximada">Não sei a data exata</button>
+                            </div>
+                            <input type="date" name="nascimento" class="form-control campo-nascimento-exata" data-validar="nascimento" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>" value="<?= h($animal['DataNascimento']) ?>">
+                            <div class="row g-1 campo-nascimento-aproximada" hidden>
+                                <div class="col-6">
+                                    <input type="number" name="nascimento_anos" class="form-control" min="0" max="100" placeholder="Anos" disabled>
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" name="nascimento_meses" class="form-control" min="0" max="11" placeholder="Meses" disabled>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Peso (kg)</label>
