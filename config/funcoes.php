@@ -64,6 +64,82 @@ function agendamentoConflita(PDO $pdo, string $fkVet, string $inicio, string $fi
     return ((int) $stmt->fetchColumn()) > 0;
 }
 
+/**
+ * Decompõe o texto salvo em ConfiguracoesSistema (chave horario_*, ex.:
+ * "07:30 - 18:00", "Fechado" ou vazio) em abre/fecha/fechado. Usado tanto
+ * na tela de Configurações (campo de hora estruturado) quanto no cálculo
+ * de horários disponíveis do Pedido de Agendamento — um lugar só pro
+ * formato de texto salvo não precisar ser reinterpretado em dois lugares
+ * diferentes.
+ */
+function decomporHorario(string $valor): array
+{
+    if ($valor === '') {
+        return ['abre' => '', 'fecha' => '', 'fechado' => false];
+    }
+    if (preg_match('/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/', $valor, $m)) {
+        return ['abre' => $m[1], 'fecha' => $m[2], 'fechado' => false];
+    }
+    // Qualquer outro texto não vazio (ex.: "Fechado", ou algo digitado à
+    // mão antes desse campo virar estruturado, tipo "8h às 18h") não dá
+    // pra decompor com segurança em abre/fecha — cai como "Fechado"
+    // marcado, e quem administra corrige na hora se não for bem isso.
+    return ['abre' => '', 'fecha' => '', 'fechado' => true];
+}
+
+// Chave de horário (ConfiguracoesSistema) pra cada dia da semana, na mesma
+// ordem do PHP date('w') (0 = domingo). Usada pelo Pedido de Agendamento
+// pra saber que dia é qual sem repetir esse mapa em mais de um lugar.
+function chaveHorarioDoDia(int $diaSemana): string
+{
+    return ['horario_domingo', 'horario_segunda', 'horario_terca', 'horario_quarta',
+            'horario_quinta', 'horario_sexta', 'horario_sabado'][$diaSemana] ?? '';
+}
+
+/**
+ * Lista os horários livres (HH:MM) de um dia específico — usado no Pedido
+ * de Agendamento (cliente escolhendo quando quer vir). Considera o
+ * horário de funcionamento configurado (ConfiguracoesSistema), uma
+ * antecedência mínima de 1h (não oferece horário "daqui a 5 minutos"), e,
+ * se um veterinário específico foi escolhido, os compromissos que ele já
+ * tem marcados (mesma checagem de conflito de agenda.php). Sem
+ * veterinário escolhido ("sem preferência"), não filtra por conflito
+ * nenhum — a equipe resolve qual profissional atende na hora de
+ * confirmar o pedido.
+ */
+function listarHorariosDisponiveis(PDO $pdo, string $data, ?string $fkVet, int $duracaoMinutos): array
+{
+    $diaSemana = (int) date('w', strtotime($data));
+    $chave     = chaveHorarioDoDia($diaSemana);
+    $hr        = decomporHorario(getConfig($pdo, $chave, ''));
+    if ($hr['fechado'] || $hr['abre'] === '' || $hr['fecha'] === '') {
+        return [];
+    }
+
+    $granularidadeMin = 30;
+    $limiteMinimo      = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+    $inicio = strtotime($data . ' ' . $hr['abre']);
+    $fechamento = strtotime($data . ' ' . $hr['fecha']);
+    $slots  = [];
+
+    for ($ts = $inicio; $ts + $duracaoMinutos * 60 <= $fechamento; $ts += $granularidadeMin * 60) {
+        $slotInicio = date('Y-m-d H:i:s', $ts);
+        if ($slotInicio < $limiteMinimo) {
+            continue;
+        }
+        if ($fkVet) {
+            $slotFim = date('Y-m-d H:i:s', $ts + $duracaoMinutos * 60);
+            if (agendamentoConflita($pdo, $fkVet, $slotInicio, $slotFim)) {
+                continue;
+            }
+        }
+        $slots[] = date('H:i', $ts);
+    }
+
+    return $slots;
+}
+
 // O picker de "veterinário responsável" (registrar_vacina.php,
 // registrar_clinico.php, agenda.php) já só lista quem tem Cargo=veterinario
 // e Ativo=1 — mas isso é só filtro de tela. Sem essa mesma checagem no
@@ -88,6 +164,29 @@ function listarVeterinariosAtivos(PDO $pdo): array
     return $pdo->query(
         "SELECT IDUsuario, Nome FROM Usuarios WHERE Cargo = 'veterinario' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
+}
+
+// Catálogo de opções pra "o que vai ser esse agendamento" — Procedimentos
+// (cirurgia/consulta/exame/procedimento) + Vacinas/cuidados periódicos,
+// nesse formato único. Usado no picker "Procedimento" da Agenda (painel)
+// e no Pedido de Agendamento (cliente) — os dois deixam escolher um item
+// do catálogo que já preenche Título/Duração/Valor sozinho. Vacina não
+// tem duração própria cadastrada — 15min cobre bem uma aplicação.
+function catalogoAgendamento(PDO $pdo): array
+{
+    $itens = $pdo->query(
+        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco FROM TiposProcedimento
+         WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
+    )->fetchAll();
+
+    foreach ($pdo->query("SELECT IDTipo, Nome, Preco FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC")->fetchAll() as $v) {
+        $itens[] = [
+            'IDTipo' => $v['IDTipo'], 'Categoria' => 'vacina', 'Nome' => $v['Nome'],
+            'DuracaoPadraoMinutos' => 15, 'Preco' => $v['Preco'],
+        ];
+    }
+
+    return $itens;
 }
 
 // Lista pro picker de "animal" (agenda.php, registrar_clinico.php,

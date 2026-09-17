@@ -459,6 +459,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/meus_animais.php">
                                         <i class="bi bi-clipboard2-pulse me-2"></i>Meus Animais</a></li>
+                                <li><a class="dropdown-item" href="<?= BASE ?>/usuario/agendar.php">
+                                        <i class="bi bi-calendar-plus me-2"></i>Pedir Agendamento</a></li>
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/meus_agendamentos.php">
                                         <i class="bi bi-calendar3 me-2"></i>Meus Agendamentos</a></li>
                                 <li><a class="dropdown-item" href="<?= BASE ?>/usuario/perfil.php">

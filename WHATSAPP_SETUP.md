@@ -57,6 +57,12 @@ Testado de ponta a ponta (mensagem chegando de verdade no celular):
 - **`usuario/processa_agendamento.php`** — cliente cancela o próprio
   agendamento (novidade: antes só a clínica podia cancelar) → avisa a
   clínica, no número de `telefone_clinica` (Configurações).
+- **`usuario/agendar.php`** — cliente manda um Pedido de Agendamento →
+  avisa a clínica (`telefone_clinica`) que tem pedido novo pra revisar.
+  Nasce com Status `pendente` (agendamento criado pela própria clínica
+  nasce direto `confirmado` — só o pedido do cliente passa por essa
+  etapa); aparece no dashboard em "Aguardando confirmação" e é
+  confirmado/recusado pela Agenda normal (nenhuma tela nova pro admin).
 - **`cron/whatsapp_vacinas.php`** — lembrete de vacina, 7 dias antes do
   vencimento + no dia (já existia).
 - **`cron/whatsapp_agendamentos.php`** — lembrete de atendimento (consulta,

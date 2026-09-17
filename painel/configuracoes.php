@@ -20,20 +20,6 @@ $diasSemana = [
 // em vez de digitar isso à mão. Decompõe esse texto em abre/fecha/fechado
 // pra preencher os 3 campos; a composição inversa (na hora de salvar) está
 // logo abaixo, antes do loop que grava cada config.
-function decomporHorario(string $valor): array
-{
-    if ($valor === '') {
-        return ['abre' => '', 'fecha' => '', 'fechado' => false];
-    }
-    if (preg_match('/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/', $valor, $m)) {
-        return ['abre' => $m[1], 'fecha' => $m[2], 'fechado' => false];
-    }
-    // Qualquer outro texto não vazio (ex.: "Fechado", ou algo digitado à
-    // mão antes desse campo virar estruturado, tipo "8h às 18h") não dá
-    // pra decompor com segurança em abre/fecha — cai como "Fechado"
-    // marcado, e quem administra corrige na hora se não for bem isso.
-    return ['abre' => '', 'fecha' => '', 'fechado' => true];
-}
 
 $campos = [
     'nome_clinica', 'telefone_clinica', 'email_clinica', 'instagram_clinica',

@@ -393,23 +393,7 @@ if ($vista === 'semana' && !empty($_GET['dia']) && preg_match('/^\d{4}-\d{2}-\d{
 }
 
 try {
-    $procedimentos = $pdo->query(
-        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco FROM TiposProcedimento
-         WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
-    )->fetchAll();
-
-    // Catálogo de vacinas/cuidados periódicos também vira opção ao agendar
-    // (Tipo = 'vacina') — reaproveita o MESMO mecanismo de "Procedimento"
-    // (picker filtra pela categoria batendo com o Tipo escolhido; selecionar
-    // já preenche Título/Duração/Valor), só que puxando de TiposVacina em
-    // vez de TiposProcedimento. Sem duração própria cadastrada pra vacina —
-    // 15min cobre bem uma aplicação.
-    foreach ($pdo->query("SELECT IDTipo, Nome, Preco FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC")->fetchAll() as $v) {
-        $procedimentos[] = [
-            'IDTipo' => $v['IDTipo'], 'Categoria' => 'vacina', 'Nome' => $v['Nome'],
-            'DuracaoPadraoMinutos' => 15, 'Preco' => $v['Preco'],
-        ];
-    }
+    $procedimentos = catalogoAgendamento($pdo);
 
     // Nome (minúsculo) -> Preço das vacinas/cuidados com preço padrão
     // definido — usado só pra sugerir o "Valor" ao concluir um agendamento

@@ -139,7 +139,7 @@ require_once __DIR__ . '/../geral/header.php';
     $stats = [
         ['bi-exclamation-triangle-fill', 'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Vacinas atrasadas',   $atrasadas,             BASE . '/painel/index.php?vac=atrasadas#vacinas', $filtroVac === 'atrasadas', false],
         ['bi-clock-fill',                'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Vencendo em 7 dias',  $vencendo,              BASE . '/painel/index.php?vac=vencendo#vacinas',   $filtroVac === 'vencendo', false],
-        ['bi-hourglass-split',           'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Aguardando confirmação', $agendamentosPendentes, BASE . '/painel/agenda.php',  false, false],
+        ['bi-hourglass-split',           'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'Aguardando confirmação', $agendamentosPendentes, BASE . '/painel/agenda.php?vista=semana&status=pendente',  false, false],
         ['bi-calendar-x-fill',           'var(--cor-perigo)',  'var(--cor-perigo-bg)',  'Faltas essa semana',  $faltasSemana,          BASE . '/painel/agenda.php',  false, false],
         ['bi-cash-coin',                 'var(--cor-atencao)', 'var(--cor-atencao-bg)', 'A receber',           $totalAReceber,         BASE . '/painel/relatorios.php#pagamentos-pendentes', false, true],
     ];

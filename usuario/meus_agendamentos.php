@@ -38,13 +38,22 @@ $areaAtual    = 'cliente';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<h4 class="fw-bold mb-4"><i class="bi bi-calendar3 me-2 text-accent"></i>Meus Agendamentos</h4>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-accent"></i>Meus Agendamentos</h4>
+    <a href="<?= BASE ?>/usuario/agendar.php" class="btn btn-accent btn-sm">
+        <i class="bi bi-calendar-plus me-1"></i> Pedir agendamento
+    </a>
+</div>
 
 <?php if (empty($proximos) && empty($anteriores)): ?>
     <div class="card text-center py-5 text-secondary">
         <i class="bi bi-calendar3 fs-1 d-block mb-2 opacity-25"></i>
-        <p class="mb-0">Nenhum agendamento ainda.</p>
-        <p class="small">Entre em contato com a clínica para agendar.</p>
+        <p class="mb-3">Nenhum agendamento ainda.</p>
+        <div>
+            <a href="<?= BASE ?>/usuario/agendar.php" class="btn btn-accent">
+                <i class="bi bi-calendar-plus me-1"></i> Pedir agendamento
+            </a>
+        </div>
     </div>
 <?php else: ?>
     <h6 class="fw-semibold text-secondary mb-2">Próximos</h6>
