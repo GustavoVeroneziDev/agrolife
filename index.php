@@ -126,26 +126,6 @@ require_once __DIR__ . '/geral/header.php';
     </div>
 </section>
 
-<?php if (!empty($especiesHome)): ?>
-<section class="home-section home-especies">
-    <div class="container-lg">
-        <div class="home-section-head">
-            <span class="home-eyebrow">Quem cuidamos</span>
-            <h2>Cuidamos de quem você ama</h2>
-            <p>Do seu cão ou gato aos animais de produção — atendemos diferentes espécies com o mesmo padrão de cuidado.</p>
-        </div>
-        <div class="home-especies-row">
-            <?php foreach ($especiesHome as $esp): ?>
-                <div class="home-especie-item">
-                    <span class="home-especie-badge"><?= especieIconeHtml($esp['Icone'], '2.1rem') ?></span>
-                    <span><?= h($esp['Nome']) ?></span>
-                </div>
-            <?php endforeach ?>
-        </div>
-    </div>
-</section>
-<?php endif ?>
-
 <section class="home-section home-servicos">
     <div class="container-lg">
         <div class="home-section-head">
@@ -211,6 +191,26 @@ require_once __DIR__ . '/geral/header.php';
         </div>
     </div>
 </section>
+
+<?php if (!empty($especiesHome)): ?>
+<section class="home-section home-especies">
+    <div class="container-lg">
+        <div class="home-section-head">
+            <span class="home-eyebrow">Quem cuidamos</span>
+            <h2>Cuidamos de quem você ama</h2>
+            <p>Do seu cão ou gato aos animais de produção — atendemos diferentes espécies com o mesmo padrão de cuidado.</p>
+        </div>
+        <div class="home-especies-row">
+            <?php foreach ($especiesHome as $esp): ?>
+                <div class="home-especie-item">
+                    <span class="home-especie-badge"><?= especieIconeHtml($esp['Icone'], '2.1rem') ?></span>
+                    <span><?= h($esp['Nome']) ?></span>
+                </div>
+            <?php endforeach ?>
+        </div>
+    </div>
+</section>
+<?php endif ?>
 
 <section class="home-contato">
     <div class="container-lg py-2">

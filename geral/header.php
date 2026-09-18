@@ -369,12 +369,15 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
                 ['href' => BASE . '/painel/tipos_procedimento.php', 'icon' => 'bi-list-check', 'label' => 'Tipos de Procedimento'],
             ];
-            // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários
+            // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários —
+            // separado num grupo próprio na sidebar ("Sistema"), fica visualmente claro que é
+            // administração da clínica, não operação do dia a dia.
+            $menuItensSistema = [];
             if ($nivelAcesso === 'admin') {
-                $menuItens[] = ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge', 'label' => 'Equipe'];
-                $menuItens[] = ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history', 'label' => 'Auditoria'];
-                $menuItens[] = ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',         'label' => 'Configurações'];
-                $menuItens[] = ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear', 'label' => 'Migrations'];
+                $menuItensSistema[] = ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge', 'label' => 'Equipe'];
+                $menuItensSistema[] = ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history', 'label' => 'Auditoria'];
+                $menuItensSistema[] = ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',         'label' => 'Configurações'];
+                $menuItensSistema[] = ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear', 'label' => 'Migrations'];
             }
             ?>
             <ul class="sidebar-nav">
@@ -386,6 +389,17 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                         </a>
                     </li>
                 <?php endforeach ?>
+                <?php if ($menuItensSistema): ?>
+                    <li><span class="sidebar-nav-label">Sistema</span></li>
+                    <?php foreach ($menuItensSistema as $item): ?>
+                        <li>
+                            <a href="<?= $item['href'] ?>" class="<?= str_contains($uri, $item['href']) ? 'ativo' : '' ?>">
+                                <i class="bi <?= $item['icon'] ?>"></i>
+                                <?= $item['label'] ?>
+                            </a>
+                        </li>
+                    <?php endforeach ?>
+                <?php endif ?>
             </ul>
             <div class="sidebar-footer">
                 <div class="mb-1 d-flex align-items-center">
