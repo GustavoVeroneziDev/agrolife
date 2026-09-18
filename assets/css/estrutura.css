@@ -175,6 +175,14 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .card-header { background: transparent; border-bottom: 1px solid var(--card-border-color); font-weight: 600; }
 .card-footer { border-top: 1px solid var(--card-border-color); }
+/* Card com picker + seleção sequencial (ver seção 20.7) — o overflow:hidden
+   do .card acima existe pra cortar quina reta de thead, mas corta também o
+   dropdown do picker quando o card ainda está baixo (poucos passos
+   revelados) e o dropdown do último campo visível precisa "vazar" pra
+   baixo do card pra mostrar a lista inteira. Sem thead/header colado na
+   borda nesse tipo de card, então liberar overflow aqui não reintroduz o
+   problema que a regra original evita. */
+.card-form-sequencial { overflow: visible; }
 
 /* ── Botões ───────────────────────────────────────────────────── */
 /* Centralização vale pra qualquer variante de botão (secondary, danger,

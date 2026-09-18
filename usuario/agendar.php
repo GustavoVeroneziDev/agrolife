@@ -140,7 +140,7 @@ require_once __DIR__ . '/../geral/header.php';
         <p class="small">Fale com a clínica para cadastrar seu animal antes de pedir um agendamento.</p>
     </div>
 <?php else: ?>
-<div class="card p-4">
+<div class="card card-form-sequencial p-4">
     <form method="POST" id="formAgendar">
         <input type="hidden" name="csrf_token" value="<?= gerarTokenCSRF() ?>">
         <input type="hidden" name="tipo" id="inpTipo">
