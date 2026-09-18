@@ -17,29 +17,39 @@ if (estaLogado()) {
     exit;
 }
 
-// Equipe da home — nomes reais (repassados pelo cliente). Foto de verdade
-// ainda não veio ("vou pedir depois"), por isso o avatar continua ícone em
-// vez de foto de banco de imagens só pra preencher — trocar por <img> real
-// quando a foto chegar.
-$equipeHome = [
+// Veterinários da home — perfil individual (foto grande, nome, CRMV, bio).
+// 'foto' fica null até a foto de verdade chegar ("vou pedir depois") — usa
+// o ícone grande como espaço reservado nesse meio tempo, já pronto pra
+// virar <img> assim que o caminho do arquivo existir. 'crmv' também fica
+// null até ser informado — some da tela sozinho enquanto isso (nunca
+// mostra "CRMV: " vazio).
+$veterinariosHome = [
     [
         'nome'   => 'Dr. José Afonso Parro',
         'cargo'  => 'Médico Veterinário',
+        'crmv'   => null,
+        'foto'   => null,
         'bio'    => 'Consultas, exames e acompanhamento clínico do seu animal.',
         'icone'  => 'bi-person-badge',
     ],
     [
         'nome'   => 'Dr. Deyvid Alota',
         'cargo'  => 'Médico Veterinário',
+        'crmv'   => null,
+        'foto'   => null,
         'bio'    => 'Consultas, cirurgias e procedimentos com acompanhamento completo.',
         'icone'  => 'bi-person-badge',
     ],
-    [
-        'nome'   => 'Equipe de Atendimento',
-        'cargo'  => 'Suporte e Cuidado',
-        'bio'    => 'Time atuante que acompanha de perto cada visita, cuidando do conforto e bem-estar do seu animal.',
-        'icone'  => 'bi-people-fill',
-    ],
+];
+
+// Equipe de apoio — coletivo, sem CRMV nem foto individual, por isso fica
+// fora do bloco de perfil (formato pensado pra profissional específico com
+// credencial, não combina com "um time" genérico).
+$equipeApoioHome = [
+    'titulo' => 'Equipe de Atendimento',
+    'cargo'  => 'Suporte e Cuidado',
+    'bio'    => 'Time atuante que acompanha de perto cada visita, cuidando do conforto e bem-estar do seu animal.',
+    'icone'  => 'bi-people-fill',
 ];
 
 $servicosHome = [
@@ -162,17 +172,40 @@ require_once __DIR__ . '/geral/header.php';
             <h2>Profissionais que cuidam com atenção</h2>
             <p>Uma equipe qualificada e dedicada, pronta pra acompanhar a saúde do seu animal de perto.</p>
         </div>
-        <div class="row g-4 justify-content-center">
-            <?php foreach ($equipeHome as $prof): ?>
-                <div class="col-sm-6 col-lg-4">
-                    <div class="card home-equipe-card">
-                        <div class="home-equipe-avatar"><i class="bi <?= h($prof['icone']) ?>"></i></div>
-                        <h3><?= h($prof['nome']) ?></h3>
-                        <span class="home-equipe-cargo"><?= h($prof['cargo']) ?></span>
-                        <p><?= h($prof['bio']) ?></p>
+        <div class="home-vets">
+            <?php foreach ($veterinariosHome as $vet): ?>
+                <div class="home-vet-linha">
+                    <div class="home-vet-foto">
+                        <?php if ($vet['foto']): ?>
+                            <img src="<?= BASE ?>/uploads/equipe/<?= h($vet['foto']) ?>" alt="<?= h($vet['nome']) ?>">
+                        <?php else: ?>
+                            <i class="bi <?= h($vet['icone']) ?>"></i>
+                        <?php endif ?>
+                    </div>
+                    <div class="home-vet-info">
+                        <h3><?= h($vet['nome']) ?></h3>
+                        <div class="home-vet-tags">
+                            <span class="home-equipe-cargo"><?= h($vet['cargo']) ?></span>
+                            <?php if ($vet['crmv']): ?><span class="home-vet-crmv">CRMV <?= h($vet['crmv']) ?></span><?php endif ?>
+                        </div>
+                        <p><?= h($vet['bio']) ?></p>
+                        <?php if ($telClinicaHome !== ''): ?>
+                            <a href="<?= h(waLink($telClinicaHome, "Olá! Gostaria de agendar com {$vet['nome']}.")) ?>" target="_blank" rel="noopener" class="home-vet-contato">
+                                <i class="bi bi-whatsapp me-1"></i>Falar com a clínica
+                            </a>
+                        <?php endif ?>
                     </div>
                 </div>
             <?php endforeach ?>
+        </div>
+
+        <div class="home-equipe-apoio">
+            <div class="home-equipe-avatar"><i class="bi <?= h($equipeApoioHome['icone']) ?>"></i></div>
+            <div>
+                <h3><?= h($equipeApoioHome['titulo']) ?></h3>
+                <span class="home-equipe-cargo"><?= h($equipeApoioHome['cargo']) ?></span>
+                <p><?= h($equipeApoioHome['bio']) ?></p>
+            </div>
         </div>
     </div>
 </section>
