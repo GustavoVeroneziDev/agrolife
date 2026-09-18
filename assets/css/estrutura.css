@@ -58,10 +58,14 @@ button, a, [role="button"] { touch-action: manipulation; }
   z-index: 1030;
 }
 .topnav .navbar-brand {
-  font-weight: 700;
-  color: var(--accent) !important;
-  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
 }
+/* Logo é uma wordmark larga (já traz o nome escrito nela) — nunca forçar
+   width+height quadrado nela, esmaga a imagem. Só altura, largura segue
+   a proporção real do arquivo sozinha. */
+.brand-logo { height: 40px; width: auto; display: block; }
+.brand-logo-topnav { height: 34px; }
 .topnav .dropdown-menu {
   border-color: var(--card-border-color);
   z-index: 9999;

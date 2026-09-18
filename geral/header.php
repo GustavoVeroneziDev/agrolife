@@ -354,9 +354,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="fecharSidebar()"></div>
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none" style="color:inherit;">
-                    <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="28" height="28">
-                    <span><?= APP_NOME ?></span>
+                <a href="<?= BASE ?>/index.php" class="text-decoration-none" style="color:inherit;">
+                    <img src="<?= BASE ?>/assets/img/logo.png" alt="<?= h(APP_NOME) ?>" class="brand-logo">
                 </a>
             </div>
             <?php
@@ -436,9 +435,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 <button class="btn btn-sm btn-outline-secondary" onclick="abrirSidebar()">
                     <i class="bi bi-list fs-5"></i>
                 </button>
-                <a href="<?= BASE ?>/index.php" class="d-flex align-items-center gap-2 text-decoration-none">
-                    <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="26" height="26">
-                    <span class="fw-bold" style="color:var(--text-main);"><?= APP_NOME ?></span>
+                <a href="<?= BASE ?>/index.php" class="text-decoration-none">
+                    <img src="<?= BASE ?>/assets/img/logo.png" alt="<?= h(APP_NOME) ?>" class="brand-logo">
                 </a>
             </div>
 
@@ -447,8 +445,8 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
         <?php else: ?>
             <nav class="navbar topnav sticky-top">
                 <div class="container-lg">
-                    <a class="navbar-brand d-flex align-items-center gap-2" href="<?= BASE ?>/index.php">
-                        <img src="<?= BASE ?>/assets/img/logo.png" alt="" width="26" height="26"> <?= APP_NOME ?>
+                    <a class="navbar-brand" href="<?= BASE ?>/index.php">
+                        <img src="<?= BASE ?>/assets/img/logo.png" alt="<?= h(APP_NOME) ?>" class="brand-logo brand-logo-topnav">
                     </a>
 
                     <?php if (estaLogado()): ?>
