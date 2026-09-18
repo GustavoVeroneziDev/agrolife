@@ -28,7 +28,7 @@ $veterinariosHome = [
         'nome'   => 'Dr. José Afonso Parro',
         'cargo'  => 'Médico Veterinário',
         'crmv'   => null,
-        'foto'   => null,
+        'foto'   => 'b5e397f2-601b-4504-ab7a-3dc0ef0a51e4.jpg',
         'bio'    => 'Consultas, exames e acompanhamento clínico do seu animal.',
         'icone'  => 'bi-person-badge',
     ],
