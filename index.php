@@ -36,7 +36,7 @@ $veterinariosHome = [
         'nome'   => 'Dr. Deyvid Alota',
         'cargo'  => 'Médico Veterinário',
         'crmv'   => null,
-        'foto'   => null,
+        'foto'   => '29034acf-139d-4d8d-a3ad-b9b83e839ae8.png',
         'bio'    => 'Consultas, cirurgias e procedimentos com acompanhamento completo.',
         'icone'  => 'bi-person-badge',
     ],
