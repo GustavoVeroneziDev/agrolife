@@ -754,8 +754,11 @@ require_once __DIR__ . '/../geral/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Animal *</label>
+                    <!-- Seleção sequencial (PADROES_DESENVOLVIMENTO.md 20.7): um passo de
+                         cada vez, em vez do formulário inteiro de uma vez só — mesmo
+                         esquema do Pedido de Agendamento do cliente (usuario/agendar.php). -->
+                    <div class="mb-3 campo-sequencial" id="passoAg1">
+                        <label class="form-label"><span class="badge-passo">1</span> Animal *</label>
                         <input type="hidden" name="animal" id="inpAnimalId" required value="<?= $animalPre ? h($animalPre['IDAnimal']) : '' ?>">
                         <div class="picker" id="animalPicker">
                             <div class="picker-trigger" id="animalTrigger" tabindex="0">
@@ -773,59 +776,66 @@ require_once __DIR__ . '/../geral/header.php';
                             </div>
                         </div>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Tipo *</label>
-                            <?= campoPicker('agTipo', 'tipo', '—', '', 'consulta', 'Consulta', obrigatorio: true, comBusca: false) ?>
+
+                    <div class="mb-3 campo-sequencial" id="passoAg2" hidden>
+                        <label class="form-label"><span class="badge-passo">2</span> Tipo e procedimento *</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <?= campoPicker('agTipo', 'tipo', '—', '', 'consulta', 'Consulta', obrigatorio: true, comBusca: false) ?>
+                            </div>
+                            <div class="col-6">
+                                <?= campoPicker('agProc', 'procedimento_ref', 'Personalizado', '', obrigatorio: false, comBusca: false) ?>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Procedimento</label>
-                            <?= campoPicker('agProc', 'procedimento_ref', 'Personalizado', '', obrigatorio: false, comBusca: false) ?>
-                        </div>
+                        <div class="form-text mt-1">Escolher um procedimento já preenche título, duração e valor a seguir — pode ajustar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Título *</label>
-                        <input type="text" name="titulo" id="inpTituloAgendamento" class="form-control" placeholder="Ex: Consulta de rotina, Castração…" required maxlength="150">
-                    </div>
-                    <div class="row g-2 mb-1">
-                        <div class="col-6">
-                            <label class="form-label">Duração</label>
-                            <?= campoPicker('agDur', 'duracao', '30 min', '', '30', '30 min', obrigatorio: true, comBusca: false) ?>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Valor estimado <span class="text-secondary">(opcional)</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">R$</span>
-                                <input type="number" name="valor" id="inpValorAgendamento" class="form-control" step="0.01" min="0" placeholder="0,00">
+
+                    <div class="mb-3 campo-sequencial" id="passoAg3" hidden>
+                        <label class="form-label"><span class="badge-passo">3</span> Título *</label>
+                        <input type="text" name="titulo" id="inpTituloAgendamento" class="form-control mb-2" placeholder="Ex: Consulta de rotina, Castração…" required maxlength="150">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">Duração</label>
+                                <?= campoPicker('agDur', 'duracao', '30 min', '', '30', '30 min', obrigatorio: true, comBusca: false) ?>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Valor estimado <span class="text-secondary">(opcional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" name="valor" id="inpValorAgendamento" class="form-control" step="0.01" min="0" placeholder="0,00">
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="form-text mb-3">Escolher um procedimento acima já preenche os dois — pode ajustar se precisar. <a href="<?= BASE ?>/painel/tipos_procedimento.php">Gerenciar procedimentos</a></div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Data *</label>
-                            <input type="date" name="data" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Hora *</label>
-                            <input type="time" name="hora" class="form-control" required>
+
+                    <div class="mb-3 campo-sequencial" id="passoAg4" hidden>
+                        <label class="form-label"><span class="badge-passo">4</span> Data e horário *</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="date" name="data" id="inpDataNovoAg" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
+                            </div>
+                            <div class="col-6">
+                                <input type="time" name="hora" id="inpHoraNovoAg" class="form-control" required>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Veterinário responsável</label>
+
+                    <div class="mb-3 campo-sequencial" id="passoAg5" hidden>
+                        <label class="form-label"><span class="badge-passo">5</span> Veterinário responsável <span class="text-secondary">(opcional)</span></label>
                         <?= campoPicker('vetResp', 'veterinario', 'Selecione…', 'Buscar veterinário…') ?>
                         <?php if (empty($vets)): ?>
                             <div class="form-text">Nenhum veterinário cadastrado — <a href="<?= BASE ?>/painel/equipe.php">cadastre um primeiro</a>.</div>
                         <?php endif ?>
                     </div>
-                    <div class="mb-1">
-                        <label class="form-label">Observações</label>
+
+                    <div class="campo-sequencial" id="passoAg6" hidden>
+                        <label class="form-label"><span class="badge-passo">6</span> Observações <span class="text-secondary">(opcional)</span></label>
                         <textarea name="observacoes" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-accent"><i class="bi bi-calendar-plus me-1"></i> Agendar</button>
+                    <button type="submit" class="btn btn-accent" id="btnSubmitNovoAg" disabled><i class="bi bi-calendar-plus me-1"></i> Agendar</button>
                 </div>
             </form>
         </div>
@@ -958,6 +968,39 @@ var TIPOS_AGENDA = <?= json_encode(array_map(fn($valor, $label) => [
 ], array_keys($tiposAgenda), $tiposAgenda), JSON_UNESCAPED_UNICODE) ?>;
 
 var inpTituloAgendamento  = document.getElementById('inpTituloAgendamento');
+var inpDataNovoAg         = document.getElementById('inpDataNovoAg');
+var inpHoraNovoAg         = document.getElementById('inpHoraNovoAg');
+var btnSubmitNovoAg       = document.getElementById('btnSubmitNovoAg');
+
+// Seleção sequencial (ver PADROES_DESENVOLVIMENTO.md 20.7): só mostra o
+// próximo passo depois do atual estar respondido, igual usuario/agendar.php.
+function revelarPasso(id) {
+    var el = document.getElementById(id);
+    if (el.hidden) {
+        el.hidden = false;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// Só habilita "Agendar" quando os campos obrigatórios (animal, tipo, título,
+// data, hora) estão preenchidos — evita form inválido escondido atrás de um
+// passo que a pessoa ainda não abriu.
+function atualizarBotaoSubmitAg() {
+    var ok = document.getElementById('inpAnimalId').value
+        && document.getElementById('inpagTipoId').value
+        && inpTituloAgendamento.value.trim()
+        && inpDataNovoAg.value
+        && inpHoraNovoAg.value;
+    btnSubmitNovoAg.disabled = !ok;
+}
+inpTituloAgendamento.addEventListener('input', atualizarBotaoSubmitAg);
+[inpDataNovoAg, inpHoraNovoAg].forEach(function (campo) {
+    campo.addEventListener('change', function () {
+        revelarPasso('passoAg5');
+        revelarPasso('passoAg6');
+        atualizarBotaoSubmitAg();
+    });
+});
 
 // Rótulo de uma duração em minutos — cobre valores fora da lista fixa (ex:
 // 20min de algum procedimento) sem precisar de opção pré-cadastrada.
@@ -992,6 +1035,7 @@ function selecionarProcedimento(item) {
     // sobrescreve um valor que a pessoa já tivesse digitado antes de trocar
     // de procedimento — troca de ideia limpa o campo de novo, igual duração).
     document.getElementById('inpValorAgendamento').value = item.preco !== null ? item.preco.toFixed(2) : '';
+    atualizarBotaoSubmitAg();
 }
 
 var agProcPk = initPicker({
@@ -1016,6 +1060,12 @@ var agTipoPk = initPicker({
     onSelect: function (t) {
         var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === t.id; });
         agProcPk.setItems(itens, 'Personalizado');
+        // Título/Duração/Valor (passo 3) e Data/Horário (passo 4) revelam juntos
+        // aqui — nenhum dos dois depende de verdade do outro, só do Tipo já
+        // estar escolhido (mesmo raciocínio do passo3+4 de usuario/agendar.php).
+        revelarPasso('passoAg3');
+        revelarPasso('passoAg4');
+        atualizarBotaoSubmitAg();
         // Abre o próximo picker sozinho, pra fluir direto sem precisar clicar
         // de novo. Precisa do setTimeout: o clique que selecionou o Tipo ainda
         // vai disparar um "click" nativo (mousedown já rodou, click vem na
@@ -1050,7 +1100,20 @@ initPicker({
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },
     vazioMsg: 'Nenhum animal encontrado.',
+    onSelect: function () {
+        revelarPasso('passoAg2');
+        atualizarBotaoSubmitAg();
+        setTimeout(function () { agTipoPk.abrir(); }, 50);
+    },
 });
+
+// Reabertura do modal depois de um erro de validação (?acao=novo&animal=X)
+// já vem com o animal pré-preenchido pelo servidor — revela o passo 2 direto
+// em vez de esconder atrás de uma escolha que a pessoa já tinha feito.
+if (document.getElementById('inpAnimalId').value) {
+    revelarPasso('passoAg2');
+}
+atualizarBotaoSubmitAg();
 
 initPicker({
     pickerId: 'vetRespPicker', triggerId: 'vetRespTrigger', dropdownId: 'vetRespDropdown',
