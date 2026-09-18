@@ -132,22 +132,35 @@
 /* ── Equipe ───────────────────────────────────────────────────── */
 .home-equipe { background: var(--bg-card); }
 
-/* Perfil de veterinário — foto grande de um lado, dados do outro, linha
-   alternando o lado a cada profissional (zigue-zague) — dá mais peso
-   editorial a cada um do que um card pequeno igual pros dois. */
-.home-vets { display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; }
-.home-vet-linha { display: flex; align-items: center; gap: 2.5rem; padding: 2.75rem 0; }
-.home-vet-linha:first-child { padding-top: 0; }
-.home-vet-linha:not(:first-child) { border-top: 1px solid var(--card-border-color); }
+/* Perfil de veterinário — card elevado (sombra + leve fundo verde-claro,
+   pra destacar contra o branco da seção), foto em proporção retrato de um
+   lado, dados do outro, alternando o lado a cada profissional
+   (zigue-zague). Padrão de "bio executiva" de escritório/agência premium:
+   cada profissional é seu próprio bloco com peso visual de verdade, não
+   um card pequeno igual genérico pros dois. */
+.home-vets { display: flex; flex-direction: column; gap: 2rem; max-width: 920px; margin: 0 auto; }
+.home-vet-linha {
+  display: flex; align-items: center; gap: 3rem;
+  background: var(--bg-hover);
+  border-radius: 28px;
+  padding: 2.75rem;
+  box-shadow: 0 1px 2px var(--shadow-color), 0 20px 40px -20px var(--shadow-color-forte);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.home-vet-linha:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1px 2px var(--shadow-color), 0 28px 48px -20px var(--shadow-color-forte);
+}
 .home-vet-linha:nth-child(even) { flex-direction: row-reverse; }
 .home-vet-foto {
   flex: 0 0 auto;
-  width: 180px; height: 180px;
-  border-radius: 24px;
+  width: 200px; height: 250px;
+  border-radius: 20px;
   background: var(--accent-light);
   color: var(--accent);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  box-shadow: 0 12px 28px -8px var(--shadow-color-forte);
 }
 /* font-size fica só no ícone — <img> herdava esse tamanho gigante pro
    texto alternativo quando a foto não carrega (caminho errado, arquivo
@@ -156,25 +169,34 @@
 .home-vet-foto i { font-size: 4.5rem; }
 .home-vet-foto img { width: 100%; height: 100%; object-fit: cover; font-size: .7rem; color: transparent; }
 .home-vet-info { flex: 1 1 auto; min-width: 0; }
-.home-vet-info h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: .3rem; color: var(--text-main); }
-.home-vet-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin-bottom: .75rem; }
+.home-vet-info h3 { font-size: 1.65rem; font-weight: 800; letter-spacing: -.01em; margin-bottom: .5rem; color: var(--text-main); }
+.home-vet-tags { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .7rem; margin-bottom: 1rem; }
+.home-vet-role {
+  font-size: .78rem; font-weight: 700; letter-spacing: .02em;
+  color: var(--accent-text); background: var(--accent);
+  border-radius: 999px; padding: .35rem .85rem;
+}
 .home-vet-crmv {
   font-size: .78rem; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-hover); border-radius: 999px; padding: .2rem .65rem;
+  background: var(--bg-card); border-radius: 999px; padding: .3rem .75rem;
 }
-.home-vet-info p { color: var(--text-secondary); margin-bottom: 1rem; max-width: 46ch; }
+.home-vet-info p { color: var(--text-secondary); margin-bottom: 1.25rem; max-width: 42ch; line-height: 1.6; }
 .home-vet-contato {
   display: inline-flex; align-items: center;
   font-size: .85rem; font-weight: 600;
-  color: var(--accent); text-decoration: none;
+  color: var(--accent); background: var(--bg-card);
+  border-radius: 999px; padding: .55rem 1.1rem;
+  text-decoration: none;
+  box-shadow: 0 1px 2px var(--shadow-color);
+  transition: background .15s ease, color .15s ease;
 }
-.home-vet-contato:hover { text-decoration: underline; }
+.home-vet-contato:hover { background: var(--accent); color: var(--accent-text); }
 
 /* Equipe de apoio — coletivo, sem CRMV/foto individual, tratamento mais
-   discreto que o perfil de veterinário acima. */
+   discreto (fora do card elevado) que o perfil de veterinário acima. */
 .home-equipe-apoio {
   display: flex; align-items: center; gap: 1.5rem;
-  max-width: 900px; margin: 1rem auto 0;
+  max-width: 900px; margin: 1.5rem auto 0;
   padding-top: 2.5rem; border-top: 1px solid var(--card-border-color);
 }
 .home-equipe-avatar {
@@ -189,9 +211,14 @@
 .home-equipe-apoio h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: .15rem; color: var(--text-main); }
 .home-equipe-apoio p { color: var(--text-secondary); font-size: .88rem; margin-bottom: 0; }
 
+@media (prefers-reduced-motion: reduce) {
+  .home-vet-linha, .home-vet-contato { transition: none; }
+}
+
 @media (max-width: 767.98px) {
-  .home-vet-linha, .home-vet-linha:nth-child(even) { flex-direction: column; text-align: center; gap: 1.25rem; }
-  .home-vet-foto { width: 140px; height: 140px; }
+  .home-vet-linha, .home-vet-linha:nth-child(even) { flex-direction: column; text-align: center; gap: 1.5rem; padding: 2rem 1.5rem; }
+  .home-vet-linha:hover { transform: none; }
+  .home-vet-foto { width: 160px; height: 160px; }
   .home-vet-foto i { font-size: 3.5rem; }
   .home-vet-tags { justify-content: center; }
   .home-vet-info p { max-width: none; }

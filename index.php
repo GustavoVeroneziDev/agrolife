@@ -187,7 +187,7 @@ require_once __DIR__ . '/geral/header.php';
                     <div class="home-vet-info">
                         <h3><?= h($vet['nome']) ?></h3>
                         <div class="home-vet-tags">
-                            <span class="home-equipe-cargo"><?= h($vet['cargo']) ?></span>
+                            <span class="home-vet-role"><?= h($vet['cargo']) ?></span>
                             <?php if ($vet['crmv']): ?><span class="home-vet-crmv">CRMV <?= h($vet['crmv']) ?></span><?php endif ?>
                         </div>
                         <p><?= h($vet['bio']) ?></p>
