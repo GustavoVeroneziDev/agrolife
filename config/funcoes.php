@@ -87,6 +87,22 @@ function decomporHorario(string $valor): array
     return ['abre' => '', 'fecha' => '', 'fechado' => true];
 }
 
+// Endereço completo da clínica, montado a partir dos campos separados de
+// Configurações — usado no rodapé (geral/footer.php) e na home pública
+// (index.php), que antes tinha esse mesmo endereço escrito à mão, sem
+// nenhuma relação com o que ficava salvo em Configurações (duas fontes da
+// mesma informação, podendo ficar desatualizadas uma em relação à outra).
+function enderecoClinicaFormatado(PDO $pdo): string
+{
+    return implode(', ', array_filter([
+        trim(getConfig($pdo, 'endereco_rua', '') . ' ' . getConfig($pdo, 'endereco_numero', '')),
+        getConfig($pdo, 'endereco_complemento', ''),
+        getConfig($pdo, 'endereco_bairro', ''),
+        trim(getConfig($pdo, 'endereco_cidade', '') . (getConfig($pdo, 'endereco_uf', '') !== '' ? ' - ' . getConfig($pdo, 'endereco_uf', '') : '')),
+        getConfig($pdo, 'endereco_cep', ''),
+    ]));
+}
+
 // Chave de horário (ConfiguracoesSistema) pra cada dia da semana, na mesma
 // ordem do PHP date('w') (0 = domingo). Usada pelo Pedido de Agendamento
 // pra saber que dia é qual sem repetir esse mapa em mais de um lugar.

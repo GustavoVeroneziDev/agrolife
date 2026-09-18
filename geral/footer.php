@@ -12,13 +12,7 @@
     $rcTel      = getConfig($pdo, 'telefone_clinica', '');
     $rcEmail    = getConfig($pdo, 'email_clinica', '');
     $rcInsta    = getConfig($pdo, 'instagram_clinica', '');
-    $rcEndereco = implode(', ', array_filter([
-        trim(getConfig($pdo, 'endereco_rua', '') . ' ' . getConfig($pdo, 'endereco_numero', '')),
-        getConfig($pdo, 'endereco_complemento', ''),
-        getConfig($pdo, 'endereco_bairro', ''),
-        trim(getConfig($pdo, 'endereco_cidade', '') . (getConfig($pdo, 'endereco_uf', '') !== '' ? ' - ' . getConfig($pdo, 'endereco_uf', '') : '')),
-        getConfig($pdo, 'endereco_cep', ''),
-    ]));
+    $rcEndereco = enderecoClinicaFormatado($pdo);
     // Só o horário de HOJE — as 7 linhas completas ficam só na tela de
     // Configurações, aqui no rodapé o que importa é "abre a que horas hoje".
     $rcDiaSemanaChave = [

@@ -17,21 +17,19 @@ if (estaLogado()) {
     exit;
 }
 
-// Equipe da home — nomes ainda placeholder até preencher com os dados
-// reais (só trocar o 'nome' de cada um). Estrutura real: 2 médicos
-// veterinários + a equipe de atendimento (atuante na área, mas sem
-// formação de veterinário — por isso sem "Dr./Dra." e sem se passar por
-// profissional formado). Sem foto de verdade ainda, por isso o avatar é
-// um ícone — evita usar foto de banco de imagens só pra preencher.
+// Equipe da home — nomes reais (repassados pelo cliente). Foto de verdade
+// ainda não veio ("vou pedir depois"), por isso o avatar continua ícone em
+// vez de foto de banco de imagens só pra preencher — trocar por <img> real
+// quando a foto chegar.
 $equipeHome = [
     [
-        'nome'   => 'Dra. [nome da veterinária]',
-        'cargo'  => 'Médica Veterinária',
+        'nome'   => 'Dr. José Afonso Parro',
+        'cargo'  => 'Médico Veterinário',
         'bio'    => 'Consultas, exames e acompanhamento clínico do seu animal.',
-        'icone'  => 'bi-person-heart',
+        'icone'  => 'bi-person-badge',
     ],
     [
-        'nome'   => 'Dr. [nome do veterinário]',
+        'nome'   => 'Dr. Deyvid Alota',
         'cargo'  => 'Médico Veterinário',
         'bio'    => 'Consultas, cirurgias e procedimentos com acompanhamento completo.',
         'icone'  => 'bi-person-badge',
@@ -62,6 +60,19 @@ try {
 } catch (PDOException $e) {
     error_log('[HomeEspecies] ' . $e->getMessage());
 }
+
+// Contato da home — vem de Configurações (mesma fonte que o rodapé já usa,
+// ver geral/footer.php), não mais escrito à mão aqui. Antes eram duas
+// cópias do mesmo dado (rodapé dinâmico, home hardcoded) que podiam ficar
+// desatualizadas uma em relação à outra.
+$telClinicaHome   = getConfig($pdo, 'telefone_clinica', '');
+$emailClinicaHome = getConfig($pdo, 'email_clinica', '');
+$instaClinicaHome = getConfig($pdo, 'instagram_clinica', '');
+$enderecoHome     = enderecoClinicaFormatado($pdo);
+$horarioResumoHome = trim(
+    (getConfig($pdo, 'horario_segunda', '') !== '' ? 'Segunda a sexta: ' . getConfig($pdo, 'horario_segunda', '') : '')
+    . (getConfig($pdo, 'horario_sabado', '') !== '' ? ' · Sábado: ' . getConfig($pdo, 'horario_sabado', '') : '')
+);
 
 $paginaTitulo       = 'Cuidado veterinário completo para o seu animal';
 $areaAtual          = 'publico';
@@ -173,21 +184,31 @@ require_once __DIR__ . '/geral/header.php';
                 <span class="home-eyebrow" style="color:var(--accent-text);opacity:.85;">Fale com a gente</span>
                 <h2>Vamos cuidar do seu animal juntos</h2>
                 <ul class="home-contato-lista mt-3">
-                    <li><i class="bi bi-geo-alt"></i>R. Elías Chibeb, 580 - Centro, Sebastianópolis do Sul - SP</li>
-                    <li>
-                        <i class="bi bi-whatsapp"></i>
-                        <a href="<?= h(waLink('17997806050')) ?>" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
-                            (17) 99780-6050
-                        </a>
-                    </li>
-                    <li><i class="bi bi-envelope"></i>contato@agrolife.com</li>
-                    <li><i class="bi bi-clock"></i>Segunda a sexta: 7h30 às 18h · Sábado: 7h30 às 12h</li>
-                    <li>
-                        <i class="bi bi-instagram"></i>
-                        <a href="https://www.instagram.com/agrolife_sebas" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
-                            @agrolife_sebas
-                        </a>
-                    </li>
+                    <?php if ($enderecoHome !== ''): ?>
+                        <li><i class="bi bi-geo-alt"></i><?= h($enderecoHome) ?></li>
+                    <?php endif ?>
+                    <?php if ($telClinicaHome !== ''): ?>
+                        <li>
+                            <i class="bi bi-whatsapp"></i>
+                            <a href="<?= h(waLink($telClinicaHome)) ?>" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
+                                <?= h(formatarTelefoneExibicao($telClinicaHome)) ?>
+                            </a>
+                        </li>
+                    <?php endif ?>
+                    <?php if ($emailClinicaHome !== ''): ?>
+                        <li><i class="bi bi-envelope"></i><?= h($emailClinicaHome) ?></li>
+                    <?php endif ?>
+                    <?php if ($horarioResumoHome !== ''): ?>
+                        <li><i class="bi bi-clock"></i><?= h($horarioResumoHome) ?></li>
+                    <?php endif ?>
+                    <?php if ($instaClinicaHome !== ''): ?>
+                        <li>
+                            <i class="bi bi-instagram"></i>
+                            <a href="https://www.instagram.com/<?= h($instaClinicaHome) ?>" target="_blank" rel="noopener" class="text-decoration-none" style="color:inherit;">
+                                @<?= h($instaClinicaHome) ?>
+                            </a>
+                        </li>
+                    <?php endif ?>
                 </ul>
             </div>
             <a href="<?= BASE ?>/usuario/cadastro.php" class="btn btn-light btn-lg">
