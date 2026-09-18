@@ -955,6 +955,7 @@ var VETS = <?= json_encode(array_map(fn($v) => [
 ], $vets), JSON_UNESCAPED_UNICODE) ?>;
 var PROCEDIMENTOS = <?= json_encode(array_map(fn($p) => [
     'id' => $p['IDTipo'], 'categoria' => $p['Categoria'], 'nome' => $p['Nome'], 'duracao' => (int) $p['DuracaoPadraoMinutos'],
+    'especie' => $p['FKEspecie'],
     'preco' => $p['Preco'] !== null ? (float) $p['Preco'] : null,
 ], $procedimentos), JSON_UNESCAPED_UNICODE) ?>;
 // Nome (minúsculo) -> preço padrão da vacina/cuidado — só pra sugerir
@@ -966,6 +967,19 @@ var PRECOS_VACINA = <?= json_encode($precosVacina, JSON_UNESCAPED_UNICODE) ?>;
 var TIPOS_AGENDA = <?= json_encode(array_map(fn($valor, $label) => [
     'id' => $valor, 'nome' => $label,
 ], array_keys($tiposAgenda), $tiposAgenda), JSON_UNESCAPED_UNICODE) ?>;
+
+// Espécie do animal escolhido no passo 1 — filtra o catálogo do passo 2 (ex:
+// vacina de gato não aparece pra quem selecionou um cachorro). Só Vacina tem
+// espécie fixada no catálogo hoje; Procedimento (cirurgia/consulta/exame)
+// serve pra qualquer uma (especie null). Mesma ideia de vacinasParaEspecie()
+// em registrar_vacina.php.
+var animalSelecionadoEspecie = <?= json_encode($animalPre['FKEspecie'] ?? null) ?>;
+function procedimentosParaCategoria(categoriaId) {
+    return PROCEDIMENTOS.filter(function (p) {
+        return p.categoria === categoriaId
+            && (!animalSelecionadoEspecie || !p.especie || p.especie === animalSelecionadoEspecie);
+    });
+}
 
 var inpTituloAgendamento  = document.getElementById('inpTituloAgendamento');
 var inpDataNovoAg         = document.getElementById('inpDataNovoAg');
@@ -1058,7 +1072,7 @@ var agTipoPk = initPicker({
     matches: function (t, q) { return t.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nada encontrado.',
     onSelect: function (t) {
-        var itens = PROCEDIMENTOS.filter(function (p) { return p.categoria === t.id; });
+        var itens = procedimentosParaCategoria(t.id);
         agProcPk.setItems(itens, 'Personalizado');
         // Título/Duração/Valor (passo 3) e Data/Horário (passo 4) revelam juntos
         // aqui — nenhum dos dois depende de verdade do outro, só do Tipo já
@@ -1100,9 +1114,17 @@ initPicker({
         return a.nome.toLowerCase().indexOf(q) !== -1 || a.dono.toLowerCase().indexOf(q) !== -1;
     },
     vazioMsg: 'Nenhum animal encontrado.',
-    onSelect: function () {
+    onSelect: function (a) {
+        animalSelecionadoEspecie = a.especie;
         revelarPasso('passoAg2');
         atualizarBotaoSubmitAg();
+        // Trocou de animal depois de já ter escolhido o Tipo (voltou no
+        // passo 1) — refiltra o Procedimento pra espécie nova, senão ficava
+        // vacina do animal anterior ainda listada.
+        var tipoAtual = document.getElementById('inpagTipoId').value;
+        if (tipoAtual) {
+            agProcPk.setItems(procedimentosParaCategoria(tipoAtual), 'Personalizado');
+        }
         setTimeout(function () { agTipoPk.abrir(); }, 50);
     },
 });

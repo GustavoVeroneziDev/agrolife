@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 try {
     $animais = $pdo->prepare(
-        "SELECT a.IDAnimal, a.Nome, e.Icone AS IconeEspecie
+        "SELECT a.IDAnimal, a.Nome, a.FKEspecie, e.Icone AS IconeEspecie
          FROM Animais a JOIN Especies e ON e.IDEspecie = a.FKEspecie
          WHERE a.FKDono = :uid AND a.Ativo = 1 ORDER BY a.Nome ASC"
     );
@@ -192,14 +192,22 @@ require_once __DIR__ . '/../geral/header.php';
 
 <script>
 var ANIMAIS = <?= json_encode(array_map(fn($a) => [
-    'id' => $a['IDAnimal'], 'nome' => $a['Nome'], 'icone' => $a['IconeEspecie'],
+    'id' => $a['IDAnimal'], 'nome' => $a['Nome'], 'icone' => $a['IconeEspecie'], 'especie' => $a['FKEspecie'],
 ], $animais), JSON_UNESCAPED_UNICODE) ?>;
 
 var CATALOGO = <?= json_encode(array_map(fn($c) => [
     'id' => $c['IDTipo'], 'categoria' => $c['Categoria'], 'nome' => $c['Nome'],
-    'duracao' => (int) $c['DuracaoPadraoMinutos'],
+    'duracao' => (int) $c['DuracaoPadraoMinutos'], 'especie' => $c['FKEspecie'],
 ], $catalogo), JSON_UNESCAPED_UNICODE) ?>;
-CATALOGO.push({ id: '__outro__', categoria: 'outro', nome: 'Outro (não está na lista)', duracao: 30 });
+CATALOGO.push({ id: '__outro__', categoria: 'outro', nome: 'Outro (não está na lista)', duracao: 30, especie: null });
+
+// Filtra o catálogo pela espécie do animal escolhido — vacina de gato não
+// pode aparecer pra quem tem um cachorro. "Outro" e qualquer item sem
+// espécie fixada (Procedimento em geral) servem pra qualquer bicho. Mesma
+// ideia de vacinasParaEspecie() em painel/registrar_vacina.php.
+function catalogoParaEspecie(especie) {
+    return CATALOGO.filter(function (c) { return !especie || !c.especie || c.especie === especie; });
+}
 
 var VETS = <?= json_encode(array_map(fn($v) => ['id' => $v['IDUsuario'], 'nome' => $v['Nome']], $vets), JSON_UNESCAPED_UNICODE) ?>;
 
@@ -226,7 +234,8 @@ initPicker({
     renderItem: function (a) { return { title: a.nome, icon: a.icone }; },
     matches: function (a, q) { return a.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nenhum animal encontrado.',
-    onSelect: function () {
+    onSelect: function (a) {
+        agServicoPk.setItems(catalogoParaEspecie(a.especie), 'Selecione…');
         revelarPasso('passo2');
         setTimeout(function () { agServicoPk.abrir(); }, 50);
     },

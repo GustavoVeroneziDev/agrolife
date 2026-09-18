@@ -188,17 +188,24 @@ function listarVeterinariosAtivos(PDO $pdo): array
 // e no Pedido de Agendamento (cliente) — os dois deixam escolher um item
 // do catálogo que já preenche Título/Duração/Valor sozinho. Vacina não
 // tem duração própria cadastrada — 15min cobre bem uma aplicação.
+// FKEspecie sempre vai junto (null pra Procedimento — essa tabela não tem
+// a coluna, serve pra qualquer espécie — ou herdado da Vacina) pra quem
+// consome dar/filtrar por espécie do animal escolhido, igual já acontece
+// no picker de vacina de registrar_vacina.php (ver vacinasParaEspecie()).
 function catalogoAgendamento(PDO $pdo): array
 {
-    $itens = $pdo->query(
-        "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco FROM TiposProcedimento
-         WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
-    )->fetchAll();
+    $itens = array_map(
+        fn($p) => $p + ['FKEspecie' => null],
+        $pdo->query(
+            "SELECT IDTipo, Categoria, Nome, DuracaoPadraoMinutos, Preco FROM TiposProcedimento
+             WHERE Ativo = 1 ORDER BY Ordem ASC, Nome ASC"
+        )->fetchAll()
+    );
 
-    foreach ($pdo->query("SELECT IDTipo, Nome, Preco FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC")->fetchAll() as $v) {
+    foreach ($pdo->query("SELECT IDTipo, Nome, Preco, FKEspecie FROM TiposVacina WHERE Ativo = 1 ORDER BY Nome ASC")->fetchAll() as $v) {
         $itens[] = [
             'IDTipo' => $v['IDTipo'], 'Categoria' => 'vacina', 'Nome' => $v['Nome'],
-            'DuracaoPadraoMinutos' => 15, 'Preco' => $v['Preco'],
+            'DuracaoPadraoMinutos' => 15, 'Preco' => $v['Preco'], 'FKEspecie' => $v['FKEspecie'],
         ];
     }
 
