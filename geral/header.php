@@ -375,6 +375,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 $menuItens[] = ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge', 'label' => 'Equipe'];
                 $menuItens[] = ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history', 'label' => 'Auditoria'];
                 $menuItens[] = ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',         'label' => 'Configurações'];
+                $menuItens[] = ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear', 'label' => 'Migrations'];
             }
             ?>
             <ul class="sidebar-nav">
