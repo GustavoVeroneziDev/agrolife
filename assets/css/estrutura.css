@@ -259,6 +259,24 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ── Formulários ──────────────────────────────────────────────── */
 .form-label { font-weight: 500; }
+/* Seleção sequencial (ver PADROES_DESENVOLVIMENTO.md seção 20.7) — campo
+   que só aparece depois do anterior ser respondido. .badge-passo numera
+   cada etapa; campo-sequencial entra com uma transição suave em vez de
+   aparecer/sumir seco, pra ficar claro que é o PRÓXIMO passo, não um
+   elemento novo aleatório na tela. */
+.badge-passo {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; margin-right: .4rem;
+  border-radius: 50%; background: var(--accent-light); color: var(--accent);
+  font-size: .72rem; font-weight: 700;
+}
+.campo-sequencial {
+  animation: campoSequencialEntra .25s ease-out;
+}
+@keyframes campoSequencialEntra {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 /* Mesma altura de .btn-accent/.btn-outline-accent (44px) — sem isso,
    input/select ficavam no padrão menor do Bootstrap (~38px) e destoavam
    de um botão ao lado na mesma linha (ex: busca + "Ativos", filtro +

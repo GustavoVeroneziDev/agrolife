@@ -148,43 +148,43 @@ require_once __DIR__ . '/../geral/header.php';
         <input type="hidden" name="duracao" id="inpDuracao" value="30">
         <input type="hidden" name="hora" id="inpHora">
 
-        <div class="mb-3">
-            <label class="form-label">Animal *</label>
+        <div class="mb-3 campo-sequencial" id="passo1">
+            <label class="form-label"><span class="badge-passo">1</span> Animal *</label>
             <?= campoPicker('agAnimal', 'animal', 'Selecione…', 'Buscar animal…', obrigatorio: true, comBusca: false) ?>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">O que você precisa? *</label>
+        <div class="mb-3 campo-sequencial" id="passo2" hidden>
+            <label class="form-label"><span class="badge-passo">2</span> O que você precisa? *</label>
             <?= campoPicker('agServico', 'servico_ref', 'Selecione…', 'Buscar…', obrigatorio: true) ?>
             <div id="blocoOutroServico" class="mt-2" hidden>
                 <input type="text" class="form-control" id="inpOutroTitulo" placeholder="Descreva o que você precisa" maxlength="150">
             </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Veterinário <span class="text-secondary">(opcional)</span></label>
+        <div class="mb-3 campo-sequencial" id="passo3" hidden>
+            <label class="form-label"><span class="badge-passo">3</span> Veterinário <span class="text-secondary">(opcional)</span></label>
             <?= campoPicker('agVet', 'veterinario', 'Sem preferência', '', comBusca: false) ?>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Data *</label>
+        <div class="mb-3 campo-sequencial" id="passo4" hidden>
+            <label class="form-label"><span class="badge-passo">4</span> Data *</label>
             <input type="date" class="form-control" id="inpData" required
                 min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+60 days')) ?>">
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Horário *</label>
+        <div class="mb-3 campo-sequencial" id="passo5" hidden>
+            <label class="form-label"><span class="badge-passo">5</span> Horário *</label>
             <div id="blocoHorarios" class="d-flex flex-wrap gap-2">
                 <span class="text-secondary small">Escolha uma data pra ver os horários livres.</span>
             </div>
         </div>
 
-        <div class="mb-4">
-            <label class="form-label">Observações <span class="text-secondary">(opcional)</span></label>
+        <div class="mb-4 campo-sequencial" id="passo6" hidden>
+            <label class="form-label"><span class="badge-passo">6</span> Observações <span class="text-secondary">(opcional)</span></label>
             <textarea name="observacoes" class="form-control" rows="2" maxlength="500" placeholder="Algo que a clínica precise saber antes de confirmar…"></textarea>
         </div>
 
-        <button type="submit" class="btn btn-accent w-100" id="btnEnviarPedido" disabled>
+        <button type="submit" class="btn btn-accent w-100 campo-sequencial" id="btnEnviarPedido" hidden disabled>
             <i class="bi bi-send-fill me-1"></i> Enviar pedido
         </button>
     </form>
@@ -203,6 +203,21 @@ CATALOGO.push({ id: '__outro__', categoria: 'outro', nome: 'Outro (não está na
 
 var VETS = <?= json_encode(array_map(fn($v) => ['id' => $v['IDUsuario'], 'nome' => $v['Nome']], $vets), JSON_UNESCAPED_UNICODE) ?>;
 
+// Seleção sequencial (ver PADROES_DESENVOLVIMENTO.md 20.7): só mostra o
+// próximo campo depois do atual estar respondido, em vez da tela inteira
+// de uma vez — cada escolha aqui restringe/depende da anterior (animal →
+// o que precisa → [vet/data] → horário), então faz sentido pedir uma coisa
+// de cada vez. Passo 3 (veterinário) e 4 (data) revelam juntos porque vet
+// é opcional — não faz sentido travar a data esperando uma escolha que a
+// pessoa pode legitimamente pular.
+function revelarPasso(id) {
+    var el = document.getElementById(id);
+    if (el.hidden) {
+        el.hidden = false;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
 initPicker({
     pickerId: 'agAnimalPicker', triggerId: 'agAnimalTrigger', dropdownId: 'agAnimalDropdown',
     searchId: 'agAnimalSearch', listId: 'agAnimalList', hiddenId: 'inpagAnimalId', labelId: 'agAnimalLabel',
@@ -211,6 +226,10 @@ initPicker({
     renderItem: function (a) { return { title: a.nome, icon: a.icone }; },
     matches: function (a, q) { return a.nome.toLowerCase().indexOf(q) !== -1; },
     vazioMsg: 'Nenhum animal encontrado.',
+    onSelect: function () {
+        revelarPasso('passo2');
+        setTimeout(function () { agServicoPk.abrir(); }, 50);
+    },
 });
 
 initPicker({
@@ -245,6 +264,8 @@ var agServicoPk = initPicker({
         blocoOutro.hidden = !ehOutro;
         inpTitulo.value = ehOutro ? '' : c.nome;
         if (ehOutro) { inpOutroTitulo.focus(); }
+        revelarPasso('passo3');
+        revelarPasso('passo4');
         buscarHorarios();
     },
 });
@@ -270,6 +291,7 @@ function buscarHorarios() {
         blocoHorarios.innerHTML = '<span class="text-secondary small">Escolha uma data pra ver os horários livres.</span>';
         return;
     }
+    revelarPasso('passo5');
     blocoHorarios.innerHTML = '<span class="text-secondary small"><i class="bi bi-hourglass-split me-1"></i>Buscando horários…</span>';
 
     var vetId = document.getElementById('inpagVetId').value || '';
@@ -292,6 +314,8 @@ function buscarHorarios() {
                 btn.classList.remove('btn-outline-accent');
                 btn.classList.add('btn-accent');
                 inpHora.value = h;
+                revelarPasso('passo6');
+                revelarPasso('btnEnviarPedido');
                 atualizarBotaoEnviar();
             });
             blocoHorarios.appendChild(btn);
