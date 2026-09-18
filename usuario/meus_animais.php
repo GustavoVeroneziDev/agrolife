@@ -74,9 +74,35 @@ try {
             $proximoPorAnimal[$idAnimal] = $ag;
         }
     }
+    // Resumo rápido do topo — cruza informação que hoje só aparecia
+    // espalhada em cada card de animal (ou nem aparecia, no caso do
+    // "pedido aguardando confirmação"). $agendamentosAtivos já vem
+    // ordenado por data, então o primeiro pendente/confirmado ainda no
+    // futuro já é o "próximo" — sem precisar de outra consulta.
+    $proximoGeral = null;
+    foreach ($agendamentosAtivos as $ag) {
+        if ($ag['DataHoraInicio'] >= $agora && in_array($ag['Status'], ['pendente', 'confirmado'], true)) {
+            $proximoGeral = $ag;
+            break;
+        }
+    }
+
+    $pedidosPendentes = array_values(array_filter(
+        $agendamentosAtivos,
+        fn($ag) => $ag['Status'] === 'pendente'
+    ));
+
+    $vacinaMaisProxima = null;
+    foreach ($animais as $a) {
+        if ($a['ProximaVacina'] && (!$vacinaMaisProxima || $a['ProximaVacina'] < $vacinaMaisProxima['data'])) {
+            $vacinaMaisProxima = ['data' => $a['ProximaVacina'], 'animal' => $a['Nome']];
+        }
+    }
 } catch (PDOException $e) {
     error_log('[MeusAnimais] ' . $e->getMessage());
     $animais = [];
+    $proximoGeral = $vacinaMaisProxima = null;
+    $pedidosPendentes = [];
 }
 
 $paginaTitulo = 'Meus Animais';
@@ -84,7 +110,12 @@ $areaAtual    = 'cliente';
 require_once __DIR__ . '/../geral/header.php';
 ?>
 
-<h4 class="fw-bold mb-4"><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Meus Animais</h4>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-clipboard2-pulse me-2 text-accent"></i>Meus Animais</h4>
+    <a href="<?= BASE ?>/usuario/agendar.php" class="btn btn-accent btn-sm">
+        <i class="bi bi-calendar-plus me-1"></i> Pedir agendamento
+    </a>
+</div>
 
 <?php if (empty($animais)): ?>
     <div class="card text-center py-5 text-secondary">
@@ -93,6 +124,61 @@ require_once __DIR__ . '/../geral/header.php';
         <p class="small">Entre em contato com a clínica para cadastrar seu animal.</p>
     </div>
 <?php else: ?>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <div class="d-flex align-items-center gap-2 mb-2 text-secondary small">
+                    <i class="bi bi-calendar-event text-accent"></i> Próximo agendamento
+                </div>
+                <?php if ($proximoGeral): ?>
+                    <div class="fw-semibold"><?= especieIconeHtml($proximoGeral['IconeEspecie']) ?> <?= h($proximoGeral['NomeAnimal']) ?></div>
+                    <div class="small text-secondary mb-2"><?= h($tiposAgenda[$proximoGeral['Tipo']] ?? $proximoGeral['Tipo']) ?> — <?= h($proximoGeral['Titulo']) ?></div>
+                    <div class="small">
+                        <i class="bi bi-clock me-1"></i>
+                        <?= substr($proximoGeral['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($proximoGeral['DataHoraInicio']) ?>
+                        às <?= date('H:i', strtotime($proximoGeral['DataHoraInicio'])) ?>
+                        <?= labelStatusAgendamento($proximoGeral['Status']) ?>
+                    </div>
+                <?php else: ?>
+                    <p class="text-secondary small mb-0">Nenhum agendamento marcado.</p>
+                <?php endif ?>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <div class="d-flex align-items-center gap-2 mb-2 text-secondary small">
+                    <i class="bi bi-hourglass-split" style="color:var(--cor-atencao);"></i> Aguardando confirmação
+                </div>
+                <?php if (!empty($pedidosPendentes)): ?>
+                    <div class="fw-semibold mb-2"><?= count($pedidosPendentes) ?> pedido<?= count($pedidosPendentes) === 1 ? '' : 's' ?> em análise</div>
+                    <?php foreach (array_slice($pedidosPendentes, 0, 2) as $p): ?>
+                        <div class="small text-secondary">
+                            <?= h($p['NomeAnimal']) ?> — <?= formatarData($p['DataHoraInicio']) ?> às <?= date('H:i', strtotime($p['DataHoraInicio'])) ?>
+                        </div>
+                    <?php endforeach ?>
+                    <?php if (count($pedidosPendentes) > 2): ?>
+                        <div class="small text-secondary">+<?= count($pedidosPendentes) - 2 ?> outro(s)</div>
+                    <?php endif ?>
+                <?php else: ?>
+                    <p class="text-secondary small mb-0">Nenhum pedido pendente.</p>
+                <?php endif ?>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <div class="d-flex align-items-center gap-2 mb-2 text-secondary small">
+                    <i class="bi bi-shield-plus text-accent"></i> Próxima vacina
+                </div>
+                <?php if ($vacinaMaisProxima): ?>
+                    <div class="fw-semibold mb-1"><?= h($vacinaMaisProxima['animal']) ?></div>
+                    <div class="small"><?= labelSituacaoVacina($vacinaMaisProxima['data']) ?> <span class="text-secondary"><?= formatarData($vacinaMaisProxima['data']) ?></span></div>
+                <?php else: ?>
+                    <p class="text-secondary small mb-0">Nenhuma vacina registrada.</p>
+                <?php endif ?>
+            </div>
+        </div>
+    </div>
+
     <?php if (!empty($agendamentosHoje)): ?>
         <h6 class="fw-semibold text-secondary mb-2"><i class="bi bi-calendar-event me-1"></i>Hoje</h6>
         <div class="mb-4">
