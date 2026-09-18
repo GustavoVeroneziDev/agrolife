@@ -168,7 +168,7 @@ require_once __DIR__ . '/../geral/header.php';
 
         <div class="mb-3 campo-sequencial" id="passo4" hidden>
             <label class="form-label"><span class="badge-passo">4</span> Data *</label>
-            <input type="date" class="form-control" id="inpData" required
+            <input type="date" class="form-control" name="data" id="inpData" required
                 min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+60 days')) ?>">
         </div>
 
