@@ -2,10 +2,14 @@ name: Deploy para Hospedagem
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
 
 jobs:
-  deploy:
+  # Produção — dispara só em push na main. Segue apontando pro FTP que já
+  # existe hoje (o site que está no ar); nada muda aqui quando o domínio
+  # oficial entrar, é só um endereço novo apontando pro mesmo lugar.
+  deploy-producao:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -28,6 +32,46 @@ jobs:
           server:   ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/Base/**
+            **/config/conexao.php
+            **/config/evolution_keys.php
+            **/config/smtp_keys.php
+            **/uploads/**
+            **/logs/**
+
+  # Beta/staging — dispara em push na beta. AINDA NÃO ATIVO DE VERDADE: os
+  # secrets FTP_HOST_BETA/FTP_USER_BETA/FTP_PASS_BETA não existem ainda, só
+  # passam a existir quando a pasta+banco de teste forem criados na
+  # hospedagem (ver checklist). Até lá, empurrar pra beta só faz esse job
+  # falhar (tentando FTP vazio) sem afetar produção em nada — os dois jobs
+  # rodam isolados, cada um só no push da própria branch.
+  deploy-beta:
+    if: github.ref == 'refs/heads/beta'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gerar config/versao.php (0.0.X = numero de commits na beta)
+        run: |
+          PATCH=$(git rev-list --count HEAD)
+          VERSAO="0.0.${PATCH}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u '+%d/%m/%Y %H:%M UTC')
+          printf '<?php\ndefine("APP_VERSAO", "%s");\ndefine("APP_BUILD_DATE", "%s (%s)");\n' "$VERSAO" "$BUILD_DATE" "$SHORT_SHA" > config/versao.php
+
+      - name: Deploy via FTP para ambiente de teste
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server:   ${{ secrets.FTP_HOST_BETA }}
+          username: ${{ secrets.FTP_USER_BETA }}
+          password: ${{ secrets.FTP_PASS_BETA }}
           exclude: |
             **/.git*
             **/.git*/**
