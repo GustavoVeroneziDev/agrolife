@@ -151,8 +151,11 @@ button, a, [role="button"] { touch-action: manipulation; }
 .sidebar-nav li a.ativo i { background: var(--accent); color: var(--accent-text); }
 .sidebar-nav-label {
   display: block;
-  padding: 1.1rem .65rem .4rem;
-  margin-top: .35rem;
+  /* Margem negativa cancela o padding lateral do <ul> só aqui, pra a borda
+     esticar de ponta a ponta da sidebar de verdade — sem isso, a linha
+     parava no meio, antes de encostar na borda direita. */
+  margin: .35rem -.75rem 0;
+  padding: 1.1rem 0 .4rem 1.4rem;
   border-top: 1px solid var(--card-border-color);
   font-size: .68rem;
   font-weight: 700;
