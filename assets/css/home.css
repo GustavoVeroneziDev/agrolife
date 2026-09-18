@@ -135,8 +135,10 @@
 /* Perfil de veterinário — foto grande de um lado, dados do outro, linha
    alternando o lado a cada profissional (zigue-zague) — dá mais peso
    editorial a cada um do que um card pequeno igual pros dois. */
-.home-vets { display: flex; flex-direction: column; gap: 3rem; max-width: 900px; margin: 0 auto; }
-.home-vet-linha { display: flex; align-items: center; gap: 2.5rem; }
+.home-vets { display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; }
+.home-vet-linha { display: flex; align-items: center; gap: 2.5rem; padding: 2.75rem 0; }
+.home-vet-linha:first-child { padding-top: 0; }
+.home-vet-linha:not(:first-child) { border-top: 1px solid var(--card-border-color); }
 .home-vet-linha:nth-child(even) { flex-direction: row-reverse; }
 .home-vet-foto {
   flex: 0 0 auto;
@@ -172,7 +174,7 @@
    discreto que o perfil de veterinário acima. */
 .home-equipe-apoio {
   display: flex; align-items: center; gap: 1.5rem;
-  max-width: 900px; margin: 3.5rem auto 0;
+  max-width: 900px; margin: 1rem auto 0;
   padding-top: 2.5rem; border-top: 1px solid var(--card-border-color);
 }
 .home-equipe-avatar {

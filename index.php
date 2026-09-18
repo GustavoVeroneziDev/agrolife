@@ -26,7 +26,7 @@ if (estaLogado()) {
 $veterinariosHome = [
     [
         'nome'   => 'Dr. José Afonso Parro',
-        'cargo'  => 'Médico Veterinário',
+        'cargo'  => 'CEO & Médico Veterinário',
         'crmv'   => null,
         'foto'   => 'b5e397f2-601b-4504-ab7a-3dc0ef0a51e4.jpg',
         'bio'    => 'Consultas, exames e acompanhamento clínico do seu animal.',
@@ -34,7 +34,9 @@ $veterinariosHome = [
     ],
     [
         'nome'   => 'Dr. Deyvid Alota',
-        'cargo'  => 'Médico Veterinário',
+        // TODO: "Sócio" é um termo genérico até o Gustavo confirmar o
+        // título exato que ele usa (Diretor, Sócio-fundador, etc.).
+        'cargo'  => 'Sócio & Médico Veterinário',
         'crmv'   => null,
         'foto'   => '29034acf-139d-4d8d-a3ad-b9b83e839ae8.png',
         'bio'    => 'Consultas, cirurgias e procedimentos com acompanhamento completo.',
