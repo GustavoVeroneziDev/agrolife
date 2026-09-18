@@ -360,38 +360,53 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             </div>
             <?php
             $uri = $_SERVER['REQUEST_URI'];
-            $menuItens = [
-                ['href' => BASE . '/painel/index.php',        'icon' => 'bi-house-door',    'label' => 'Dashboard'],
-                ['href' => BASE . '/painel/agenda.php',       'icon' => 'bi-calendar3',     'label' => 'Agenda'],
-                ['href' => BASE . '/painel/animais.php',      'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
-                ['href' => BASE . '/painel/clientes.php',      'icon' => 'bi-people',        'label' => 'Clientes'],
-                ['href' => BASE . '/painel/relatorios.php',    'icon' => 'bi-bar-chart-line', 'label' => 'Relatórios'],
-                ['href' => BASE . '/painel/tipos_vacina.php',  'icon' => 'bi-shield-plus',   'label' => 'Tipos de Vacina'],
-                ['href' => BASE . '/painel/tipos_procedimento.php', 'icon' => 'bi-list-check', 'label' => 'Tipos de Procedimento'],
+            // Sidebar organizada por grupo (rótulo null = sem cabeçalho, fica "solto"
+            // no topo): Visão geral → Atendimento (o dia a dia com cliente/animal) →
+            // Gestão (relatórios e catálogos que sustentam o atendimento) → Sistema
+            // (administração da clínica, só admin vê).
+            $gruposMenu = [
+                [
+                    'label' => null,
+                    'itens' => [
+                        ['href' => BASE . '/painel/index.php', 'icon' => 'bi-house-door', 'label' => 'Dashboard'],
+                    ],
+                ],
+                [
+                    'label' => 'Atendimento',
+                    'itens' => [
+                        ['href' => BASE . '/painel/agenda.php',  'icon' => 'bi-calendar3',        'label' => 'Agenda'],
+                        ['href' => BASE . '/painel/animais.php', 'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
+                        ['href' => BASE . '/painel/clientes.php', 'icon' => 'bi-people',           'label' => 'Clientes'],
+                    ],
+                ],
+                [
+                    'label' => 'Gestão',
+                    'itens' => [
+                        ['href' => BASE . '/painel/relatorios.php',         'icon' => 'bi-bar-chart-line', 'label' => 'Relatórios'],
+                        ['href' => BASE . '/painel/tipos_vacina.php',       'icon' => 'bi-shield-plus',    'label' => 'Tipos de Vacina'],
+                        ['href' => BASE . '/painel/tipos_procedimento.php', 'icon' => 'bi-list-check',     'label' => 'Tipos de Procedimento'],
+                    ],
+                ],
             ];
-            // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários —
-            // separado num grupo próprio na sidebar ("Sistema"), fica visualmente claro que é
-            // administração da clínica, não operação do dia a dia.
-            $menuItensSistema = [];
+            // Equipe e Configurações: só o admin dono do sistema mexe nisso, não os veterinários.
             if ($nivelAcesso === 'admin') {
-                $menuItensSistema[] = ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge', 'label' => 'Equipe'];
-                $menuItensSistema[] = ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history', 'label' => 'Auditoria'];
-                $menuItensSistema[] = ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',         'label' => 'Configurações'];
-                $menuItensSistema[] = ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear', 'label' => 'Migrations'];
+                $gruposMenu[] = [
+                    'label' => 'Sistema',
+                    'itens' => [
+                        ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge',   'label' => 'Equipe'],
+                        ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history',  'label' => 'Auditoria'],
+                        ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',           'label' => 'Configurações'],
+                        ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear',  'label' => 'Migrations'],
+                    ],
+                ];
             }
             ?>
             <ul class="sidebar-nav">
-                <?php foreach ($menuItens as $item): ?>
-                    <li>
-                        <a href="<?= $item['href'] ?>" class="<?= str_contains($uri, $item['href']) ? 'ativo' : '' ?>">
-                            <i class="bi <?= $item['icon'] ?>"></i>
-                            <?= $item['label'] ?>
-                        </a>
-                    </li>
-                <?php endforeach ?>
-                <?php if ($menuItensSistema): ?>
-                    <li><span class="sidebar-nav-label">Sistema</span></li>
-                    <?php foreach ($menuItensSistema as $item): ?>
+                <?php foreach ($gruposMenu as $grupo): ?>
+                    <?php if ($grupo['label']): ?>
+                        <li><span class="sidebar-nav-label"><?= h($grupo['label']) ?></span></li>
+                    <?php endif ?>
+                    <?php foreach ($grupo['itens'] as $item): ?>
                         <li>
                             <a href="<?= $item['href'] ?>" class="<?= str_contains($uri, $item['href']) ? 'ativo' : '' ?>">
                                 <i class="bi <?= $item['icon'] ?>"></i>
@@ -399,7 +414,7 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                             </a>
                         </li>
                     <?php endforeach ?>
-                <?php endif ?>
+                <?php endforeach ?>
             </ul>
             <div class="sidebar-footer">
                 <div class="mb-1 d-flex align-items-center">
