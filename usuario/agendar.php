@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $novoId = gerarUuid();
         $pdo->prepare(
-            'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Status)
-             VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, \'pendente\')'
+            'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Status, CriadoPor)
+             VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, \'pendente\', \'cliente\')'
         )->execute([
             ':id'     => $novoId,
             ':animal' => $fkAnimal,

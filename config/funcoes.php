@@ -689,8 +689,8 @@ function criarAgendamentoVacina(PDO $pdo, string $fkAnimal, string $nomeVacina, 
     $titulo = 'Vacina: ' . $nomeVacina . ($retorno ? ' (retorno)' : '');
 
     $pdo->prepare(
-        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status)
-         VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, \'confirmado\')'
+        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status, CriadoPor)
+         VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, \'confirmado\', \'equipe\')'
     )->execute([
         ':id' => $agId, ':animal' => $fkAnimal, ':vet' => $fkVet ?: null,
         ':tipo' => 'vacina', ':titulo' => $titulo, ':inicio' => $inicio, ':fim' => $fim,
@@ -1234,6 +1234,23 @@ function labelStatusAgendamento(string $status): string
     return '<span class="badge bg-' . $cor . '">' . h($label) . '</span>';
 }
 
+// Selo "Pedido" — só aparece quando CriadoPor = 'cliente', pra deixar claro
+// que ESSE compromisso nasceu de alguém de fora pedindo (usuario/agendar.php),
+// não da própria equipe marcando. Sem isso, depois de uma remarcação (que
+// zera o Status de volta pra 'pendente' mesmo num agendamento criado pela
+// equipe — ver painel/agenda.php acao=remarcar), um pedido de cliente e um
+// compromisso comum ficavam com o mesmo status "Pendente", indistinguíveis.
+// Visual deliberadamente diferente do badge de Status (sólido) e do badge
+// de Tipo (fundo claro) — contorno, pra ler como "tag de origem", não como
+// mais um estado.
+function labelPedidoCliente(string $criadoPor): string
+{
+    if ($criadoPor !== 'cliente') {
+        return '';
+    }
+    return '<span class="badge-pedido-cliente"><i class="bi bi-person-raised-hand"></i>Pedido</span>';
+}
+
 // Rótulo pra cada linha do "Histórico de movimentações" (EventosAgendamento)
 // — verbo no particípio, cor por gravidade. Diferente de
 // labelStatusAgendamento(): esse aqui descreve o EVENTO que aconteceu, não
@@ -1266,8 +1283,14 @@ function labelEventoAgendamento(string $tipo): string
  * (meus_agendamentos.php) — aí sim, se o agendamento ainda estiver
  * pendente/confirmado e no futuro, mostra um botão "Cancelar" que posta
  * pra usuario/processa_agendamento.php.
+ *
+ * $mostrarOrigem só deve vir true numa tela da EQUIPE olhando o agendamento
+ * de outra pessoa (painel/cliente_detalhe.php) — mostra o selo "Pedido"
+ * quando veio de um Pedido do cliente. Na tela do próprio cliente vendo o
+ * próprio agendamento (meus_agendamentos.php, meus_animais.php) não faz
+ * sentido — ele já sabe que foi ele quem pediu.
  */
-function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCancelar = false): void
+function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCancelar = false, bool $mostrarOrigem = false): void
 {
     $podeCancelar = $permitirCancelar
         && in_array($ag['Status'], ['pendente', 'confirmado'], true)
@@ -1283,6 +1306,7 @@ function renderCardAgendamento(array $ag, array $tiposAgenda, bool $permitirCanc
                 <div>
                     <div>
                         <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$ag['Tipo']] ?? $ag['Tipo']) ?></span>
+                        <?php if ($mostrarOrigem): ?><?= labelPedidoCliente($ag['CriadoPor']) ?><?php endif ?>
                         <?= labelStatusAgendamento($ag['Status']) ?>
                         <?php if ($ag['Status'] === 'concluido' && $ag['Valor'] !== null): ?>
                             <?php

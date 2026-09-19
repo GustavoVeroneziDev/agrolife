@@ -297,7 +297,7 @@ require_once __DIR__ . '/../geral/header.php';
 <?php if (!empty($agendamentosHoje)): ?>
     <h6 class="fw-semibold text-secondary mb-2"><i class="bi bi-calendar-event me-1"></i>Hoje</h6>
     <div class="mb-4">
-        <?php foreach ($agendamentosHoje as $ag) renderCardAgendamento($ag, $tiposAgenda) ?>
+        <?php foreach ($agendamentosHoje as $ag) renderCardAgendamento($ag, $tiposAgenda, mostrarOrigem: true) ?>
     </div>
 <?php endif ?>
 
@@ -391,6 +391,7 @@ require_once __DIR__ . '/../geral/header.php';
                                         <td class="small">
                                             <?php if ($prox): ?>
                                                 <span class="badge" style="background:var(--accent-light);color:var(--accent);"><?= h($tiposAgenda[$prox['Tipo']] ?? $prox['Tipo']) ?></span>
+                                                <?= labelPedidoCliente($prox['CriadoPor']) ?>
                                                 <?= substr($prox['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($prox['DataHoraInicio']) ?>
                                                 às <?= date('H:i', strtotime($prox['DataHoraInicio'])) ?>
                                             <?php elseif ($a['UltimoAtendimentoData']): ?>

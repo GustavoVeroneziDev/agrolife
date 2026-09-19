@@ -577,6 +577,31 @@ button, a, [role="button"] { touch-action: manipulation; }
 .cal-ticket-icone-pago     { background-color: var(--cal-ticket-pago-icone); }
 .cal-ticket-icone-pendente { background-color: var(--bs-warning); }
 
+/* Ícone de "Pedido" (CriadoPor = cliente) dentro do ticket do calendário —
+   mesma ideia do ícone de pagamento acima, mas prefixo do texto em vez de
+   sufixo. Herda a cor de texto do próprio ticket (--accent-text), que já
+   contrasta com qualquer cor de status de fundo. */
+.cal-ticket-icone-pedido { font-size: .58rem; margin-right: 2px; vertical-align: -1px; }
+
+/* Selo "Pedido" (CriadoPor = cliente) nas listas/cards de agendamento —
+   contorno em vez de preenchido de propósito: os badges de Status (sólido)
+   e de Tipo (fundo claro) já usam essa linguagem, então isso aqui lê como
+   uma "etiqueta de origem" à parte, não mais um estado no meio dos outros. */
+.badge-pedido-cliente {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  background: var(--bg-card);
+  white-space: nowrap;
+}
+.badge-pedido-cliente i { font-size: .8rem; }
+
 /* ── Ícone de espécie (PNG recolorido via CSS mask) ───────────── */
 .especie-icone {
   display: inline-block;

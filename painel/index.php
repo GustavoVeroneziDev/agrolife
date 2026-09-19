@@ -75,7 +75,7 @@ try {
     $paramsAg       = $souVeterinario ? [':uid' => $_SESSION['usuario_id']] : [];
 
     $stmtHoje = $pdo->prepare(
-        "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
+        "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.CriadoPor,
                 a.IDAnimal, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
          FROM Agendamentos ag
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
@@ -89,7 +89,7 @@ try {
     $agendamentosHoje = $stmtHoje->fetchAll();
 
     $stmtProximos = $pdo->prepare(
-        "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status,
+        "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.CriadoPor,
                 a.IDAnimal, a.Nome AS NomeAnimal, e.Icone AS IconeEspecie
          FROM Agendamentos ag
          JOIN Animais a  ON a.IDAnimal = ag.FKAnimal
@@ -192,7 +192,7 @@ require_once __DIR__ . '/../geral/header.php';
                                         <td class="px-4 small fw-medium"><?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
                                         <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
                                         <td class="small"><?= h($ag['Titulo']) ?></td>
-                                        <td><?= labelStatusAgendamento($ag['Status']) ?></td>
+                                        <td class="d-flex flex-wrap gap-1"><?= labelPedidoCliente($ag['CriadoPor']) ?><?= labelStatusAgendamento($ag['Status']) ?></td>
                                     </tr>
                                 <?php endforeach ?>
                             </tbody>
@@ -281,7 +281,7 @@ require_once __DIR__ . '/../geral/header.php';
                             <td class="px-4 small fw-medium"><?= formatarData($ag['DataHoraInicio']) ?> às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?></td>
                             <td class="small"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></td>
                             <td class="small"><?= h($ag['Titulo']) ?></td>
-                            <td><?= labelStatusAgendamento($ag['Status']) ?></td>
+                            <td class="d-flex flex-wrap gap-1"><?= labelPedidoCliente($ag['CriadoPor']) ?><?= labelStatusAgendamento($ag['Status']) ?></td>
                         </tr>
                     <?php endforeach ?>
                 </tbody>

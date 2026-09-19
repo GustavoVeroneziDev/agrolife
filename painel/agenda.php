@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // usuario/agendar/), que aí sim precisa de alguém da equipe
             // revisar antes — é o "Aguardando confirmação" do dashboard.
             $pdo->prepare(
-                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Valor, Status)
-                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, :valor, \'confirmado\')'
+                'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, Tipo, Titulo, DataHoraInicio, DataHoraFim, Observacoes, Valor, Status, CriadoPor)
+                 VALUES (:id, :animal, :vet, :tipo, :titulo, :inicio, :fim, :obs, :valor, \'confirmado\', \'equipe\')'
             )->execute([
                 ':id'     => $novoAgId,
                 ':animal' => $fkAnimal,
@@ -215,8 +215,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         . 'Agende manualmente num horário livre.';
                 } else {
                     $pdo->prepare(
-                        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status)
-                         VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim, \'confirmado\')'
+                        'INSERT INTO Agendamentos (IDAgendamento, FKAnimal, FKVeterinario, FKAgendamentoOrigem, Tipo, Titulo, DataHoraInicio, DataHoraFim, Status, CriadoPor)
+                         VALUES (:id, :animal, :vet, :origem, :tipo, :titulo, :inicio, :fim, \'confirmado\', \'equipe\')'
                     )->execute([
                         ':id'     => $retornoId,
                         ':animal' => $ag['FKAnimal'],
@@ -453,7 +453,7 @@ try {
         $fimMes    = date('Y-m-d', strtotime('+1 month', strtotime($inicioMes)));
 
         $stmt = $pdo->prepare(
-            "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.FKAgendamentoOrigem,
+            "SELECT ag.IDAgendamento, ag.Tipo, ag.Titulo, ag.DataHoraInicio, ag.Status, ag.CriadoPor, ag.FKAgendamentoOrigem,
                     ag.Valor, ag.StatusPagamento, ag.ObservacoesPos,
                     a.Nome AS NomeAnimal, e.Icone AS IconeEspecie,
                     u.Nome AS NomeDono, v.Nome AS NomeVeterinario
@@ -484,6 +484,10 @@ try {
                 'vet'    => $ag['NomeVeterinario'],
                 'status' => $ag['Status'],
                 'origem' => !empty($ag['FKAgendamentoOrigem']),
+                // Distinto de 'origem' acima (que é sobre cadeia de retorno,
+                // outro conceito) — esse é CriadoPor = 'cliente', pro badge
+                // "Pedido" do painel de dia (ver STATUS_LABEL/montarLinhaAg no JS).
+                'pedidoCliente' => $ag['CriadoPor'] === 'cliente',
                 // Preço/observação pós-consulta só existem depois de concluído
                 // (ver acao=concluir) — mesmos dados que o card da vista
                 // semanal já mostra, pra não faltar informação só por ter
@@ -625,12 +629,16 @@ require_once __DIR__ . '/../geral/header.php';
                                 <?php foreach ($ticketsMostrados as $ag): ?>
                                     <?php
                                         $temPagamento = $ag['Status'] === 'concluido' && $ag['Valor'] !== null;
-                                        $tituloTicket = $ag['Titulo'] . ' — ' . $ag['NomeAnimal']
+                                        $ehPedido     = $ag['CriadoPor'] === 'cliente';
+                                        $tituloTicket = ($ehPedido ? 'Pedido do cliente — ' : '') . $ag['Titulo'] . ' — ' . $ag['NomeAnimal']
                                             . ($temPagamento ? ' (' . ($ag['StatusPagamento'] === 'pago' ? 'pago' : 'pagamento pendente') . ')' : '');
                                     ?>
                                     <span class="cal-ticket cal-ticket-<?= h($ag['Status']) ?>" title="<?= h($tituloTicket) ?>">
                                         <?php if ($temPagamento): ?>
                                             <span class="cal-ticket-icone-pagamento <?= $ag['StatusPagamento'] === 'pago' ? 'cal-ticket-icone-pago' : 'cal-ticket-icone-pendente' ?>"></span>
+                                        <?php endif ?>
+                                        <?php if ($ehPedido): ?>
+                                            <i class="bi bi-person-raised-hand cal-ticket-icone-pedido"></i>
                                         <?php endif ?>
                                         <?= h($ag['Titulo']) ?> — <?= h($ag['NomeAnimal']) ?>
                                     </span>
@@ -693,6 +701,7 @@ require_once __DIR__ . '/../geral/header.php';
                                         <?php if (!empty($ag['FKAgendamentoOrigem'])): ?>
                                             <span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>
                                         <?php endif ?>
+                                        <?= labelPedidoCliente($ag['CriadoPor']) ?>
                                         <?= labelStatusAgendamento($ag['Status']) ?>
                                         <span class="fw-medium"><?= especieIconeHtml($ag['IconeEspecie']) ?> <?= h($ag['NomeAnimal']) ?></span>
                                         <span class="text-secondary small">— <?= h($ag['NomeDono']) ?></span>
@@ -1353,6 +1362,7 @@ function mostrarDiaMes(data, diaNum) {
                  + '<div class="d-flex align-items-center gap-1 flex-wrap">'
                  + '<span class="badge" style="background:var(--accent-light);color:var(--accent);">' + escHtmlPicker(ag.tipo) + '</span>'
                  + (ag.origem ? '<span class="badge bg-secondary"><i class="bi bi-arrow-return-right"></i> Retorno</span>' : '')
+                 + (ag.pedidoCliente ? '<span class="badge-pedido-cliente"><i class="bi bi-person-raised-hand"></i>Pedido</span>' : '')
                  + '<span class="badge bg-' + STATUS_COR[ag.status] + '">' + STATUS_LABEL[ag.status] + '</span>'
                  + '<span class="fw-medium">' + iconeHtmlPicker(ag.icone) + escHtmlPicker(ag.animal) + '</span>'
                  + '<span class="text-secondary small">— ' + escHtmlPicker(ag.dono) + '</span>'

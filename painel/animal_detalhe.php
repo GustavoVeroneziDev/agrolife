@@ -268,6 +268,7 @@ require_once __DIR__ . '/../geral/header.php';
                             —
                             <?= substr($ag['DataHoraInicio'], 0, 10) === date('Y-m-d') ? 'Hoje' : formatarData($ag['DataHoraInicio']) ?>
                             às <?= date('H:i', strtotime($ag['DataHoraInicio'])) ?>
+                            <?= labelPedidoCliente($ag['CriadoPor']) ?>
                             <?= labelStatusAgendamento($ag['Status']) ?>
                             <?php if ($ag['NomeVeterinario']): ?><span class="text-secondary">· <?= h($ag['NomeVeterinario']) ?></span><?php endif ?>
                             <?php if ($ag['Observacoes']): ?>
