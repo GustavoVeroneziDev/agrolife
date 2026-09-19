@@ -39,7 +39,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
 
     <link rel="icon" href="<?= BASE ?>/assets/img/icone.ico">
     <link rel="icon" type="image/png" sizes="192x192" href="<?= BASE ?>/assets/img/icon-192.png">
+    <link rel="icon" type="image/png" sizes="384x384" href="<?= BASE ?>/assets/img/icon-384.png">
     <link rel="apple-touch-icon" sizes="180x180" href="<?= BASE ?>/assets/img/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="<?= BASE ?>/assets/img/icon-152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="<?= BASE ?>/assets/img/icon-167.png">
     <link rel="manifest" href="<?= BASE ?>/manifest.php">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
