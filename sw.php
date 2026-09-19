@@ -17,9 +17,11 @@ const STATIC_ASSETS = [
     '<?= $b ?>/assets/img/logo.png',
     '<?= $b ?>/assets/img/icone.ico',
     '<?= $b ?>/assets/img/icon-192.png',
+    '<?= $b ?>/assets/img/icon-384.png',
     '<?= $b ?>/assets/img/icon-512.png',
     '<?= $b ?>/assets/img/icon-512-maskable.png',
     '<?= $b ?>/assets/img/apple-touch-icon.png',
+    '<?= $b ?>/assets/img/badge-notificacao.png',
 ];
 
 // Pré-cache dos assets críticos na instalação
@@ -83,13 +85,19 @@ self.addEventListener('fetch', e => {
 
 // Push: exibe notificação nativa
 self.addEventListener('push', e => {
-    let d = { title: '<?= addslashes(APP_NOME) ?>', body: 'Você tem uma novidade.', url: '<?= $b ?>/painel/index.php' };
+    let d = { title: '<?= addslashes(APP_NOME) ?>', body: 'Você tem uma novidade.', url: '<?= $b ?>/painel' };
     if (e.data) { try { d = Object.assign(d, e.data.json()); } catch (_) {} }
     e.waitUntil(
         self.registration.showNotification(d.title, {
             body:  d.body,
-            icon:  '<?= $b ?>/assets/img/logo.png',
-            badge: '<?= $b ?>/assets/img/logo.png',
+            // "icon" é a imagem grande de verdade (pode ter cor) — usa o
+            // ícone novo (fundo + logo), não a wordmark crua sozinha.
+            // "badge" é o iconezinho do status bar Android — o SO recolore
+            // tudo pra silhueta monocromática usando só o canal alpha, por
+            // isso precisa de um arquivo à parte com fundo TRANSPARENTE de
+            // verdade (o ícone normal tem fundo sólido, viraria um blob).
+            icon:  '<?= $b ?>/assets/img/icon-512.png',
+            badge: '<?= $b ?>/assets/img/badge-notificacao.png',
             data:  { url: d.url },
             tag:   d.tag || undefined,
         })
@@ -99,7 +107,7 @@ self.addEventListener('push', e => {
 // Clique na notificação
 self.addEventListener('notificationclick', e => {
     e.notification.close();
-    const url = e.notification.data?.url || '<?= $b ?>/painel/index.php';
+    const url = e.notification.data?.url || '<?= $b ?>/painel';
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
             for (const c of lista) {

@@ -690,6 +690,50 @@ button, a, [role="button"] { touch-action: manipulation; }
   .vs-spinner div { animation: none; opacity: .6; }
 }
 
+/* ── Banner de instalação do PWA (Android/desktop + instrução iOS) ──
+   Cartão flutuante ancorado embaixo, mesma linguagem visual do resto do
+   sistema (sombra em camadas, cantos arredondados, ícone com sombra
+   própria) — não é o infobar genérico do navegador, é uma peça de marca. */
+.vs-install-banner {
+  position: fixed;
+  left: 1rem; right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  max-width: 420px;
+  margin: 0 auto;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  background: var(--bg-card);
+  border-radius: 18px;
+  padding: .9rem 1rem;
+  box-shadow: 0 16px 40px -12px var(--shadow-color-forte), 0 2px 10px var(--shadow-color);
+  border: 1px solid var(--card-border-color);
+  opacity: 0;
+  transform: translateY(20px) scale(.98);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.vs-install-banner-visivel { opacity: 1; transform: translateY(0) scale(1); }
+.vs-install-banner-icone {
+  flex-shrink: 0;
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow: 0 6px 14px -4px var(--shadow-color-forte);
+}
+.vs-install-banner-icone img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.vs-install-banner-texto { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.vs-install-banner-texto strong { font-size: .9rem; font-weight: 700; color: var(--text-main); }
+.vs-install-banner-texto span { font-size: .78rem; color: var(--text-secondary); line-height: 1.4; }
+.vs-install-banner-texto span i { color: var(--accent); }
+.vs-install-banner-acoes { display: flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+.vs-install-banner-acoes .btn { white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .vs-install-banner { transition: none; } }
+@media (max-width: 420px) {
+  .vs-install-banner { flex-wrap: wrap; }
+  .vs-install-banner-acoes { width: 100%; justify-content: flex-end; margin-left: calc(46px + .85rem); }
+}
+
 /* ── Overlay de carregamento global (troca de página / envio de form) ── */
 .vs-loading-overlay {
   position: fixed;

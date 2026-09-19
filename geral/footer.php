@@ -90,6 +90,34 @@
     </div>
 </div>
 
+<?php if (in_array($areaAtual ?? '', ['painel', 'cliente'], true)): ?>
+<!-- Banner de instalação do PWA — só em área logada (painel/cliente), nunca
+     no site público pra quem ainda nem tem conta. Dois cartões porque o
+     gatilho é diferente: Android/desktop tem o evento beforeinstallprompt
+     de verdade (JS decide mostrar o #1); iOS Safari nunca dispara esse
+     evento, então o #2 é só instrução manual, mostrado por detecção de
+     userAgent. Nunca os dois ao mesmo tempo. -->
+<div id="vsInstallBanner" class="vs-install-banner" hidden>
+    <div class="vs-install-banner-icone"><img src="<?= BASE ?>/assets/img/icon-192.png" alt=""></div>
+    <div class="vs-install-banner-texto">
+        <strong>Instalar o <?= h(APP_NOME) ?></strong>
+        <span>Acesso direto pela tela inicial, sem precisar abrir o navegador.</span>
+    </div>
+    <div class="vs-install-banner-acoes">
+        <button type="button" class="btn btn-accent btn-sm" id="vsInstallBtn">Instalar</button>
+        <button type="button" class="btn-close" id="vsInstallDismiss" aria-label="Fechar"></button>
+    </div>
+</div>
+<div id="vsInstallBannerIOS" class="vs-install-banner" hidden>
+    <div class="vs-install-banner-icone"><img src="<?= BASE ?>/assets/img/icon-192.png" alt=""></div>
+    <div class="vs-install-banner-texto">
+        <strong>Instalar o <?= h(APP_NOME) ?></strong>
+        <span>Toque em <i class="bi bi-box-arrow-up"></i> <strong>Compartilhar</strong> e depois em <strong>"Adicionar à Tela de Início"</strong>.</span>
+    </div>
+    <button type="button" class="btn-close flex-shrink-0" id="vsInstallDismissIOS" aria-label="Fechar"></button>
+</div>
+<?php endif ?>
+
 <script>
 function abrirSidebar() {
     document.getElementById('sidebar').classList.add('aberta');
@@ -392,6 +420,83 @@ if ('serviceWorker' in navigator) {
             .catch(function (e) { console.warn('SW:', e); });
     });
 }
+
+// ── Banner de instalação do PWA ─────────────────────────────────
+// Android/Chrome/Edge disparam beforeinstallprompt de verdade — segura
+// esse evento (senão o navegador mostra o mini-infobar genérico dele por
+// conta própria) e mostra o cartão da marca no lugar. iOS Safari NUNCA
+// dispara esse evento (Apple não implementa), então pra quem tá em iOS a
+// única forma de guiar é instrução manual mesmo, detectada por userAgent.
+// Dispensar guarda um cooldown de 14 dias — não é "nunca mais", é "não
+// insistir toda hora".
+(function () {
+    var banner    = document.getElementById('vsInstallBanner');
+    var bannerIOS = document.getElementById('vsInstallBannerIOS');
+    if (!banner && !bannerIOS) return; // fora de área logada, footer.php nem renderizou os blocos
+
+    var CHAVE = 'vsInstallDispensadoEm';
+    var DIAS_COOLDOWN = 14;
+
+    function jaInstalado() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    function dispensadoRecentemente() {
+        try {
+            var em = localStorage.getItem(CHAVE);
+            return !!em && (Date.now() - parseInt(em, 10)) / 86400000 < DIAS_COOLDOWN;
+        } catch (e) { return false; }
+    }
+    function marcarDispensado() {
+        try { localStorage.setItem(CHAVE, String(Date.now())); } catch (e) {}
+    }
+    function mostrar(el) {
+        if (!el) return;
+        el.hidden = false;
+        setTimeout(function () { el.classList.add('vs-install-banner-visivel'); }, 50);
+    }
+    function esconder(el) {
+        if (!el) return;
+        el.classList.remove('vs-install-banner-visivel');
+        setTimeout(function () { el.hidden = true; }, 300);
+    }
+
+    if (jaInstalado() || dispensadoRecentemente()) return;
+
+    var deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        mostrar(banner);
+    });
+
+    document.getElementById('vsInstallBtn')?.addEventListener('click', function () {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(function () {
+            deferredPrompt = null;
+            esconder(banner);
+        });
+    });
+    document.getElementById('vsInstallDismiss')?.addEventListener('click', function () {
+        marcarDispensado();
+        esconder(banner);
+    });
+    window.addEventListener('appinstalled', function () {
+        marcarDispensado();
+        esconder(banner);
+    });
+
+    // iOS: sem evento nenhum pra escutar, só detecta e espera um pouco
+    // antes de mostrar (não interromper o primeiro instante da página).
+    var ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    if (ehIOS && bannerIOS) {
+        setTimeout(function () { mostrar(bannerIOS); }, 2500);
+    }
+    document.getElementById('vsInstallDismissIOS')?.addEventListener('click', function () {
+        marcarDispensado();
+        esconder(bannerIOS);
+    });
+})();
 </script>
 </body>
 </html>
