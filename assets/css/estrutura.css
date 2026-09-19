@@ -139,6 +139,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .sidebar-nav li a i {
   font-size: 1.05rem;
+  line-height: 1;
   width: 32px;
   height: 32px;
   flex-shrink: 0;
