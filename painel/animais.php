@@ -336,7 +336,17 @@ require_once __DIR__ . '/../geral/header.php';
                             </div>
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Peso (kg)</label>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
+                                <label class="form-label mb-0">Peso (kg)</label>
+                                <!-- Espaçador invisível — mesmo switch do campo Nascimento ao lado,
+                                     só que sem função (aria-hidden, sem tabindex). Ocupa exatamente
+                                     a mesma altura, inclusive quando quebra de linha por falta de
+                                     espaço, pra a caixa de Peso começar pareada com a de Nascimento. -->
+                                <div class="switch-2" style="visibility:hidden;" aria-hidden="true">
+                                    <button type="button" class="switch-2-opcao" tabindex="-1">Exata</button>
+                                    <button type="button" class="switch-2-opcao" tabindex="-1">Aproximada</button>
+                                </div>
+                            </div>
                             <input type="text" id="naPesoVisivel" class="form-control" data-mask="peso" data-target="naPesoReal" placeholder="0,000" inputmode="numeric">
                             <input type="hidden" name="peso" id="naPesoReal">
                         </div>
