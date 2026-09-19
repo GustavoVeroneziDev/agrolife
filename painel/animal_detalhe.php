@@ -530,12 +530,10 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6" data-campo-nascimento>
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
-                                <label class="form-label mb-0">Nascimento</label>
-                                <div class="switch-2" role="group" aria-label="Como informar o nascimento">
-                                    <button type="button" class="switch-2-opcao ativo" data-modo="exata">Exata</button>
-                                    <button type="button" class="switch-2-opcao" data-modo="aproximada">Aproximada</button>
-                                </div>
+                            <label class="form-label d-block mb-1">Nascimento</label>
+                            <div class="switch-2 mb-1" role="group" aria-label="Como informar o nascimento">
+                                <button type="button" class="switch-2-opcao ativo" data-modo="exata">Exata</button>
+                                <button type="button" class="switch-2-opcao" data-modo="aproximada">Aproximada</button>
                             </div>
                             <input type="date" name="nascimento" class="form-control campo-nascimento-exata" data-validar="nascimento" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>" value="<?= h($animal['DataNascimento']) ?>">
                             <div class="row g-1 campo-nascimento-aproximada" hidden>
@@ -548,16 +546,16 @@ require_once __DIR__ . '/../geral/header.php';
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
-                                <label class="form-label mb-0">Peso (kg)</label>
-                                <!-- Espaçador invisível — mesmo switch do campo Nascimento ao lado,
-                                     só que sem função (aria-hidden, sem tabindex). Ocupa exatamente
-                                     a mesma altura, inclusive quando quebra de linha por falta de
-                                     espaço, pra a caixa de Peso começar pareada com a de Nascimento. -->
-                                <div class="switch-2" style="visibility:hidden;" aria-hidden="true">
-                                    <button type="button" class="switch-2-opcao" tabindex="-1">Exata</button>
-                                    <button type="button" class="switch-2-opcao" tabindex="-1">Aproximada</button>
-                                </div>
+                            <label class="form-label d-block mb-1">Peso (kg)</label>
+                            <!-- Espaçador invisível — mesmo switch do campo Nascimento ao lado, só
+                                 que sem função (aria-hidden, sem tabindex). Empilhado embaixo do
+                                 rótulo do MESMO jeito garantido (não por quebra de linha condicional
+                                 ao tamanho do texto — "Peso (kg)" é mais estreito que "Nascimento" e
+                                 podia não quebrar igual, desalinhando nos dois de novo), pra a caixa
+                                 de Peso sempre começar pareada com a de Nascimento. -->
+                            <div class="switch-2 mb-1" style="visibility:hidden;" aria-hidden="true">
+                                <button type="button" class="switch-2-opcao" tabindex="-1">Exata</button>
+                                <button type="button" class="switch-2-opcao" tabindex="-1">Aproximada</button>
                             </div>
                             <input type="text" id="eaPesoVisivel" class="form-control" data-mask="peso" data-target="eaPesoReal" placeholder="0,000" inputmode="numeric" value="<?= $animal['PesoKg'] ? h(number_format((float) $animal['PesoKg'], 3, ',', '')) : '' ?>">
                             <input type="hidden" name="peso" id="eaPesoReal" value="<?= h($animal['PesoKg']) ?>">
