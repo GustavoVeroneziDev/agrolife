@@ -258,24 +258,29 @@ function vsValidarNascimento(input) {
 document.querySelectorAll('[data-validar="nascimento"]').forEach(vsValidarNascimento);
 
 // Alterna o campo de nascimento entre "data exata" e "idade aproximada"
-// (anos e/ou meses) — usado em mais de uma tela (novo animal, editar
-// animal), centralizado aqui em vez de duplicado em cada uma. Some sempre
-// o par exata/aproximada, nunca os dois juntos, e desabilita o lado
-// escondido pra ele não ir junto no POST.
+// (anos e/ou meses) via switch de 2 opções (.switch-2, ver estrutura.css)
+// — usado em mais de uma tela (novo animal, editar animal), centralizado
+// aqui em vez de duplicado em cada uma. Some sempre o par exata/aproximada,
+// nunca os dois juntos, e desabilita o lado escondido pra ele não ir junto
+// no POST.
 document.querySelectorAll('[data-campo-nascimento]').forEach(function (bloco) {
-    var toggle     = bloco.querySelector('.toggle-idade-aproximada');
+    var opcoes     = bloco.querySelectorAll('.switch-2-opcao');
     var campoData  = bloco.querySelector('.campo-nascimento-exata');
     var campoAprox = bloco.querySelector('.campo-nascimento-aproximada');
-    if (!toggle || !campoData || !campoAprox) return;
+    if (!opcoes.length || !campoData || !campoAprox) return;
 
-    toggle.addEventListener('click', function () {
-        var vaiMostrarAproximada = campoAprox.hidden;
-        campoAprox.hidden   = !vaiMostrarAproximada;
-        campoData.hidden    = vaiMostrarAproximada;
-        campoData.disabled  = vaiMostrarAproximada;
-        campoAprox.querySelectorAll('input').forEach(function (i) { i.disabled = !vaiMostrarAproximada; });
-        if (vaiMostrarAproximada) campoData.value = '';
-        toggle.textContent = vaiMostrarAproximada ? 'Informar data exata' : 'Não sei a data exata';
+    function selecionar(modo) {
+        var aproximada = modo === 'aproximada';
+        opcoes.forEach(function (op) { op.classList.toggle('ativo', op.dataset.modo === modo); });
+        campoAprox.hidden   = !aproximada;
+        campoData.hidden    = aproximada;
+        campoData.disabled  = aproximada;
+        campoAprox.querySelectorAll('input').forEach(function (i) { i.disabled = !aproximada; });
+        if (aproximada) campoData.value = '';
+    }
+
+    opcoes.forEach(function (op) {
+        op.addEventListener('click', function () { selecionar(op.dataset.modo); });
     });
 });
 // initPicker()/escHtmlPicker() ficam no <head> de geral/header.php — precisam

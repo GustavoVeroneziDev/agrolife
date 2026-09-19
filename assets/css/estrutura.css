@@ -342,6 +342,37 @@ button, a, [role="button"] { touch-action: manipulation; }
   box-shadow: 0 0 0 .2rem var(--accent-light);
 }
 
+/* Switch de 2 opções (segmented control) — usado onde um campo tem duas
+   formas alternativas de preenchimento (ex: nascimento por data exata OU
+   idade aproximada, ver [data-campo-nascimento] em geral/footer.php).
+   Sempre mostra as duas opções rotuladas (nunca ambíguo feito um
+   liga/desliga sozinho) — a opção ativa vira pill sólida, igual o resto
+   dos badges/pills do sistema. */
+.switch-2 {
+  display: inline-flex;
+  background: var(--bg-hover);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.switch-2-opcao {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .74rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: .3rem .65rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.switch-2-opcao:hover:not(.ativo) { color: var(--text-main); }
+.switch-2-opcao.ativo { background: var(--accent); color: var(--accent-text); }
+@media (prefers-reduced-motion: reduce) { .switch-2-opcao { transition: none; } }
+
 /* ── Tabelas ──────────────────────────────────────────────────── */
 .table-responsive { -webkit-overflow-scrolling: touch; }
 

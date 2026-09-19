@@ -318,9 +318,12 @@ require_once __DIR__ . '/../geral/header.php';
                     </div>
                     <div class="row g-2">
                         <div class="col-6" data-campo-nascimento>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label class="form-label mb-1">Nascimento</label>
-                                <button type="button" class="btn btn-link btn-sm p-0 mb-1 toggle-idade-aproximada">Não sei a data exata</button>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
+                                <label class="form-label mb-0">Nascimento</label>
+                                <div class="switch-2" role="group" aria-label="Como informar o nascimento">
+                                    <button type="button" class="switch-2-opcao ativo" data-modo="exata">Exata</button>
+                                    <button type="button" class="switch-2-opcao" data-modo="aproximada">Aproximada</button>
+                                </div>
                             </div>
                             <input type="date" name="nascimento" class="form-control campo-nascimento-exata" data-validar="nascimento" min="<?= date('Y-m-d', strtotime('-100 years')) ?>" max="<?= date('Y-m-d') ?>">
                             <div class="row g-1 campo-nascimento-aproximada" hidden>
