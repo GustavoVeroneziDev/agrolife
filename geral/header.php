@@ -364,27 +364,32 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
             // no topo): Visão geral → Atendimento (o dia a dia com cliente/animal) →
             // Gestão (relatórios e catálogos que sustentam o atendimento) → Sistema
             // (administração da clínica, só admin vê).
+            // hrefs já em URL limpa (sem .php, sem /painel) — ver .htaccess.
+            // Precisa ser assim, não só por estética: o destaque do item
+            // ativo (str_contains($uri, href) logo abaixo) compara contra
+            // REQUEST_URI de verdade, que já vem limpo depois do
+            // redirecionamento — um href com .php nunca bateria.
             $gruposMenu = [
                 [
                     'label' => null,
                     'itens' => [
-                        ['href' => BASE . '/painel/index.php', 'icon' => 'bi-house-door', 'label' => 'Dashboard'],
+                        ['href' => BASE . '/painel', 'icon' => 'bi-house-door', 'label' => 'Dashboard'],
                     ],
                 ],
                 [
                     'label' => 'Atendimento',
                     'itens' => [
-                        ['href' => BASE . '/painel/agenda.php',  'icon' => 'bi-calendar3',        'label' => 'Agenda'],
-                        ['href' => BASE . '/painel/animais.php', 'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
-                        ['href' => BASE . '/painel/clientes.php', 'icon' => 'bi-people',           'label' => 'Clientes'],
+                        ['href' => BASE . '/agenda',   'icon' => 'bi-calendar3',        'label' => 'Agenda'],
+                        ['href' => BASE . '/animais',  'icon' => 'bi-clipboard2-pulse', 'label' => 'Animais'],
+                        ['href' => BASE . '/clientes', 'icon' => 'bi-people',           'label' => 'Clientes'],
                     ],
                 ],
                 [
                     'label' => 'Gestão',
                     'itens' => [
-                        ['href' => BASE . '/painel/relatorios.php',         'icon' => 'bi-bar-chart-line', 'label' => 'Relatórios'],
-                        ['href' => BASE . '/painel/tipos_vacina.php',       'icon' => 'bi-shield-plus',    'label' => 'Tipos de Vacina'],
-                        ['href' => BASE . '/painel/tipos_procedimento.php', 'icon' => 'bi-list-check',     'label' => 'Tipos de Procedimento'],
+                        ['href' => BASE . '/relatorios',         'icon' => 'bi-bar-chart-line', 'label' => 'Relatórios'],
+                        ['href' => BASE . '/tipos_vacina',       'icon' => 'bi-shield-plus',    'label' => 'Tipos de Vacina'],
+                        ['href' => BASE . '/tipos_procedimento', 'icon' => 'bi-list-check',     'label' => 'Tipos de Procedimento'],
                     ],
                 ],
             ];
@@ -393,10 +398,10 @@ $nivelAcesso  = $_SESSION['nivel_acesso'] ?? '';
                 $gruposMenu[] = [
                     'label' => 'Sistema',
                     'itens' => [
-                        ['href' => BASE . '/painel/equipe.php',        'icon' => 'bi-person-badge',   'label' => 'Equipe'],
-                        ['href' => BASE . '/painel/auditoria.php',     'icon' => 'bi-clock-history',  'label' => 'Auditoria'],
-                        ['href' => BASE . '/painel/configuracoes.php', 'icon' => 'bi-gear',           'label' => 'Configurações'],
-                        ['href' => BASE . '/painel/migrations.php',    'icon' => 'bi-database-gear',  'label' => 'Migrations'],
+                        ['href' => BASE . '/equipe',        'icon' => 'bi-person-badge',   'label' => 'Equipe'],
+                        ['href' => BASE . '/auditoria',     'icon' => 'bi-clock-history',  'label' => 'Auditoria'],
+                        ['href' => BASE . '/configuracoes', 'icon' => 'bi-gear',           'label' => 'Configurações'],
+                        ['href' => BASE . '/migrations_admin', 'icon' => 'bi-database-gear', 'label' => 'Migrations'],
                     ],
                 ];
             }

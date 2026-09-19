@@ -19,6 +19,82 @@ Options -Indexes
     RewriteRule ^Base(/|$)        - [F,L]
 </IfModule>
 
+# ── URLs limpas (sem .php, sem pasta) ──────────────────────────────
+# Padrão do sistema (ver PADROES_DESENVOLVIMENTO.md) — replicar em
+# projetos novos desde o início, escrevendo os links já sem .php em vez
+# de precisar dessa camada de redirecionamento depois.
+#
+# Mapeamento explícito (uma linha por página) em vez de "adivinhar" a
+# pasta via checagem de arquivo — checagem de existência (-f) com
+# caminho relativo resolve contra o diretório de trabalho do processo
+# Apache, não contra onde este .htaccess está, então dava resultado
+# diferente em local (dentro de /vetsul/) e produção (raiz do domínio).
+# RewriteRule (padrão e alvo) não tem esse problema — sempre relativo ao
+# diretório do próprio .htaccess, funciona igual nos dois lugares.
+#
+# Só página navegada por gente de verdade entra aqui. api_*.php (chamado
+# só via fetch/JS) e processa_*.php (só recebe POST de formulário) ficam
+# de fora de propósito — nenhum dos dois aparece na barra de endereço de
+# ninguém, e um 301 em cima de um POST vira GET no navegador, quebrando o
+# envio. Toda página nova precisa de uma linha aqui pra ganhar URL limpa.
+<IfModule mod_rewrite.c>
+    RewriteRule ^agenda$               painel/agenda.php               [L,QSA]
+    RewriteRule ^animais$              painel/animais.php              [L,QSA]
+    RewriteRule ^animal_detalhe$       painel/animal_detalhe.php       [L,QSA]
+    RewriteRule ^auditoria$            painel/auditoria.php            [L,QSA]
+    RewriteRule ^cliente_detalhe$      painel/cliente_detalhe.php      [L,QSA]
+    RewriteRule ^clientes$             painel/clientes.php             [L,QSA]
+    RewriteRule ^configuracoes$        painel/configuracoes.php        [L,QSA]
+    RewriteRule ^demo_whatsapp$        painel/demo_whatsapp.php        [L,QSA]
+    RewriteRule ^equipe$               painel/equipe.php               [L,QSA]
+    # Não pode ser "/migrations" — colide com a regra que bloqueia a
+    # pasta migrations/ (arquivos .sql brutos) logo acima nesse arquivo,
+    # que também casa com a string exata "migrations" sem barra no fim.
+    RewriteRule ^migrations_admin$     painel/migrations.php           [L,QSA]
+    RewriteRule ^registrar_clinico$    painel/registrar_clinico.php    [L,QSA]
+    RewriteRule ^registrar_vacina$     painel/registrar_vacina.php     [L,QSA]
+    RewriteRule ^relatorios$           painel/relatorios.php           [L,QSA]
+    RewriteRule ^tipos_procedimento$   painel/tipos_procedimento.php   [L,QSA]
+    RewriteRule ^tipos_vacina$         painel/tipos_vacina.php         [L,QSA]
+
+    RewriteRule ^agendar$              usuario/agendar.php             [L,QSA]
+    RewriteRule ^animal_vacinas$       usuario/animal_vacinas.php      [L,QSA]
+    RewriteRule ^cadastro$             usuario/cadastro.php            [L,QSA]
+    RewriteRule ^esqueci_senha$        usuario/esqueci_senha.php       [L,QSA]
+    RewriteRule ^login$                usuario/login.php               [L,QSA]
+    RewriteRule ^logout$               usuario/logout.php              [L,QSA]
+    RewriteRule ^meus_agendamentos$    usuario/meus_agendamentos.php   [L,QSA]
+    RewriteRule ^meus_animais$         usuario/meus_animais.php        [L,QSA]
+    RewriteRule ^perfil$               usuario/perfil.php              [L,QSA]
+    RewriteRule ^redefinir_senha$      usuario/redefinir_senha.php     [L,QSA]
+
+    # Link antigo/salvo com .php na URL → redireciona (301, permanente)
+    # pra versão limpa, preservando querystring — um favorito ou link já
+    # mandado por WhatsApp com .php também passa a abrir bonito.
+    # manifest.php/sw.php/index.php da raiz ficam de fora: PWA espera os
+    # dois primeiros num caminho exato (não pode mudar a URL deles), e a
+    # raiz já é servida limpa via "/" mesmo, não precisa de redirect.
+    #
+    # painel/index.php (dashboard) é caso especial — não tem mapeamento
+    # "^index$" acima de propósito (colidiria com o index.php da raiz),
+    # a URL limpa dele é só a pasta (/painel), servida nativamente pelo
+    # DirectoryIndex do Apache — por isso precisa de uma regra própria
+    # antes da genérica, senão "index" viraria "/index" (raiz) errado.
+    RewriteCond %{THE_REQUEST} \s(/\S*?)?/painel/index\.php[\s?] [NC]
+    RewriteRule ^ %1/painel [R=301,L,QSA]
+
+    # migrations.php é outro caso especial — não pode virar "/migrations"
+    # (ver comentário junto do mapeamento ^migrations_admin$ acima).
+    RewriteCond %{THE_REQUEST} \s(/\S*?)?/painel/migrations\.php[\s?] [NC]
+    RewriteRule ^ %1/migrations_admin [R=301,L,QSA]
+
+    RewriteCond %{THE_REQUEST} \s(/\S*?)?/painel/(?!api_)(?!migrations\.php)([\w-]+)\.php[\s?] [NC]
+    RewriteRule ^ %1/%2 [R=301,L,QSA]
+
+    RewriteCond %{THE_REQUEST} \s(/\S*?)?/usuario/(?!api_|processa_)([\w-]+)\.php[\s?] [NC]
+    RewriteRule ^ %1/%2 [R=301,L,QSA]
+</IfModule>
+
 # Cabeçalhos de segurança HTTP (requer mod_headers)
 <IfModule mod_headers.c>
     Header always set X-Frame-Options          "SAMEORIGIN"
