@@ -125,10 +125,11 @@ try {
 
     $especies = $pdo->query('SELECT * FROM Especies ORDER BY Ordem ASC')->fetchAll();
     $racas    = $pdo->query('SELECT IDRaca, FKEspecie, Nome FROM Racas ORDER BY Ordem ASC')->fetchAll();
-    // Inclui admin também — a equipe da clínica pode ter animal próprio
-    // cadastrado no sistema, não só os clientes.
+    // Só cliente de verdade — equipe (admin/funcionário) misturada aqui
+    // poluía o picker de "Dono", que é conceitualmente escolher o cliente
+    // dono do animal, não qualquer usuário do sistema.
     $donos    = $pdo->query(
-        "SELECT IDUsuario, Nome, Email, NivelAcesso FROM Usuarios WHERE Ativo = 1 ORDER BY Nome ASC"
+        "SELECT IDUsuario, Nome, Email FROM Usuarios WHERE NivelAcesso = 'cliente' AND Ativo = 1 ORDER BY Nome ASC"
     )->fetchAll();
 } catch (PDOException $e) {
     error_log('[Animais] ' . $e->getMessage());
@@ -366,7 +367,6 @@ require_once __DIR__ . '/../geral/header.php';
 <script>
 var DONOS = <?= json_encode(array_map(fn($d) => [
     'id' => $d['IDUsuario'], 'nome' => $d['Nome'], 'email' => $d['Email'],
-    'equipe' => $d['NivelAcesso'] !== 'cliente',
 ], $donos), JSON_UNESCAPED_UNICODE) ?>;
 var NA_ESPECIES = <?= json_encode(array_map(fn($e) => [
     'id' => $e['IDEspecie'], 'nome' => $e['Nome'], 'icone' => $e['Icone'],
@@ -380,7 +380,7 @@ initPicker({
     searchId: 'donoSearch', listId: 'donoList', hiddenId: 'inpDonoId', labelId: 'donoLabel',
     items: DONOS,
     chave: function (d) { return d.id; },
-    renderItem: function (d) { return { title: d.nome + (d.equipe ? ' (equipe)' : ''), sub: d.email }; },
+    renderItem: function (d) { return { title: d.nome, sub: d.email }; },
     matches: function (d, q) {
         return d.nome.toLowerCase().indexOf(q) !== -1 || d.email.toLowerCase().indexOf(q) !== -1;
     },
